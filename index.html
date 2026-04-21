@@ -408,7 +408,7 @@ tr:hover td{background:var(--sf);}
 var SB_URL = 'https://rdmlxfgwlbroigsisjph.supabase.co';
 var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkbWx4Zmd3bGJyb2lnc2lzanBoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3NjMxOTIsImV4cCI6MjA5MjMzOTE5Mn0.stw8254uQoJGka6jEx0kXQeGWXn_IOTZcyltM6c5UqA';
 var db = supabase.createClient(SB_URL, SB_KEY, {
-  auth: { persistSession: true, autoRefreshToken: true }
+  auth: { persistSession: true, autoRefreshToken: true , storage: window.localStorage}
 });
 
 var ptitles = {dashboard:'Dashboard',cases:'Casos',clients:'Clientes',agenda:'Agenda',movements:'Andamentos',expenses:'Despesas',docs:'Documentos',importer:'Importar Documento',financial:'Financeiro',email:'Agente E-mail',access:'Controle de Acesso',connectors:'Conectores',settings:'Configurações'};

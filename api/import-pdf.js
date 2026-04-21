@@ -1,5 +1,7 @@
-export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).json({error:'Method not allowed'});
+module.exports = async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({error:'Method not allowed'});
+  }
   try {
     const { pdf_base64 } = req.body;
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -16,8 +18,8 @@ export default async function handler(req, res) {
         messages: [{
           role: 'user',
           content: [
-            { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: pdf_base64 } },
-            { type: 'text', text: 'Extraia os dados.' }
+            {type:'document', source:{type:'base64', media_type:'application/pdf', data:pdf_base64}},
+            {type:'text', text:'Extraia os dados.'}
           ]
         }]
       })
@@ -25,4 +27,6 @@ export default async function handler(req, res) {
     const data = await response.json();
     res.status(200).json(data);
   } catch(e) {
-    res.status(500).json({error: e.me
+    res.status(500).json({error: e.message});
+  }
+}

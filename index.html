@@ -320,7 +320,7 @@ tr:hover td{background:var(--sf);}
 
 <script>
 var SB_URL='https://rdmlxfgwlbroigsisjph.supabase.co';
-var SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJIUzI1NiIsInJlZiI6InJkbWx4Zmd3bGJyb2lnc2lzanBoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3NjMxOTIsImV4cCI6MjA5MjMzOTE5Mn0.stw8254uQoJGka6jEx0kXQeGWXn_IOTZcyltM6c5UqA';
+var SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkbWx4Zmd3bGJyb2lnc2lzanBoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3NjMxOTIsImV4cCI6MjA5MjMzOTE5Mn0.stw8254uQoJGka6jEx0kXQeGWXn_IOTZcyltM6c5UqA';
 var ANTHROPIC_KEY='';
 var db=supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,storage:window.localStorage}});
 var ptitles={dashboard:'Dashboard',cases:'Casos',clients:'Clientes',agenda:'Agenda',movements:'Andamentos',expenses:'Despesas',docs:'Documentos',importer:'Importar Documento',financial:'Financeiro',email:'Agente E-mail',access:'Controle de Acesso',connectors:'Conectores',settings:'Configurações'};
@@ -438,7 +438,7 @@ function fazerLogin(){
   if(!email||!pwd){err.style.display='block';err.textContent='Preencha e-mail e senha.';return;}
   btn.textContent='Entrando...';btn.disabled=true;err.style.display='none';
   db.auth.signInWithPassword({email:email,password:pwd}).then(function(res){
-    if(res.error){err.style.display='block';err.textContent='E-mail ou senha incorretos.';btn.textContent='Entrar';btn.disabled=false;return;}
+    if(res.error){err.style.display='block';err.textContent='Erro no login: '+(res.error.message||'E-mail ou senha incorretos.');btn.textContent='Entrar';btn.disabled=false;return;}
     mostrarSistema();
   });
 }
@@ -515,7 +515,11 @@ function colarChaveManual(){
 
 function callClaude(payload, onSuccess, onError){
   var key=getApiKey();
-  if(!key){onError('Chave da API não configurada. Configure em Conectores.');return;}
+  if(!key){
+    onError('Chave da API não configurada. Vá em Conectores → Colar Manual → Salvar Chave.');
+    return;
+  }
+
   fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
     headers:{
@@ -528,16 +532,30 @@ function callClaude(payload, onSuccess, onError){
   }).then(async function(r){
     var text=await r.text();
     var payloadResp={};
-    try{payloadResp=text?JSON.parse(text):{};}catch(e){payloadResp={raw:text};}
+    try{
+      payloadResp=text?JSON.parse(text):{};
+    }catch(e){
+      payloadResp={raw:text};
+    }
+
     if(!r.ok){
-      var msg=(payloadResp.error&&payloadResp.error.message)||payloadResp.message||text||('Erro HTTP '+r.status);
+      var msg='Erro HTTP '+r.status;
+      if(payloadResp.error && payloadResp.error.message){msg+=' — '+payloadResp.error.message;}
+      else if(payloadResp.message){msg+=' — '+payloadResp.message;}
+      else if(text){msg+=' — '+text.slice(0,500);}
       throw new Error(msg);
     }
+
     return payloadResp;
   }).then(function(d){
-    if(d.error){onError(d.error.message||'Erro da API');return;}
+    if(d.error){
+      onError(d.error.message||'Erro da API');
+      return;
+    }
     onSuccess(d);
-  }).catch(function(e){onError(e.message||'Erro de rede');});
+  }).catch(function(e){
+    onError(e.message||'Erro de rede/API');
+  });
 }
 
 function openModal(t){

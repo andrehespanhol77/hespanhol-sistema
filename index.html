@@ -44,7 +44,7 @@ body{background:var(--bg);color:var(--tx);font-family:var(--fn);min-height:100vh
 .bg{background:transparent;color:var(--tx2);border:1px solid var(--bd2);}
 .bg:hover{background:var(--sf);color:var(--tx);}
 .content{padding:20px;flex:1;}
-.page{display:none;}.page.active{display:block;}
+.page{display:none}.page.active{display:block}
 .card{background:var(--bg3);border:1px solid var(--bd);border-radius:var(--rl);padding:18px;margin-bottom:16px;}
 .ch{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
 .ct{font-size:13px;font-weight:600;color:var(--tx);}
@@ -57,18 +57,13 @@ body{background:var(--bg);color:var(--tx);font-family:var(--fn);min-height:100vh
 .mv{font-size:26px;font-weight:700;color:var(--tx);line-height:1;margin-bottom:4px;}
 .ms{font-size:11px;color:var(--tx2);}
 .mi{position:absolute;top:14px;right:14px;font-size:20px;opacity:.4;}
-.tu{color:var(--ok);font-size:11px;margin-top:4px;}
-.td{color:var(--er);font-size:11px;margin-top:4px;}
 table{width:100%;border-collapse:collapse;}
 th{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--tx3);padding:7px 10px;text-align:left;border-bottom:1px solid var(--bd);}
 td{font-size:12px;color:var(--tx2);padding:10px;border-bottom:1px solid rgba(74,159,212,.05);vertical-align:middle;}
-tr:last-child td{border-bottom:none;}
 tr:hover td{background:var(--sf);}
 .badge{display:inline-block;font-size:10px;padding:2px 8px;border-radius:20px;font-weight:600;}
 .ba{background:rgba(46,204,113,.15);color:#2ecc71;}
-.bu{background:rgba(231,76,60,.15);color:#e74c3c;}
 .bw{background:rgba(243,156,18,.15);color:#f39c12;}
-.bl{background:rgba(231,76,60,.15);color:#e74c3c;}
 .bs{background:rgba(74,159,212,.15);color:#4A9FD4;}
 .inp{width:100%;background:var(--sf);border:1px solid var(--bd2);border-radius:8px;padding:9px 12px;color:var(--tx);font-size:12px;font-family:var(--fn);outline:none;}
 .inp:focus{border-color:var(--ac);}
@@ -77,7 +72,7 @@ tr:hover td{background:var(--sf);}
 .tabs{display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--bd);}
 .tab{padding:8px 14px;font-size:12px;font-weight:500;color:var(--tx3);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;}
 .tab.active{color:var(--ac);border-bottom-color:var(--ac);}
-.tc{display:none;}.tc.active{display:block;}
+.tc{display:none}.tc.active{display:block}
 .tl{position:relative;padding-left:20px;}
 .tl::before{content:'';position:absolute;left:5px;top:0;bottom:0;width:1px;background:var(--bd);}
 .tli{position:relative;padding-bottom:14px;}
@@ -92,10 +87,9 @@ tr:hover td{background:var(--sf);}
 .iz:hover{border-color:var(--ac);background:var(--sf);}
 .cc{background:var(--bg3);border:1px solid var(--bd);border-radius:var(--rl);padding:16px;display:flex;align-items:center;gap:14px;margin-bottom:10px;}
 .cs{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
-.son{background:var(--ok);}.ssn{background:var(--wn);}.sof{background:var(--tx3);}
+.son{background:var(--ok)}.ssn{background:var(--wn)}
 .adn{text-align:center;padding:60px 20px;color:var(--tx3);}
 .aibtn{position:fixed;bottom:22px;right:22px;width:46px;height:46px;border-radius:50%;background:var(--ac);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 4px 20px rgba(74,159,212,.4);z-index:150;transition:all .2s;}
-.aibtn:hover{transform:scale(1.1);}
 .aip{position:fixed;bottom:80px;right:22px;width:310px;background:var(--bg2);border:1px solid var(--bd);border-radius:var(--rl);z-index:150;display:none;flex-direction:column;max-height:420px;box-shadow:0 8px 32px rgba(0,0,0,.5);}
 .aip.open{display:flex;}
 .aih{padding:12px 14px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:8px;}
@@ -108,8 +102,6 @@ tr:hover td{background:var(--sf);}
 .ais{background:var(--ac);border:none;border-radius:6px;width:26px;height:26px;cursor:pointer;color:var(--bg2);font-size:12px;}
 .aty{display:flex;gap:3px;align-items:center;padding:7px 10px;background:var(--sf);border-radius:8px;align-self:flex-start;}
 .aty span{width:4px;height:4px;background:var(--tx3);border-radius:50%;animation:bx .8s infinite;}
-.aty span:nth-child(2){animation-delay:.15s;}
-.aty span:nth-child(3){animation-delay:.3s;}
 @keyframes bx{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}}
 .mo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center;}
 .mo.open{display:flex;}
@@ -137,6 +129,7 @@ tr:hover td{background:var(--sf);}
     <div class="login-err" id="login-err"></div>
   </div>
 </div>
+
 <aside class="sidebar">
   <div class="slogo"><div class="lt">HESPANHOL</div><div class="ls">ADVOGADOS</div></div>
   <nav class="nav">
@@ -170,179 +163,152 @@ tr:hover td{background:var(--sf);}
     </div>
   </div>
 </aside>
+
 <main class="main">
-  <header class="topbar">
-    <div style="font-size:14px;font-weight:600;color:var(--tx);flex:1" id="ptitle">Dashboard</div>
-    <select onchange="switchRole(this.value)" style="background:var(--sf);border:1px solid var(--bd);color:var(--tx2);padding:5px 10px;border-radius:8px;font-size:11px;outline:none;font-family:var(--fn)">
-      <option value="admin">👑 Admin</option>
-      <option value="fin">💼 Financeiro</option>
-      <option value="adv">⚖️ Advogado</option>
-      <option value="est">📚 Estagiário</option>
-      <option value="cli">👤 Cliente</option>
-    </select>
-    <input class="sb" placeholder="Buscar...">
-    <button class="btn bp" onclick="openModal('new')">+ Novo</button>
-  </header>
-  <div class="content">
-    <div class="page active" id="page-dashboard">
-      <div class="g4">
-        <div class="mc"><div class="mi">📁</div><div class="ml">Casos Ativos</div><div class="mv" id="dash-casos">—</div><div class="ms">no banco de dados</div></div>
-        <div class="mc"><div class="mi">👤</div><div class="ml">Clientes</div><div class="mv" id="dash-clientes">—</div><div class="ms">cadastrados</div></div>
-        <div class="mc admin-only"><div class="mi">💰</div><div class="ml">Honorários/Mês</div><div class="mv">—</div><div class="ms">a configurar</div></div>
-        <div class="mc"><div class="mi">📅</div><div class="ml">Prazos (7 dias)</div><div class="mv">—</div><div class="ms">verificar agenda</div></div>
-      </div>
-      <div class="g2">
-        <div class="card">
-          <div class="ch"><div class="ct">Casos Recentes</div><span style="font-size:11px;color:var(--ac);cursor:pointer" onclick="go('cases',document.querySelectorAll('.ni')[1])">Ver todos →</span></div>
-          <div id="dash-casos-list"><div class="loading">🔄 Carregando...</div></div>
+<header class="topbar">
+  <div style="font-size:14px;font-weight:600;color:var(--tx);flex:1" id="ptitle">Dashboard</div>
+  <select onchange="switchRole(this.value)" style="background:var(--sf);border:1px solid var(--bd);color:var(--tx2);padding:5px 10px;border-radius:8px;font-size:11px;outline:none;font-family:var(--fn)">
+    <option value="admin">👑 Admin</option><option value="fin">💼 Financeiro</option><option value="adv">⚖️ Advogado</option><option value="est">📚 Estagiário</option><option value="cli">👤 Cliente</option>
+  </select>
+  <input class="sb" placeholder="Buscar...">
+  <button class="btn bp" onclick="openModal('new')">+ Novo</button>
+</header>
+
+<div class="content">
+  <div class="page active" id="page-dashboard">
+    <div class="g4">
+      <div class="mc"><div class="mi">📁</div><div class="ml">Casos Ativos</div><div class="mv" id="dash-casos">—</div><div class="ms">no banco de dados</div></div>
+      <div class="mc"><div class="mi">👤</div><div class="ml">Clientes</div><div class="mv" id="dash-clientes">—</div><div class="ms">cadastrados</div></div>
+      <div class="mc admin-only"><div class="mi">💰</div><div class="ml">Honorários/Mês</div><div class="mv">—</div><div class="ms">a configurar</div></div>
+      <div class="mc"><div class="mi">📅</div><div class="ml">Prazos (7 dias)</div><div class="mv">—</div><div class="ms">verificar agenda</div></div>
+    </div>
+    <div class="g2">
+      <div class="card"><div class="ch"><div class="ct">Casos Recentes</div><span style="font-size:11px;color:var(--ac);cursor:pointer" onclick="go('cases',document.querySelectorAll('.ni')[1])">Ver todos →</span></div><div id="dash-casos-list"><div class="loading">🔄 Carregando...</div></div></div>
+      <div class="card"><div class="ch"><div class="ct">Últimas Movimentações</div></div><div class="tl"><div class="tli"><div class="tld"></div><div class="tldt">Hoje — DataJud/CNJ</div><div class="tltx">Monitoramento ativo</div></div><div class="tli"><div class="tld w"></div><div class="tldt">Agente Hespanhol</div><div class="tltx">Relatório diário enviado</div></div></div></div>
+    </div>
+  </div>
+
+  <div class="page" id="page-cases">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><div style="font-size:13px;color:var(--tx3)" id="cases-count">Carregando...</div><button class="btn bp" onclick="openModal('new')">+ Novo Caso</button></div>
+    <table><thead><tr><th>Nº CNJ</th><th>Cliente</th><th>Tipo</th><th>Tribunal</th><th>Fase</th><th>Status</th><th class="admin-only">Valor</th></tr></thead><tbody id="cases-tbody"><tr><td colspan="7" class="loading">🔄 Carregando do banco...</td></tr></tbody></table>
+  </div>
+
+  <div class="page" id="page-clients">
+    <div style="display:flex;justify-content:space-between;margin-bottom:16px"><div style="font-size:13px;color:var(--tx3)" id="clients-count">Carregando...</div><button class="btn bp" onclick="openModal('new')">+ Novo Cliente</button></div>
+    <div id="clients-list"><div class="loading">🔄 Carregando do banco...</div></div>
+  </div>
+
+  <div class="page" id="page-agenda"><div class="card"><div class="ct">Agenda</div><div class="loading">Próximos compromissos serão exibidos aqui.</div></div></div>
+  <div class="page" id="page-movements"><div class="card"><div style="font-size:13px;color:var(--tx2);line-height:1.7">Andamentos processuais serão exibidos aqui automaticamente pelo Agente Hespanhol.</div></div></div>
+  <div class="page" id="page-expenses"><div class="card"><div class="ct">Despesas</div><div class="loading">Custos reembolsáveis.</div></div></div>
+
+  <div class="page" id="page-docs">
+    <div style="display:flex;justify-content:space-between;margin-bottom:16px"><div style="font-size:13px;color:var(--tx3)">Templates do escritório</div><button class="btn bp">+ Novo Template</button></div>
+    <div class="g3">
+      <div class="card"><div style="font-size:28px;margin-bottom:12px">📋</div><div class="ct">Contrato de Honorários</div><div style="font-size:12px;color:var(--tx3);margin:6px 0 14px">Preenchimento automático</div></div>
+      <div class="card"><div style="font-size:28px;margin-bottom:12px">📜</div><div class="ct">Procuração Ad Judicia</div><div style="font-size:12px;color:var(--tx3);margin:6px 0 14px">Poderes gerais e especiais</div></div>
+      <div class="card"><div style="font-size:28px;margin-bottom:12px">⚖️</div><div class="ct">Petição Inicial</div><div style="font-size:12px;color:var(--tx3);margin:6px 0 14px">Template com campos variáveis</div></div>
+    </div>
+  </div>
+
+  <div class="page" id="page-importer">
+    <div class="g2">
+      <div>
+        <div class="iz" id="upload-zone" onclick="document.getElementById('pdf-upload').click()">
+          <input type="file" id="pdf-upload" accept=".pdf" style="display:none" onchange="doImport(this)">
+          <div style="font-size:36px;margin-bottom:12px">📄</div>
+          <div style="font-size:14px;font-weight:600;color:var(--tx);margin-bottom:6px">Importar Procuração ou Contrato</div>
+          <div style="font-size:12px;color:var(--tx3)">Clique para selecionar o PDF</div>
         </div>
-        <div class="card">
-          <div class="ch"><div class="ct">Últimas Movimentações</div></div>
-          <div class="tl">
-            <div class="tli"><div class="tld"></div><div class="tldt">Hoje — DataJud/CNJ</div><div class="tltx">Monitoramento ativo</div></div>
-            <div class="tli"><div class="tld w"></div><div class="tldt">Agente Hespanhol</div><div class="tltx">Relatório diário enviado</div></div>
-          </div>
-        </div>
+        <div id="imp-result" style="display:none"></div>
       </div>
-    </div>
-    <div class="page" id="page-cases">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-        <div style="font-size:13px;color:var(--tx3)" id="cases-count">Carregando...</div>
-        <button class="btn bp" onclick="openModal('new')">+ Novo Caso</button>
-      </div>
-      <table>
-        <thead><tr><th>Nº CNJ</th><th>Cliente</th><th>Tipo</th><th>Tribunal</th><th>Fase</th><th>Status</th><th class="admin-only">Valor</th></tr></thead>
-        <tbody id="cases-tbody"><tr><td colspan="7" class="loading">🔄 Carregando do banco...</td></tr></tbody>
-      </table>
-    </div>
-    <div class="page" id="page-clients">
-      <div style="display:flex;justify-content:space-between;margin-bottom:16px">
-        <div style="font-size:13px;color:var(--tx3)" id="clients-count">Carregando...</div>
-        <button class="btn bp" onclick="openModal('new')">+ Novo Cliente</button>
-      </div>
-      <div id="clients-list"><div class="loading">🔄 Carregando do banco...</div></div>
-    </div>
-    <div class="page" id="page-agenda">
-      <div style="display:flex;justify-content:space-between;margin-bottom:16px"><div style="font-size:13px;color:var(--tx3)">Próximos compromissos</div><button class="btn bp">+ Novo Evento</button></div>
-    </div>
-    <div class="page" id="page-movements">
-      <div class="card"><div style="font-size:13px;color:var(--tx2);line-height:1.7">Andamentos processuais serão exibidos aqui automaticamente pelo Agente Hespanhol.</div></div>
-    </div>
-    <div class="page" id="page-expenses">
-      <div style="display:flex;justify-content:space-between;margin-bottom:16px"><div style="font-size:13px;color:var(--tx3)">Custos reembolsáveis</div><button class="btn bp" onclick="openModal('expense')">+ Lançar Despesa</button></div>
-    </div>
-    <div class="page" id="page-docs">
-      <div style="display:flex;justify-content:space-between;margin-bottom:16px"><div style="font-size:13px;color:var(--tx3)">Templates do escritório</div><button class="btn bp">+ Novo Template</button></div>
-      <div class="g3">
-        <div class="card"><div style="font-size:28px;margin-bottom:12px">📋</div><div class="ct">Contrato de Honorários</div><div style="font-size:12px;color:var(--tx3);margin:6px 0 14px">Preenchimento automático</div><div style="display:flex;gap:8px"><button class="btn bg" style="font-size:11px;flex:1">Editar</button><button class="btn bp" style="font-size:11px;flex:1">Gerar</button></div></div>
-        <div class="card"><div style="font-size:28px;margin-bottom:12px">📜</div><div class="ct">Procuração Ad Judicia</div><div style="font-size:12px;color:var(--tx3);margin:6px 0 14px">Poderes gerais e especiais</div><div style="display:flex;gap:8px"><button class="btn bg" style="font-size:11px;flex:1">Editar</button><button class="btn bp" style="font-size:11px;flex:1">Gerar</button></div></div>
-        <div class="card"><div style="font-size:28px;margin-bottom:12px">⚖️</div><div class="ct">Petição Inicial</div><div style="font-size:12px;color:var(--tx3);margin:6px 0 14px">Template com campos variáveis</div><div style="display:flex;gap:8px"><button class="btn bg" style="font-size:11px;flex:1">Editar</button><button class="btn bp" style="font-size:11px;flex:1">Gerar</button></div></div>
-      </div>
-    </div>
-    <div class="page" id="page-importer">
-      <div class="g2">
-        <div>
-          <div class="iz" onclick="document.getElementById('pdf-upload').click()">
-            <input type="file" id="pdf-upload" accept=".pdf" style="display:none" onchange="doImport(this)">
-            <div style="font-size:36px;margin-bottom:12px">📄</div>
-            <div style="font-size:14px;font-weight:600;color:var(--tx);margin-bottom:6px">Importar Procuração ou Contrato</div>
-            <div style="font-size:12px;color:var(--tx3)">Clique para selecionar o PDF</div>
-          </div>
-          <div id="imp-result" style="display:none"></div>
-        </div>
-        <div class="card">
-          <div class="ct" style="margin-bottom:14px">Como funciona</div>
-          <div class="tl">
-            <div class="tli"><div class="tld"></div><div class="tldt">Passo 1</div><div class="tltx">Selecione o PDF</div></div>
-            <div class="tli"><div class="tld"></div><div class="tldt">Passo 2</div><div class="tltx">IA extrai os dados</div></div>
-            <div class="tli"><div class="tld"></div><div class="tldt">Passo 3</div><div class="tltx">Revise e confirme</div></div>
-            <div class="tli"><div class="tld"></div><div class="tldt">Passo 4</div><div class="tltx">Salvo no banco</div></div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="page" id="page-financial">
-      <div id="fin-ok">
-        <div class="tabs">
-          <div class="tab active" onclick="stab('hon',this)">Honorários</div>
-          <div class="tab" onclick="stab('nf',this)">Notas Fiscais</div>
-          <div class="tab" onclick="stab('rel',this)">Relatório</div>
-        </div>
-        <div class="tc active" id="tab-hon"><div class="card"><div class="loading">Nenhum lançamento ainda.</div></div></div>
-        <div class="tc" id="tab-nf"><div class="card"><div class="loading">Nenhuma NF emitida ainda.</div></div></div>
-        <div class="tc" id="tab-rel"><div class="card"><div class="loading">Relatório disponível após lançamentos.</div></div></div>
-      </div>
-      <div id="fin-no" class="adn" style="display:none"><div style="font-size:48px">🔒</div><h3 style="font-size:16px;color:var(--tx2);margin:16px 0 8px">Acesso Restrito</h3></div>
-    </div>
-    <div class="page" id="page-email">
       <div class="card">
-        <div class="ct" style="margin-bottom:14px">✦ Redigir com Agente Hespanhol</div>
-        <div class="fg"><label class="flb">Tipo</label><select class="inp"><option>Atualização de andamento</option><option>Convocação para reunião</option><option>Comunicado de prazo</option></select></div>
-        <div class="fg"><label class="flb">Instruções</label><textarea class="inp" rows="3" placeholder="Tom formal, mencionar prazo..."></textarea></div>
-        <div style="display:flex;gap:8px"><button class="btn bg" style="flex:1" onclick="genEmail()">✦ Gerar com IA</button><button class="btn bp" style="flex:1">Enviar</button></div>
-        <div id="email-box" style="display:none;margin-top:12px;background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:12px;font-size:12px;color:var(--tx2);line-height:1.6;white-space:pre-wrap"></div>
+        <div class="ct" style="margin-bottom:14px">Como funciona</div>
+        <div class="tl">
+          <div class="tli"><div class="tld"></div><div class="tldt">Passo 1</div><div class="tltx">Selecione o PDF</div></div>
+          <div class="tli"><div class="tld"></div><div class="tldt">Passo 2</div><div class="tltx">IA extrai os dados</div></div>
+          <div class="tli"><div class="tld"></div><div class="tldt">Passo 3</div><div class="tltx">Revise e confirme</div></div>
+          <div class="tli"><div class="tld"></div><div class="tldt">Passo 4</div><div class="tltx">Salvo no banco</div></div>
+        </div>
       </div>
     </div>
-    <div class="page" id="page-access">
+  </div>
+
+  <div class="page" id="page-financial">
+    <div id="fin-ok"><div class="tabs"><div class="tab active" onclick="stab('hon',this)">Honorários</div><div class="tab" onclick="stab('nf',this)">Notas Fiscais</div><div class="tab" onclick="stab('rel',this)">Relatório</div></div><div class="tc active" id="tab-hon"><div class="card"><div class="loading">Nenhum lançamento ainda.</div></div></div><div class="tc" id="tab-nf"><div class="card"><div class="loading">Nenhuma NF emitida ainda.</div></div></div><div class="tc" id="tab-rel"><div class="card"><div class="loading">Relatório disponível após lançamentos.</div></div></div></div>
+    <div id="fin-no" class="adn" style="display:none"><div style="font-size:48px">🔒</div><h3 style="font-size:16px;color:var(--tx2);margin:16px 0 8px">Acesso Restrito</h3></div>
+  </div>
+
+  <div class="page" id="page-email">
+    <div class="card">
+      <div class="ct" style="margin-bottom:14px">✦ Redigir com Agente Hespanhol</div>
+      <div class="fg"><label class="flb">Tipo</label><select class="inp"><option>Atualização de andamento</option><option>Convocação para reunião</option><option>Comunicado de prazo</option></select></div>
+      <div class="fg"><label class="flb">Instruções</label><textarea class="inp" rows="3" placeholder="Tom formal, mencionar prazo..."></textarea></div>
+      <div style="display:flex;gap:8px"><button class="btn bg" style="flex:1" onclick="genEmail()">✦ Gerar com IA</button><button class="btn bp" style="flex:1">Enviar</button></div>
+      <div id="email-box" style="display:none;margin-top:12px;background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:12px;font-size:12px;color:var(--tx2);line-height:1.6;white-space:pre-wrap"></div>
+    </div>
+  </div>
+
+  <div class="page" id="page-access"><div class="card"><div class="ch"><div class="ct">Usuários do Sistema</div><button class="btn bp" style="font-size:11px">+ Usuário</button></div><div id="users-list"><div class="loading">🔄 Carregando usuários...</div></div></div></div>
+
+  <div class="page" id="page-connectors">
+    <div class="cc"><div class="cs son"></div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--tx)">Supabase</div><div style="font-size:11px;color:var(--tx3)">Banco de dados</div></div><span class="badge ba">Ativo</span></div>
+    <div class="cc"><div class="cs son"></div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--tx)">Resend API</div><div style="font-size:11px;color:var(--tx3)">hespanhol@andrehespanhol.com</div></div><span class="badge ba">Configurado</span></div>
+    <div class="cc"><div class="cs ssn"></div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--tx)">DataJud / CNJ</div><div style="font-size:11px;color:var(--tx3)">Monitoramento processual</div></div><button class="btn bg" style="font-size:11px">Configurar</button></div>
+    <div class="cc"><div class="cs son"></div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--tx)">Vercel</div><div style="font-size:11px;color:var(--tx3)">sistema.andrehespanhol.com</div></div><span class="badge ba">Online</span></div>
+    <div class="card" style="margin-top:16px">
+      <div class="ct" style="margin-bottom:14px">🤖 Anthropic API — Chave de Acesso</div>
+      <div style="font-size:12px;color:var(--tx3);margin-bottom:12px">Necessária para Importar Documentos e o Agente Hespanhol. Obtida em console.anthropic.com → API Keys.</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input class="inp" type="text" id="apikey-input" placeholder="Cole aqui sua chave sk-ant-..." autocomplete="off" style="flex:1">
+        <button class="btn bp" style="white-space:nowrap" onclick="salvarChave()">Salvar Chave</button>
+      </div>
+      <div id="apikey-status" style="font-size:12px;margin-top:10px;display:none"></div>
+    </div>
+  </div>
+
+  <div class="page" id="page-settings">
+    <div class="g2">
       <div class="card">
-        <div class="ch"><div class="ct">Usuários do Sistema</div><button class="btn bp" style="font-size:11px">+ Usuário</button></div>
-        <div id="users-list"><div class="loading">🔄 Carregando usuários...</div></div>
+        <div class="ct" style="margin-bottom:16px">Identidade do Escritório</div>
+        <div class="fg"><label class="flb">Nome</label><input class="inp" value="Hespanhol Advogados"></div>
+        <div class="fg"><label class="flb">Advogado</label><input class="inp" value="Dr. Andre Luiz Hespanhol Tavares"></div>
+        <div class="fg"><label class="flb">OAB</label><input class="inp" value="OAB/RJ 109.359 · OAB/DF 39.645"></div>
+        <div class="fg"><label class="flb">E-mail profissional</label><input class="inp" value="andrehespanhol@andrehespanhol.com"></div>
+        <div class="fg"><label class="flb">E-mail do Agente</label><input class="inp" value="hespanhol@andrehespanhol.com"></div>
       </div>
-    </div>
-    <div class="page" id="page-connectors">
-      <div class="cc"><div class="cs son"></div><div style="flex:1"><div class="font-size:13px;font-weight:600;color:var(--tx)">Supabase</div><div style="font-size:11px;color:var(--tx3)">Banco de dados</div></div><span class="badge ba">Ativo</span></div>
-      <div class="cc"><div class="cs son"></div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--tx)">Resend API</div><div style="font-size:11px;color:var(--tx3)">hespanhol@andrehespanhol.com</div></div><span class="badge ba">Configurado</span></div>
-      <div class="cc"><div class="cs ssn"></div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--tx)">DataJud / CNJ</div><div style="font-size:11px;color:var(--tx3)">Monitoramento processual</div></div><button class="btn bg" style="font-size:11px">Configurar</button></div>
-      <div class="cc"><div class="cs son"></div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--tx)">Vercel</div><div style="font-size:11px;color:var(--tx3)">sistema.andrehespanhol.com</div></div><span class="badge ba">Online</span></div>
-      <div class="card" style="margin-top:16px">
-        <input class="inp" type="text" id="apikey-input" placeholder="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" autocomplete="off" style="flex:1">
-        <div style="font-size:12px;color:var(--tx3);margin-bottom:12px">Necessária para Importar Documentos e o Agente Hespanhol. Obtida em console.anthropic.com → API Keys.</div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <input class="inp" type="text" id="apikey-input" placeholder="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" autocomplete="off" style="flex:1">
-          <button class="btn bp" style="white-space:nowrap" onclick="salvarChave()">Salvar Chave</button>
-        </div>
-        <div id="apikey-status" style="font-size:12px;margin-top:10px;display:none"></div>
-      </div>
-    </div>
-    <div class="page" id="page-settings">
-      <div class="g2">
-        <div class="card">
-          <div class="ct" style="margin-bottom:16px">Identidade do Escritório</div>
-          <div class="fg"><label class="flb">Nome</label><input class="inp" value="Hespanhol Advogados"></div>
-          <div class="fg"><label class="flb">Advogado</label><input class="inp" value="Dr. Andre Luiz Hespanhol Tavares"></div>
-          <div class="fg"><label class="flb">OAB</label><input class="inp" value="OAB/RJ 109.359 · OAB/DF 39.645"></div>
-          <div class="fg"><label class="flb">E-mail profissional</label><input class="inp" value="andrehespanhol@andrehespanhol.com"></div>
-          <div class="fg"><label class="flb">E-mail do Agente</label><input class="inp" value="hespanhol@andrehespanhol.com"></div>
-        </div>
-        <div>
-          <div class="card" style="margin-bottom:16px">
-            <div class="ct" style="margin-bottom:14px">Tema de Cores</div>
-            <div style="display:flex;gap:8px">
-              <button onclick="setTheme('',this)" class="btn bg" style="flex:1;font-size:11px"><div style="width:12px;height:12px;border-radius:50%;background:#4A9FD4;margin:0 auto 4px"></div>Azul</button>
-              <button onclick="setTheme('tg',this)" class="btn bg" style="flex:1;font-size:11px"><div style="width:12px;height:12px;border-radius:50%;background:#c9a84c;margin:0 auto 4px"></div>Dourado</button>
-              <button onclick="setTheme('gr',this)" class="btn bg" style="flex:1;font-size:11px"><div style="width:12px;height:12px;border-radius:50%;background:#9b9bbb;margin:0 auto 4px"></div>Grafite</button>
-              <button onclick="setTheme('wh',this)" class="btn bg" style="flex:1;font-size:11px"><div style="width:12px;height:12px;border-radius:50%;background:#fff;border:1px solid #ccc;margin:0 auto 4px"></div>Branco</button>
-            </div>
+      <div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="ct" style="margin-bottom:14px">Tema de Cores</div>
+          <div style="display:flex;gap:8px">
+            <button onclick="setTheme('',this)" class="btn bg" style="flex:1;font-size:11px">Azul</button>
+            <button onclick="setTheme('tg',this)" class="btn bg" style="flex:1;font-size:11px">Dourado</button>
+            <button onclick="setTheme('gr',this)" class="btn bg" style="flex:1;font-size:11px">Grafite</button>
+            <button onclick="setTheme('wh',this)" class="btn bg" style="flex:1;font-size:11px">Branco</button>
           </div>
-          <div class="card">
-            <div class="ct" style="margin-bottom:10px">Status do Sistema</div>
-            <div style="display:flex;flex-direction:column;gap:8px;font-size:12px;color:var(--tx2)">
-              <div style="display:flex;justify-content:space-between"><span>Supabase</span><span style="color:var(--ok)">● Conectado</span></div>
-              <div style="display:flex;justify-content:space-between"><span>Vercel</span><span style="color:var(--ok)">● Online</span></div>
-              <div style="display:flex;justify-content:space-between"><span>Agente Hespanhol</span><span style="color:var(--wn)">Em configuração</span></div>
-            </div>
+        </div>
+        <div class="card">
+          <div class="ct" style="margin-bottom:10px">Status do Sistema</div>
+          <div style="display:flex;flex-direction:column;gap:8px;font-size:12px;color:var(--tx2)">
+            <div style="display:flex;justify-content:space-between"><span>Supabase</span><span style="color:var(--ok)">● Conectado</span></div>
+            <div style="display:flex;justify-content:space-between"><span>Vercel</span><span style="color:var(--ok)">● Online</span></div>
+            <div style="display:flex;justify-content:space-between"><span>Agente Hespanhol</span><span style="color:var(--wn)">Em configuração</span></div>
           </div>
         </div>
       </div>
     </div>
   </div>
+
+</div>
 </main>
+
 <button class="aibtn" onclick="toggleAI()">✦</button>
 <div class="aip" id="aip">
   <div class="aih"><div style="width:7px;height:7px;border-radius:50%;background:var(--ok)"></div><div style="font-size:12px;font-weight:600;color:var(--tx);flex:1">Agente Hespanhol</div><button style="background:none;border:none;color:var(--tx3);cursor:pointer;font-size:14px" onclick="toggleAI()">✕</button></div>
   <div class="aim" id="aim"><div class="aimsg bot">Olá, Dr. Andre! Como posso ajudar?</div></div>
   <div class="air"><input class="aii" id="aii" placeholder="Digite sua pergunta..." onkeydown="if(event.key==='Enter')sendAI()"><button class="ais" onclick="sendAI()">➤</button></div>
 </div>
+
 <div class="mo" id="modal" onclick="if(event.target===this)closeModal()">
   <div class="moc">
     <div class="mot" id="mot">Novo</div>
@@ -350,9 +316,10 @@ tr:hover td{background:var(--sf);}
     <div class="moa"><button class="btn bg" onclick="closeModal()">Cancelar</button><button class="btn bp" onclick="closeModal()">Salvar</button></div>
   </div>
 </div>
+
 <script>
 var SB_URL='https://rdmlxfgwlbroigsisjph.supabase.co';
-var SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkbWx4Zmd3bGJyb2lnc2lzanBoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3NjMxOTIsImV4cCI6MjA5MjMzOTE5Mn0.stw8254uQoJGka6jEx0kXQeGWXn_IOTZcyltM6c5UqA';
+var SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJIUzI1NiIsInJlZiI6InJkbWx4Zmd3bGJyb2lnc2lzanBoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3NjMxOTIsImV4cCI6MjA5MjMzOTE5Mn0.stw8254uQoJGka6jEx0kXQeGWXn_IOTZcyltM6c5UqA';
 var ANTHROPIC_KEY='';
 var db=supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,storage:window.localStorage}});
 var ptitles={dashboard:'Dashboard',cases:'Casos',clients:'Clientes',agenda:'Agenda',movements:'Andamentos',expenses:'Despesas',docs:'Documentos',importer:'Importar Documento',financial:'Financeiro',email:'Agente E-mail',access:'Controle de Acesso',connectors:'Conectores',settings:'Configurações'};
@@ -363,29 +330,32 @@ function go(id,el){
   var pg=document.getElementById('page-'+id);
   if(pg)pg.classList.add('active');
   if(el)el.classList.add('active');
-  document.getElementById('ptitle').textContent=ptitles[id]||id;
+  var title=document.getElementById('ptitle');
+  if(title)title.textContent=ptitles[id]||id;
   if(id==='cases')loadCases();
   if(id==='clients')loadClients();
   if(id==='access')loadUsers();
 }
 
+function safeText(v){return (v===null||v===undefined||v==='')?'—':String(v);}
+
 function loadCases(){
   var tbody=document.getElementById('cases-tbody');
   var countEl=document.getElementById('cases-count');
+  if(!tbody)return;
   tbody.innerHTML='<tr><td colspan="7" class="loading">🔄 Buscando no banco...</td></tr>';
   db.from('casos').select('*, clientes(nome)').then(function(res){
     if(res.error){tbody.innerHTML='<tr><td colspan="7" style="color:var(--er);padding:16px;text-align:center">Erro: '+res.error.message+'</td></tr>';return;}
     var data=res.data||[];
     if(countEl)countEl.textContent=data.length+' casos ativos';
-    var nb=document.getElementById('cases-nb');
-    if(nb)nb.textContent=data.length;
+    var nb=document.getElementById('cases-nb'); if(nb)nb.textContent=data.length;
     if(data.length===0){tbody.innerHTML='<tr><td colspan="7" class="loading">Nenhum caso cadastrado ainda.</td></tr>';return;}
     tbody.innerHTML='';
     data.forEach(function(c){
       var tr=document.createElement('tr');
       var nome=c.clientes?c.clientes.nome:'—';
-      var status=c.status==='ativo'?'<span class="badge ba">Ativo</span>':'<span class="badge bw">'+(c.status||'—')+'</span>';
-      tr.innerHTML='<td style="color:var(--tx3);font-size:11px">'+(c.numero_cnj||'—')+'</td><td>'+nome+'</td><td style="color:var(--tx3)">'+(c.tipo_acao||'—')+'</td><td style="color:var(--tx3)">'+(c.tribunal||'—')+'</td><td style="color:var(--tx3)">'+(c.fase||'—')+'</td><td>'+status+'</td><td class="admin-only" style="color:var(--ac);font-weight:600">'+(c.valor_causa?'R$'+c.valor_causa:'A definir')+'</td>';
+      var status=c.status==='ativo'?'<span class="badge ba">Ativo</span>':'<span class="badge bw">'+safeText(c.status)+'</span>';
+      tr.innerHTML='<td style="color:var(--tx3);font-size:11px">'+safeText(c.numero_cnj)+'</td><td>'+nome+'</td><td style="color:var(--tx3)">'+safeText(c.tipo_acao)+'</td><td style="color:var(--tx3)">'+safeText(c.tribunal)+'</td><td style="color:var(--tx3)">'+safeText(c.fase)+'</td><td>'+status+'</td><td class="admin-only" style="color:var(--ac);font-weight:600">'+(c.valor_causa?'R$'+c.valor_causa:'A definir')+'</td>';
       tbody.appendChild(tr);
     });
   });
@@ -394,20 +364,21 @@ function loadCases(){
 function loadClients(){
   var lista=document.getElementById('clients-list');
   var countEl=document.getElementById('clients-count');
+  if(!lista)return;
   lista.innerHTML='<div class="loading">🔄 Buscando no banco...</div>';
   db.from('clientes').select('*').then(function(res){
     if(res.error){lista.innerHTML='<div style="color:var(--er);padding:16px">Erro: '+res.error.message+'</div>';return;}
     var data=res.data||[];
     if(countEl)countEl.textContent=data.length+' clientes cadastrados';
-    var nb=document.getElementById('clients-nb');
-    if(nb)nb.textContent=data.length;
+    var nb=document.getElementById('clients-nb'); if(nb)nb.textContent=data.length;
     if(data.length===0){lista.innerHTML='<div class="loading">Nenhum cliente cadastrado ainda.</div>';return;}
     lista.innerHTML='';
     data.forEach(function(c){
-      var iniciais=c.nome.split(' ').slice(0,2).map(function(p){return p[0];}).join('').toUpperCase();
+      var nome=c.nome||'Cliente';
+      var iniciais=nome.split(' ').slice(0,2).map(function(p){return p[0]||'';}).join('').toUpperCase();
       var div=document.createElement('div');
       div.style.cssText='background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);padding:14px 18px;display:flex;align-items:center;gap:14px;margin-bottom:8px';
-      div.innerHTML='<div class="av" style="background:rgba(74,159,212,.3);color:var(--ac)">'+iniciais+'</div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--tx)">'+c.nome+'</div><div style="font-size:11px;color:var(--tx3)">'+(c.cpf_cnpj||'')+(c.endereco?' · '+c.endereco:'')+'</div></div><span class="badge ba">Ativo</span>';
+      div.innerHTML='<div class="av" style="background:rgba(74,159,212,.3);color:var(--ac)">'+iniciais+'</div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--tx)">'+nome+'</div><div style="font-size:11px;color:var(--tx3)">'+(c.cpf_cnpj||'')+(c.endereco?' · '+c.endereco:'')+'</div></div><span class="badge ba">Ativo</span>';
       lista.appendChild(div);
     });
   });
@@ -415,16 +386,18 @@ function loadClients(){
 
 function loadUsers(){
   var lista=document.getElementById('users-list');
+  if(!lista)return;
   lista.innerHTML='<div class="loading">🔄 Carregando...</div>';
   db.from('usuarios').select('*').then(function(res){
     if(res.error){lista.innerHTML='<div style="color:var(--er);padding:16px">Erro: '+res.error.message+'</div>';return;}
     if(!res.data||res.data.length===0){lista.innerHTML='<div class="loading">Nenhum usuário cadastrado.</div>';return;}
     lista.innerHTML='';
     res.data.forEach(function(u){
-      var iniciais=u.nome.split(' ').slice(0,2).map(function(p){return p[0];}).join('').toUpperCase();
+      var nome=u.nome||'Usuário';
+      var iniciais=nome.split(' ').slice(0,2).map(function(p){return p[0]||'';}).join('').toUpperCase();
       var div=document.createElement('div');
       div.style.cssText='display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd)';
-      div.innerHTML='<div class="av">'+iniciais+'</div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--tx)">'+u.nome+'</div><div style="font-size:11px;color:var(--tx3)">'+u.email+'</div></div><span class="rb ra">'+u.perfil+'</span>';
+      div.innerHTML='<div class="av">'+iniciais+'</div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--tx)">'+nome+'</div><div style="font-size:11px;color:var(--tx3)">'+safeText(u.email)+'</div></div><span class="rb ra">'+safeText(u.perfil)+'</span>';
       lista.appendChild(div);
     });
   });
@@ -433,25 +406,26 @@ function loadUsers(){
 function loadDashboard(){
   db.from('casos').select('*',{count:'exact',head:true}).then(function(res){
     var n=res.count||0;
-    var el=document.getElementById('dash-casos');if(el)el.textContent=n;
-    var nb=document.getElementById('cases-nb');if(nb)nb.textContent=n;
+    var el=document.getElementById('dash-casos'); if(el)el.textContent=n;
+    var nb=document.getElementById('cases-nb'); if(nb)nb.textContent=n;
   });
   db.from('clientes').select('*',{count:'exact',head:true}).then(function(res){
     var n=res.count||0;
-    var el=document.getElementById('dash-clientes');if(el)el.textContent=n;
-    var nb=document.getElementById('clients-nb');if(nb)nb.textContent=n;
+    var el=document.getElementById('dash-clientes'); if(el)el.textContent=n;
+    var nb=document.getElementById('clients-nb'); if(nb)nb.textContent=n;
   });
   db.from('casos').select('*, clientes(nome)').limit(4).then(function(res){
     var lista=document.getElementById('dash-casos-list');
     if(!lista)return;
     var data=res.data||[];
     if(data.length===0){lista.innerHTML='<div class="loading">Nenhum caso ainda.</div>';return;}
-    lista.innerHTML='<table><thead><tr><th>Cliente</th><th>Tipo</th><th>Status</th></tr></thead><tbody>'+data.map(function(c){return '<tr><td>'+(c.clientes?c.clientes.nome:'—')+'</td><td style="color:var(--tx3)">'+(c.tipo_acao||'—')+'</td><td><span class="badge ba">Ativo</span></td></tr>';}).join('')+'</tbody></table>';
+    lista.innerHTML='<table><thead><tr><th>Cliente</th><th>Tipo</th><th>Status</th></tr></thead><tbody>'+data.map(function(c){return '<tr><td>'+(c.clientes?c.clientes.nome:'—')+'</td><td style="color:var(--tx3)">'+safeText(c.tipo_acao)+'</td><td><span class="badge ba">Ativo</span></td></tr>';}).join('')+'</tbody></table>';
   });
 }
 
 function mostrarSistema(){
-  document.getElementById('login-wrap').style.display='none';
+  var login=document.getElementById('login-wrap');
+  if(login)login.style.display='none';
   loadDashboard();
 }
 
@@ -481,22 +455,35 @@ function fazerLogout(){
 db.auth.getSession().then(function(res){if(res.data&&res.data.session){mostrarSistema();}});
 
 function getApiKey(){
-  return window._apiKey||localStorage.getItem('hsp_apikey')||ANTHROPIC_KEY||'';
+  return (localStorage.getItem('hsp_apikey') || window._apiKey || ANTHROPIC_KEY || '').trim();
 }
 
 function salvarChave(){
   var input=document.getElementById('apikey-input');
-  var val=input?input.value.trim():'';
+  var val=input ? input.value.trim() : '';
   var st=document.getElementById('apikey-status');
+
+  if(!st){alert('Erro interno: campo de status não encontrado.');return;}
+
   if(!val){
-    st.style.display='block';st.style.color='var(--er)';
+    st.style.display='block';
+    st.style.color='var(--er)';
     st.textContent='❌ Campo vazio. Cole a chave e tente novamente.';
     return;
   }
+
+  if(val.indexOf('sk-ant-')!==0){
+    st.style.display='block';
+    st.style.color='var(--wn)';
+    st.textContent='⚠️ A chave foi salva, mas ela não parece começar com sk-ant-. Verifique se colou a chave correta.';
+  } else {
+    st.style.display='block';
+    st.style.color='var(--ok)';
+    st.textContent='✅ Chave salva com sucesso!';
+  }
+
   localStorage.setItem('hsp_apikey',val);
   window._apiKey=val;
-  st.style.display='block';st.style.color='var(--ok)';
-  st.textContent='✅ Chave salva com sucesso!';
 }
 
 function callClaude(payload, onSuccess, onError){
@@ -504,9 +491,23 @@ function callClaude(payload, onSuccess, onError){
   if(!key){onError('Chave da API não configurada. Configure em Conectores.');return;}
   fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
-    headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-allow-browser':'true'},
+    headers:{
+      'Content-Type':'application/json',
+      'x-api-key':key,
+      'anthropic-version':'2023-06-01',
+      'anthropic-dangerous-allow-browser':'true'
+    },
     body:JSON.stringify(payload)
-  }).then(function(r){return r.json();}).then(function(d){
+  }).then(async function(r){
+    var text=await r.text();
+    var payloadResp={};
+    try{payloadResp=text?JSON.parse(text):{};}catch(e){payloadResp={raw:text};}
+    if(!r.ok){
+      var msg=(payloadResp.error&&payloadResp.error.message)||payloadResp.message||text||('Erro HTTP '+r.status);
+      throw new Error(msg);
+    }
+    return payloadResp;
+  }).then(function(d){
     if(d.error){onError(d.error.message||'Erro da API');return;}
     onSuccess(d);
   }).catch(function(e){onError(e.message||'Erro de rede');});
@@ -515,21 +516,13 @@ function callClaude(payload, onSuccess, onError){
 function openModal(t){
   var b={
     new:'<div class="fg"><label class="flb">Tipo</label><select class="inp"><option>Caso</option><option>Cliente</option><option>Prazo</option></select></div><div class="fg"><label class="flb">Descrição</label><input class="inp" placeholder="Nome do cliente ou caso"></div><div class="fg"><label class="flb">Nº CNJ</label><input class="inp" placeholder="0000000-00.0000.0.00.0000"></div>',
-    expense:'<div class="fg"><label class="flb">Cliente</label><input class="inp" placeholder="Nome do cliente"></div><div class="fg"><label class="flb">Categoria</label><select class="inp"><option>Transporte</option><option>Custas</option><option>Cópias</option><option>Diárias</option></select></div><div class="fg"><label class="flb">Valor</label><input class="inp" placeholder="0,00"></div>',
-    apikey:'<div class="fg"><label class="flb">Chave da API Anthropic</label><input class="inp" id="apikeyinput" type="password" placeholder="sk-ant-..."><div style="font-size:11px;color:var(--tx3);margin-top:6px">Obtida em console.anthropic.com → API Keys</div></div>'
+    expense:'<div class="fg"><label class="flb">Cliente</label><input class="inp" placeholder="Nome do cliente"></div><div class="fg"><label class="flb">Categoria</label><select class="inp"><option>Transporte</option><option>Custas</option><option>Cópias</option><option>Diárias</option></select></div><div class="fg"><label class="flb">Valor</label><input class="inp" placeholder="0,00"></div>'
   };
-  var tt={new:'Novo Registro',expense:'Lançar Despesa',apikey:'Configurar API Anthropic'};
+  var tt={new:'Novo Registro',expense:'Lançar Despesa'};
   document.getElementById('mot').textContent=tt[t]||'Novo';
   document.getElementById('mob').innerHTML=b[t]||b.new;
   var saveBtn=document.querySelector('.moa .bp');
-  if(t==='apikey'){
-    saveBtn.onclick=function(){
-      var v=document.getElementById('apikeyinput').value.trim();
-      if(v){window._apiKey=v;closeModal();alert('Chave salva para esta sessão.');}
-    };
-  } else {
-    saveBtn.onclick=closeModal;
-  }
+  if(saveBtn)saveBtn.onclick=closeModal;
   document.getElementById('modal').classList.add('open');
 }
 
@@ -538,14 +531,14 @@ function closeModal(){document.getElementById('modal').classList.remove('open');
 function setTheme(t,btn){
   document.body.className=t;
   document.querySelectorAll('[onclick^="setTheme"]').forEach(function(b){b.style.borderColor='';});
-  btn.style.borderColor='var(--ac)';
+  if(btn)btn.style.borderColor='var(--ac)';
 }
 
 function stab(id,el){
   document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
   document.querySelectorAll('.tc').forEach(function(t){t.classList.remove('active');});
   if(el)el.classList.add('active');
-  var tc=document.getElementById('tab-'+id);if(tc)tc.classList.add('active');
+  var tc=document.getElementById('tab-'+id); if(tc)tc.classList.add('active');
 }
 
 var roles={
@@ -557,10 +550,10 @@ var roles={
 };
 
 function switchRole(r){
-  var c=roles[r];if(!c)return;
+  var c=roles[r]; if(!c)return;
   document.getElementById('uname').textContent=c.name;
   document.getElementById('av').textContent=c.av;
-  var rb=document.getElementById('urole');rb.textContent=c.role;rb.className='rb '+c.cls;
+  var rb=document.getElementById('urole'); rb.textContent=c.role; rb.className='rb '+c.cls;
   document.querySelectorAll('.admin-only').forEach(function(el){el.style.display=c.adm?'':'none';});
   document.querySelectorAll('.fin-only').forEach(function(el){el.style.display=c.fin?'':'none';});
   var fo=document.getElementById('fin-ok'),fn=document.getElementById('fin-no');
@@ -568,16 +561,30 @@ function switchRole(r){
   if(fn)fn.style.display=c.fin?'none':'block';
 }
 
+function resetUploadZone(){
+  var zone=document.getElementById('upload-zone');
+  if(!zone)return;
+  zone.innerHTML='<input type="file" id="pdf-upload" accept=".pdf" style="display:none" onchange="doImport(this)"><div style="font-size:36px;margin-bottom:12px">📄</div><div style="font-size:14px;font-weight:600;color:var(--tx);margin-bottom:6px">Importar Procuração ou Contrato</div><div style="font-size:12px;color:var(--tx3)">Clique para selecionar o PDF</div>';
+}
+
 function doImport(input){
-  var zone=document.querySelector('.iz');
+  var zone=document.getElementById('upload-zone') || document.querySelector('.iz');
   var res=document.getElementById('imp-result');
   var file=input&&input.files&&input.files[0];
   if(!file)return;
+  if(file.type && file.type!=='application/pdf'){
+    zone.innerHTML='<div style="font-size:36px">❌</div><div style="color:var(--er);margin-top:8px">Selecione um arquivo PDF.</div><div style="margin-top:12px"><button class="btn bg" onclick="resetUploadZone()">Tentar novamente</button></div>';
+    return;
+  }
   zone.innerHTML='<div style="font-size:36px;margin-bottom:12px">⏳</div><div style="font-size:14px;font-weight:600;color:var(--tx)">Lendo '+file.name+'...</div>';
-  res.style.display='none';res.innerHTML='';
+  res.style.display='none'; res.innerHTML='';
   var reader=new FileReader();
   reader.onload=function(e){
-    var b64=e.target.result.split(',')[1];
+    var b64=(e.target.result||'').split(',')[1];
+    if(!b64){
+      zone.innerHTML='<div style="font-size:36px">❌</div><div style="color:var(--er);margin-top:8px">Não foi possível ler o PDF.</div><div style="margin-top:12px"><button class="btn bg" onclick="resetUploadZone()">Tentar novamente</button></div>';
+      return;
+    }
     callClaude({
       model:'claude-sonnet-4-20250514',
       max_tokens:1000,
@@ -588,53 +595,60 @@ function doImport(input){
       var dados;
       try{
         var clean=text.replace(/```json/g,'').replace(/```/g,'').trim();
+        var first=clean.indexOf('{');
+        var last=clean.lastIndexOf('}');
+        if(first>=0 && last>first)clean=clean.slice(first,last+1);
         dados=JSON.parse(clean);
       }catch(e){
-        zone.innerHTML='<div style="font-size:36px">❌</div><div style="color:var(--er);margin-top:8px">Erro ao interpretar resposta da IA</div>';
+        zone.innerHTML='<div style="font-size:36px">❌</div><div style="color:var(--er);margin-top:8px">Erro ao interpretar resposta da IA</div><div style="font-size:11px;color:var(--tx3);margin-top:8px;white-space:pre-wrap">'+text.slice(0,500)+'</div><div style="margin-top:12px"><button class="btn bg" onclick="resetUploadZone()">Tentar novamente</button></div>';
         return;
       }
       window._dadosImport=dados;
-      zone.innerHTML='<div style="font-size:36px;margin-bottom:12px">✅</div><div style="font-size:14px;font-weight:600;color:var(--ok)">Lido com sucesso</div><div style="font-size:12px;color:var(--tx3);margin-top:6px">'+(dados.cliente||'')+'</div>';
+      zone.innerHTML='<div style="font-size:36px;margin-bottom:12px">✅</div><div style="font-size:14px;font-weight:600;color:var(--ok)">Lido com sucesso</div><div style="font-size:12px;color:var(--tx3);margin-top:6px">'+safeText(dados.cliente)+'</div><div style="margin-top:12px"><button class="btn bg" onclick="resetUploadZone()">Escolher outro PDF</button></div>';
       var procs='';
       if(dados.processos&&dados.processos.length){
         dados.processos.forEach(function(p,i){
           procs+='<div style="margin:10px 0 6px;font-size:11px;color:var(--ac);text-transform:uppercase;letter-spacing:1px">'+(i+1)+'º Processo</div>';
-          procs+='<div class="fi"><span class="fl">CNJ</span><span class="fv">'+(p.cnj||'—')+'</span></div>';
-          procs+='<div class="fi"><span class="fl">Tribunal</span><span class="fv">'+(p.tribunal||'—')+'</span></div>';
-          procs+='<div class="fi"><span class="fl">Tipo</span><span class="fv">'+(p.tipo||'—')+'</span></div>';
+          procs+='<div class="fi"><span class="fl">CNJ</span><span class="fv">'+safeText(p.cnj)+'</span></div>';
+          procs+='<div class="fi"><span class="fl">Tribunal</span><span class="fv">'+safeText(p.tribunal)+'</span></div>';
+          procs+='<div class="fi"><span class="fl">Tipo</span><span class="fv">'+safeText(p.tipo)+'</span></div>';
         });
       }
       res.innerHTML='<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><span style="font-size:18px">✦</span><div style="font-size:13px;font-weight:600;color:var(--ac)">Dados extraídos:</div></div>'
-        +'<div class="fi"><span class="fl">Cliente</span><span class="fv">'+(dados.cliente||'—')+'</span></div>'
-        +'<div class="fi"><span class="fl">CPF</span><span class="fv">'+(dados.cpf||'—')+'</span></div>'
-        +'<div class="fi"><span class="fl">Endereço</span><span class="fv" style="font-size:11px">'+(dados.endereco||'—')+'</span></div>'
+        +'<div class="fi"><span class="fl">Cliente</span><span class="fv">'+safeText(dados.cliente)+'</span></div>'
+        +'<div class="fi"><span class="fl">CPF</span><span class="fv">'+safeText(dados.cpf)+'</span></div>'
+        +'<div class="fi"><span class="fl">Endereço</span><span class="fv" style="font-size:11px">'+safeText(dados.endereco)+'</span></div>'
         +procs
         +'<div style="display:flex;gap:8px;margin-top:14px">'
-        +'<button class="btn bg" style="flex:1" onclick="document.getElementById(\'pdf-upload\').click()">Trocar PDF</button>'
+        +'<button class="btn bg" style="flex:1" onclick="resetUploadZone();document.getElementById(\'pdf-upload\').click()">Trocar PDF</button>'
         +'<button class="btn bp" style="flex:1" onclick="salvarNoBanco()">✓ Salvar no Banco</button>'
         +'</div><div id="save-status" style="margin-top:10px;font-size:12px;display:none"></div>';
       res.style.display='block';
     }, function(errMsg){
-      zone.innerHTML='<div style="font-size:36px">❌</div><div style="color:var(--er);margin-top:8px">'+errMsg+'</div>';
+      zone.innerHTML='<div style="font-size:36px">❌</div><div style="color:var(--er);margin-top:8px">'+errMsg+'</div><div style="margin-top:12px"><button class="btn bg" onclick="resetUploadZone()">Tentar novamente</button></div>';
     });
+  };
+  reader.onerror=function(){
+    zone.innerHTML='<div style="font-size:36px">❌</div><div style="color:var(--er);margin-top:8px">Erro ao ler o arquivo.</div><div style="margin-top:12px"><button class="btn bg" onclick="resetUploadZone()">Tentar novamente</button></div>';
   };
   reader.readAsDataURL(file);
 }
 
 function salvarNoBanco(){
-  var d=window._dadosImport;if(!d)return;
+  var d=window._dadosImport; if(!d)return;
   var st=document.getElementById('save-status');
-  st.style.display='block';st.style.color='var(--tx3)';st.textContent='⏳ Salvando no banco...';
-  db.from('clientes').insert({nome:d.cliente,cpf_cnpj:d.cpf,email:d.email||'',endereco:d.endereco,tipo:'PF'}).select().then(function(res){
+  st.style.display='block'; st.style.color='var(--tx3)'; st.textContent='⏳ Salvando no banco...';
+  db.from('clientes').insert({nome:d.cliente||'Cliente sem nome',cpf_cnpj:d.cpf||'',email:d.email||'',endereco:d.endereco||'',tipo:'PF'}).select().then(function(res){
     if(res.error){st.style.color='var(--er)';st.textContent='Erro: '+res.error.message;return;}
-    var clienteId=res.data[0].id;
+    var clienteId=res.data&&res.data[0]?res.data[0].id:null;
+    if(!clienteId){st.style.color='var(--er)';st.textContent='Erro: cliente salvo sem ID retornado.';return;}
     var inserts=(d.processos||[]).map(function(p){
-      return{cliente_id:clienteId,numero_cnj:p.cnj,tribunal:p.tribunal,tipo_acao:p.tipo,fase:p.fase||'Em curso',area:d.area,status:'ativo'};
+      return{cliente_id:clienteId,numero_cnj:p.cnj||'',tribunal:p.tribunal||'',tipo_acao:p.tipo||'',fase:p.fase||'Em curso',area:d.area||'',status:'ativo'};
     });
     if(inserts.length===0){st.style.color='var(--ok)';st.textContent='✅ Cliente salvo!';return;}
     db.from('casos').insert(inserts).then(function(r2){
       if(r2.error){st.style.color='var(--er)';st.textContent='Erro: '+r2.error.message;return;}
-      st.style.color='var(--ok)';st.textContent='✅ '+d.cliente+' salvo com '+inserts.length+' processo(s)!';
+      st.style.color='var(--ok)';st.textContent='✅ '+(d.cliente||'Cliente')+' salvo com '+inserts.length+' processo(s)!';
       setTimeout(function(){go('cases',document.querySelectorAll('.ni')[1]);},1500);
     });
   });
@@ -642,7 +656,7 @@ function salvarNoBanco(){
 
 function genEmail(){
   var box=document.getElementById('email-box');
-  box.style.display='block';box.textContent='✦ Redigindo...';
+  box.style.display='block'; box.textContent='✦ Redigindo...';
   callClaude({
     model:'claude-sonnet-4-20250514',
     max_tokens:400,
@@ -659,7 +673,7 @@ function toggleAI(){document.getElementById('aip').classList.toggle('open');}
 
 function sendAI(){
   var inp=document.getElementById('aii'),msgs=document.getElementById('aim'),text=inp.value.trim();
-  if(!text)return;inp.value='';
+  if(!text)return; inp.value='';
   var u=document.createElement('div');u.className='aimsg usr';u.textContent=text;msgs.appendChild(u);
   var t=document.createElement('div');t.className='aty';t.innerHTML='<span></span><span></span><span></span>';msgs.appendChild(t);
   msgs.scrollTop=msgs.scrollHeight;
@@ -680,6 +694,12 @@ function sendAI(){
     msgs.appendChild(b);msgs.scrollTop=msgs.scrollHeight;
   });
 }
+
+document.addEventListener('DOMContentLoaded',function(){
+  var existing=getApiKey();
+  var input=document.getElementById('apikey-input');
+  if(input && existing)input.value=existing;
+});
 </script>
 </body>
 </html>

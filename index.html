@@ -259,9 +259,10 @@ tr:hover td{background:var(--sf);}
     <div class="card" style="margin-top:16px">
       <div class="ct" style="margin-bottom:14px">🤖 Anthropic API — Chave de Acesso</div>
       <div style="font-size:12px;color:var(--tx3);margin-bottom:12px">Necessária para Importar Documentos e o Agente Hespanhol. Obtida em console.anthropic.com → API Keys.</div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <input class="inp" type="text" id="apikey-input" placeholder="Cole aqui sua chave sk-ant-..." autocomplete="off" style="flex:1">
-        <button class="btn bp" style="white-space:nowrap" onclick="salvarChave()">Salvar Chave</button>
+      <div style="display:flex;gap:8px;align-items:center;position:relative;z-index:10;pointer-events:auto">
+        <input class="inp" type="text" id="apikey-input" placeholder="Cole aqui sua chave sk-ant-..." autocomplete="off" autocapitalize="off" spellcheck="false" onclick="event.stopPropagation()" onmousedown="event.stopPropagation()" onfocus="this.removeAttribute('readonly')" style="flex:1;position:relative;z-index:20;pointer-events:auto;user-select:text;-webkit-user-select:text;">
+        <button class="btn bp" style="white-space:nowrap;position:relative;z-index:21;pointer-events:auto" onclick="salvarChave()">Salvar Chave</button>
+        <button class="btn bg" style="white-space:nowrap;position:relative;z-index:21;pointer-events:auto" onclick="colarChaveManual()">Colar Manual</button>
       </div>
       <div id="apikey-status" style="font-size:12px;margin-top:10px;display:none"></div>
     </div>
@@ -455,7 +456,11 @@ function fazerLogout(){
 db.auth.getSession().then(function(res){if(res.data&&res.data.session){mostrarSistema();}});
 
 function getApiKey(){
-  return (localStorage.getItem('hsp_apikey') || window._apiKey || ANTHROPIC_KEY || '').trim();
+  var k1='';
+  try{k1=localStorage.getItem('hsp_apikey')||'';}catch(e){k1='';}
+  var k2=window._apiKey||'';
+  var k3=ANTHROPIC_KEY||'';
+  return (k1||k2||k3||'').trim();
 }
 
 function salvarChave(){
@@ -463,27 +468,49 @@ function salvarChave(){
   var val=input ? input.value.trim() : '';
   var st=document.getElementById('apikey-status');
 
-  if(!st){alert('Erro interno: campo de status não encontrado.');return;}
+  if(!st){
+    alert('Erro interno: campo de status não encontrado.');
+    return;
+  }
 
   if(!val){
     st.style.display='block';
     st.style.color='var(--er)';
-    st.textContent='❌ Campo vazio. Cole a chave e tente novamente.';
+    st.textContent='❌ Campo vazio. Clique em "Colar Manual" ou cole a chave no campo.';
+    if(input){input.focus();}
     return;
   }
 
+  try{
+    localStorage.setItem('hsp_apikey',val);
+  }catch(e){
+    st.style.display='block';
+    st.style.color='var(--er)';
+    st.textContent='❌ O navegador bloqueou o salvamento local: '+(e.message||e);
+    return;
+  }
+
+  window._apiKey=val;
+
+  st.style.display='block';
   if(val.indexOf('sk-ant-')!==0){
-    st.style.display='block';
     st.style.color='var(--wn)';
-    st.textContent='⚠️ A chave foi salva, mas ela não parece começar com sk-ant-. Verifique se colou a chave correta.';
-  } else {
-    st.style.display='block';
+    st.textContent='⚠️ Chave salva, mas ela não parece começar com sk-ant-. Confira se colou a chave correta.';
+  }else{
     st.style.color='var(--ok)';
     st.textContent='✅ Chave salva com sucesso!';
   }
+}
 
-  localStorage.setItem('hsp_apikey',val);
-  window._apiKey=val;
+function colarChaveManual(){
+  var atual='';
+  var input=document.getElementById('apikey-input');
+  if(input){atual=input.value.trim();}
+  var val=prompt('Cole aqui sua chave da Anthropic API:', atual);
+  if(val===null)return;
+  val=val.trim();
+  if(input){input.value=val;}
+  salvarChave();
 }
 
 function callClaude(payload, onSuccess, onError){
@@ -698,7 +725,24 @@ function sendAI(){
 document.addEventListener('DOMContentLoaded',function(){
   var existing=getApiKey();
   var input=document.getElementById('apikey-input');
-  if(input && existing)input.value=existing;
+  var st=document.getElementById('apikey-status');
+
+  if(input){
+    input.disabled=false;
+    input.readOnly=false;
+    input.style.pointerEvents='auto';
+    input.style.userSelect='text';
+    input.style.webkitUserSelect='text';
+    input.style.position='relative';
+    input.style.zIndex='20';
+    if(existing)input.value=existing;
+  }
+
+  if(st && existing){
+    st.style.display='block';
+    st.style.color='var(--ok)';
+    st.textContent='✅ Chave já está salva neste navegador.';
+  }
 });
 </script>
 </body>

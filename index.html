@@ -487,9 +487,9 @@ function getApiKey(){
 function salvarChave(){
   var val=document.getElementById('apikey-input').value.trim();
   var st=document.getElementById('apikey-status');
-  if(!val||val.length<20){
+  if(!val){
     st.style.display='block';st.style.color='var(--er)';
-    st.textContent='❌ Chave inválida. Verifique e tente novamente.';
+    st.textContent='❌ Campo vazio. Cole a chave e tente novamente.';
     return;
   }
   localStorage.setItem('hsp_apikey',val);

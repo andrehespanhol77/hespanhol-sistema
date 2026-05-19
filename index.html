@@ -301,12 +301,23 @@ tr:hover td{background:var(--sf);}
   </div>
 
   <div class="page" id="page-email">
-    <div class="card">
-      <div class="ct" style="margin-bottom:14px">✦ Redigir com Agente Hespanhol</div>
-      <div class="fg"><label class="flb">Tipo</label><select class="inp" id="email-tipo"><option>Atualização de andamento</option><option>Convocação para reunião</option><option>Comunicado de prazo</option></select></div>
-      <div class="fg"><label class="flb">Instruções</label><textarea class="inp" id="email-inst" rows="3" placeholder="Tom formal, mencionar prazo..."></textarea></div>
-      <div style="display:flex;gap:8px"><button class="btn bg" style="flex:1" onclick="genEmail()">✦ Gerar com IA</button><button class="btn bp" style="flex:1">Enviar</button></div>
-      <div id="email-box" style="display:none;margin-top:12px;background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:12px;font-size:12px;color:var(--tx2);line-height:1.6;white-space:pre-wrap"></div>
+    <div class="g2">
+      <div class="card">
+        <div class="ct" style="margin-bottom:14px">✉️ Redigir E-mail</div>
+        <div class="fg"><label class="flb">Destinatário (cliente)</label><select class="inp" id="email-dest"><option value="">Selecione um cliente...</option></select></div>
+        <div class="fg"><label class="flb">Ou digite o e-mail manualmente</label><input class="inp" id="email-dest-manual" type="email" placeholder="email@cliente.com"></div>
+        <div class="fg"><label class="flb">Assunto *</label><input class="inp" id="email-assunto" placeholder="Ref: Processo nº..."></div>
+        <div class="fg"><label class="flb">Tipo (para gerar com IA)</label><select class="inp" id="email-tipo"><option>Atualização de andamento</option><option>Convocação para reunião</option><option>Comunicado de prazo</option><option>Envio de documentos</option><option>Cobrança de honorários</option></select></div>
+        <div class="fg"><label class="flb">Instruções adicionais</label><textarea class="inp" id="email-inst" rows="2" placeholder="Tom formal, mencionar prazo..."></textarea></div>
+        <button class="btn bg" style="width:100%;margin-bottom:12px" onclick="genEmail()">✦ Gerar corpo com IA</button>
+        <div class="fg"><label class="flb">Corpo do e-mail *</label><textarea class="inp" id="email-box" rows="10" placeholder="Redija ou gere o e-mail acima..."></textarea></div>
+        <div id="email-status" style="font-size:12px;margin-bottom:8px;display:none"></div>
+        <button class="btn bp" style="width:100%" onclick="enviarEmail()">📤 Enviar E-mail</button>
+      </div>
+      <div class="card">
+        <div class="ct" style="margin-bottom:14px">📋 Enviados Recentemente</div>
+        <div id="email-sent-list"><div class="loading" style="font-size:12px;color:var(--tx3)">Nenhum e-mail enviado nesta sessão.</div></div>
+      </div>
     </div>
   </div>
 
@@ -440,6 +451,7 @@ function go(id,el){
   if(id==='relatorio')loadRelatorio();
   if(id==='movements')loadMovements();
   if(id==='audit')loadAudit();
+  if(id==='email')loadEmailClients();
 }
 
 function abrirNovoContextual(){
@@ -990,17 +1002,61 @@ function salvarNoBanco(){
 }
 
 // ── AGENTE DE E-MAIL ───────────────────────────────────────────
+var _emailsEnviados=[];
+
+function loadEmailClients(){
+  var sel=document.getElementById('email-dest');
+  if(!sel)return;
+  db.from('clientes').select('nome,email').order('nome').then(function(res){
+    var data=(res.data||[]).filter(function(c){return c.email;});
+    sel.innerHTML='<option value="">Selecione um cliente...</option>'+data.map(function(c){
+      return '<option value="'+c.email+'">'+c.nome+' — '+c.email+'</option>';
+    }).join('');
+  });
+}
+
+function adicionarEmailEnviado(dest,assunto){
+  _emailsEnviados.unshift({dest:dest,assunto:assunto,hora:new Date().toLocaleTimeString('pt-BR')});
+  var lista=document.getElementById('email-sent-list');
+  if(!lista)return;
+  lista.innerHTML=_emailsEnviados.slice(0,10).map(function(e){
+    return '<div style="padding:8px 0;border-bottom:1px solid var(--bd);font-size:12px"><div style="color:var(--tx)">'+e.assunto+'</div><div style="color:var(--tx3);margin-top:2px">Para: '+e.dest+' · '+e.hora+'</div></div>';
+  }).join('');
+}
+
 function genEmail(){
   var box=document.getElementById('email-box');
   var tipo=document.getElementById('email-tipo').value;
   var inst=document.getElementById('email-inst').value;
-  box.style.display='block';box.textContent='✦ Redigindo...';
+  box.value='✦ Redigindo...';
   callClaude({
-    model:'claude-sonnet-4-6',max_tokens:500,
-    system:'Você é o Agente Hespanhol do escritório Hespanhol Advogados. Redija e-mails jurídicos formais em português.',
-    messages:[{role:'user',content:'Tipo: '+tipo+'. Instruções: '+(inst||'tom formal')+'.\n\nRedija o e-mail completo.'}]
-  }, function(d){box.textContent=d.content&&d.content[0]?d.content[0].text:'Erro.';},
-  function(errMsg){box.textContent='Agente indisponível: '+errMsg;});
+    model:'claude-sonnet-4-6',max_tokens:600,
+    system:'Você é o Agente Hespanhol do escritório Hespanhol Advogados (Dr. André Luiz Hespanhol Tavares, OAB/GO e OAB/DF, Formosa/GO). Redija e-mails jurídicos formais em português. Inclua saudação, corpo e assinatura completa do Dr. André. Retorne apenas o texto do e-mail, sem formatação markdown.',
+    messages:[{role:'user',content:'Tipo: '+tipo+'. Instruções adicionais: '+(inst||'tom formal')+'.\n\nRedija o e-mail completo.'}]
+  }, function(d){box.value=d.content&&d.content[0]?d.content[0].text:'Erro ao gerar.';},
+  function(errMsg){box.value='Agente indisponível: '+errMsg;});
+}
+
+function enviarEmail(){
+  var sel=document.getElementById('email-dest');
+  var manual=document.getElementById('email-dest-manual');
+  var dest=(sel&&sel.value)?sel.value:(manual?manual.value.trim():'');
+  var assunto=document.getElementById('email-assunto').value.trim();
+  var corpo=document.getElementById('email-box').value.trim();
+  var status=document.getElementById('email-status');
+  if(!dest){status.style.display='block';status.style.color='var(--er)';status.textContent='❌ Informe o destinatário.';return;}
+  if(!assunto){status.style.display='block';status.style.color='var(--er)';status.textContent='❌ Informe o assunto.';return;}
+  if(!corpo){status.style.display='block';status.style.color='var(--er)';status.textContent='❌ Escreva o corpo do e-mail.';return;}
+  status.style.display='block';status.style.color='var(--tx3)';status.textContent='⏳ Enviando...';
+  fetch('/api/send-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:dest,subject:assunto,text:corpo})}).then(async function(r){
+    var d=await r.json();
+    if(!r.ok){status.style.color='var(--er)';status.textContent='❌ Erro: '+(d.error||r.status);return;}
+    status.style.color='var(--ok)';status.textContent='✅ E-mail enviado com sucesso!';
+    logAuditoria('EMAIL','email',_userName+' enviou e-mail para '+dest+': '+assunto);
+    adicionarEmailEnviado(dest,assunto);
+    document.getElementById('email-box').value='';
+    document.getElementById('email-assunto').value='';
+  }).catch(function(e){status.style.color='var(--er)';status.textContent='❌ Erro: '+e.message;});
 }
 
 // ── RELATÓRIO IMPRIMÍVEL ───────────────────────────────────────
@@ -1041,15 +1097,27 @@ function imprimirRelatorio(){
 }
 
 // ── AGENTE HESPANHOL COM FERRAMENTAS ──────────────────────────
-var FERRAMENTAS=[
+var FERRAMENTAS_BASE=[
   {name:'buscar_cliente',description:'Busca clientes cadastrados pelo nome',input_schema:{type:'object',properties:{nome:{type:'string',description:'Nome ou parte do nome do cliente'}},required:['nome']}},
+  {name:'listar_clientes',description:'Lista todos os clientes cadastrados no sistema',input_schema:{type:'object',properties:{}}},
   {name:'criar_cliente',description:'Cadastra um novo cliente no sistema',input_schema:{type:'object',properties:{nome:{type:'string'},cpf_cnpj:{type:'string'},email:{type:'string'},telefone:{type:'string'},endereco:{type:'string'}},required:['nome']}},
-  {name:'criar_caso',description:'Cria novo caso processual vinculado a um cliente existente',input_schema:{type:'object',properties:{cliente_id:{type:'string',description:'UUID do cliente'},numero_cnj:{type:'string',description:'Número CNJ do processo'},tribunal:{type:'string'},tipo_acao:{type:'string'},area:{type:'string',enum:['civel','penal','tributario','trabalhista','outro']},fase:{type:'string'}},required:['cliente_id']}},
+  {name:'atualizar_cliente',description:'Atualiza dados de um cliente existente',input_schema:{type:'object',properties:{cliente_id:{type:'string'},nome:{type:'string'},cpf_cnpj:{type:'string'},email:{type:'string'},telefone:{type:'string'},endereco:{type:'string'}},required:['cliente_id']}},
+  {name:'buscar_casos',description:'Busca casos por número CNJ ou nome do cliente',input_schema:{type:'object',properties:{termo:{type:'string',description:'Número CNJ ou nome do cliente'}},required:['termo']}},
+  {name:'listar_casos',description:'Lista todos os casos cadastrados, com dados do cliente',input_schema:{type:'object',properties:{status:{type:'string',enum:['ativo','arquivado','todos'],description:'Filtrar por status (padrão: ativo)'}}}},
+  {name:'criar_caso',description:'Cria novo caso processual vinculado a um cliente existente',input_schema:{type:'object',properties:{cliente_id:{type:'string',description:'UUID do cliente'},numero_cnj:{type:'string'},tribunal:{type:'string'},tipo_acao:{type:'string'},area:{type:'string',enum:['civel','penal','tributario','trabalhista','outro']},fase:{type:'string'}},required:['cliente_id']}},
+  {name:'atualizar_caso',description:'Atualiza dados de um caso existente (fase, status, tribunal, etc.)',input_schema:{type:'object',properties:{caso_id:{type:'string'},numero_cnj:{type:'string'},tribunal:{type:'string'},tipo_acao:{type:'string'},fase:{type:'string'},status:{type:'string',enum:['ativo','arquivado']},observacoes:{type:'string'}},required:['caso_id']}},
   {name:'adicionar_andamento',description:'Registra um andamento processual em um caso',input_schema:{type:'object',properties:{caso_id:{type:'string'},descricao:{type:'string'},data_andamento:{type:'string',description:'Data no formato YYYY-MM-DD'}},required:['caso_id','descricao']}},
-  {name:'agendar_compromisso',description:'Agenda audiência, prazo, julgamento, reunião ou lembrete. Use recorrencia para tarefas repetitivas.',input_schema:{type:'object',properties:{caso_id:{type:'string'},titulo:{type:'string',description:'Título resumido do compromisso'},tipo:{type:'string',enum:['audiencia','prazo','julgamento','reuniao','lembrete']},data_hora:{type:'string',description:'Data e hora ISO 8601'},local:{type:'string'},observacoes:{type:'string'},recorrencia:{type:'string',enum:['nenhuma','diaria','semanal','mensal'],description:'Frequência de repetição. Use diaria para monitoramentos diários.'}},required:['tipo','data_hora']}},
-  {name:'buscar_agenda',description:'Consulta compromissos agendados. Pode filtrar por caso ou listar todos os próximos.',input_schema:{type:'object',properties:{caso_id:{type:'string',description:'UUID do caso para filtrar (opcional)'},dias:{type:'number',description:'Quantos dias à frente consultar (padrão 30)'}}}},
-  {name:'buscar_casos',description:'Busca casos por número CNJ ou nome do cliente',input_schema:{type:'object',properties:{termo:{type:'string',description:'Número CNJ ou nome do cliente'}},required:['termo']}}
+  {name:'buscar_andamentos',description:'Lista os andamentos de um caso específico',input_schema:{type:'object',properties:{caso_id:{type:'string',description:'UUID do caso'}},required:['caso_id']}},
+  {name:'agendar_compromisso',description:'Agenda audiência, prazo, julgamento, reunião ou lembrete. Use recorrencia para tarefas repetitivas.',input_schema:{type:'object',properties:{caso_id:{type:'string'},titulo:{type:'string'},tipo:{type:'string',enum:['audiencia','prazo','julgamento','reuniao','lembrete']},data_hora:{type:'string',description:'Data e hora ISO 8601'},local:{type:'string'},observacoes:{type:'string'},recorrencia:{type:'string',enum:['nenhuma','diaria','semanal','mensal']}},required:['tipo','data_hora']}},
+  {name:'buscar_agenda',description:'Consulta compromissos agendados. Pode filtrar por caso ou listar todos os próximos.',input_schema:{type:'object',properties:{caso_id:{type:'string'},dias:{type:'number',description:'Quantos dias à frente consultar (padrão 30)'}}}},
+  {name:'enviar_email',description:'Envia e-mail para um cliente ou endereço em nome do escritório Hespanhol Advogados. Use para comunicar andamentos, confirmar audiências, cobrar honorários, etc.',input_schema:{type:'object',properties:{destinatario:{type:'string',description:'E-mail do destinatário'},assunto:{type:'string',description:'Assunto do e-mail'},corpo:{type:'string',description:'Corpo completo do e-mail em texto corrido, com saudação e assinatura'}},required:['destinatario','assunto','corpo']}}
 ];
+var FERRAMENTAS_ADMIN=[
+  {name:'deletar_caso',description:'Apaga permanentemente um caso. APENAS ADMIN.',input_schema:{type:'object',properties:{caso_id:{type:'string'}},required:['caso_id']}},
+  {name:'deletar_cliente',description:'Apaga permanentemente um cliente. APENAS ADMIN.',input_schema:{type:'object',properties:{cliente_id:{type:'string'}},required:['cliente_id']}},
+  {name:'deletar_compromisso',description:'Remove um compromisso da agenda. APENAS ADMIN.',input_schema:{type:'object',properties:{compromisso_id:{type:'string'}},required:['compromisso_id']}}
+];
+var FERRAMENTAS=FERRAMENTAS_BASE;
 
 function executarFerramenta(nome, input){
   return new Promise(function(resolve){
@@ -1100,6 +1168,45 @@ function executarFerramenta(nome, input){
           q.then(function(r){resolve(r.error?{erro:r.error.message}:(r.data||[]));});
         })();
         break;
+      case 'listar_clientes':
+        db.from('clientes').select('*').order('nome').then(function(r){
+          resolve(r.error?{erro:r.error.message}:(r.data||[]));
+        });
+        break;
+      case 'atualizar_cliente':
+        (function(){
+          var id=input.cliente_id; delete input.cliente_id;
+          db.from('clientes').update(input).eq('id',id).select().then(function(r){
+            if(r.error){resolve({erro:r.error.message});return;}
+            logAuditoria('UPDATE','clientes','Agente atualizou cliente ID: '+id);
+            loadClients();
+            resolve(r.data[0]);
+          });
+        })();
+        break;
+      case 'listar_casos':
+        (function(){
+          var q=db.from('casos').select('*, clientes(nome)').order('created_at',{ascending:false});
+          if(input.status&&input.status!=='todos')q=q.eq('status',input.status);
+          q.then(function(r){resolve(r.error?{erro:r.error.message}:(r.data||[]));});
+        })();
+        break;
+      case 'atualizar_caso':
+        (function(){
+          var id=input.caso_id; delete input.caso_id;
+          db.from('casos').update(input).eq('id',id).select().then(function(r){
+            if(r.error){resolve({erro:r.error.message});return;}
+            logAuditoria('UPDATE','casos','Agente atualizou caso ID: '+id);
+            loadCases();loadDashboard();
+            resolve(r.data[0]);
+          });
+        })();
+        break;
+      case 'buscar_andamentos':
+        db.from('andamentos').select('*').eq('caso_id',input.caso_id).order('data_andamento',{ascending:false}).limit(20).then(function(r){
+          resolve(r.error?{erro:r.error.message}:(r.data||[]));
+        });
+        break;
       case 'buscar_casos':
         db.from('casos').select('*, clientes(nome)').ilike('numero_cnj','%'+input.termo+'%').limit(5).then(function(r1){
           if(r1.data&&r1.data.length>0){resolve(r1.data);return;}
@@ -1110,6 +1217,39 @@ function executarFerramenta(nome, input){
           });
         });
         break;
+      case 'enviar_email':
+        fetch('/api/send-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:input.destinatario,subject:input.assunto,text:input.corpo})}).then(async function(r){
+          var d=await r.json();
+          if(!r.ok){resolve({erro:d.error||'Erro ao enviar'});return;}
+          logAuditoria('EMAIL','email','Agente enviou e-mail para '+input.destinatario+': '+input.assunto);
+          adicionarEmailEnviado(input.destinatario,input.assunto);
+          resolve({sucesso:true,id:d.id});
+        }).catch(function(e){resolve({erro:e.message});});
+        break;
+      case 'deletar_caso':
+        if(!_podeApagar){resolve({erro:'Sem permissão. Apenas admin pode apagar.'});return;}
+        db.from('casos').delete().eq('id',input.caso_id).then(function(r){
+          if(r.error){resolve({erro:r.error.message});return;}
+          logAuditoria('DELETE','casos','Admin (agente) apagou caso ID: '+input.caso_id);
+          loadCases();loadDashboard();resolve({sucesso:true});
+        });
+        break;
+      case 'deletar_cliente':
+        if(!_podeApagar){resolve({erro:'Sem permissão. Apenas admin pode apagar.'});return;}
+        db.from('clientes').delete().eq('id',input.cliente_id).then(function(r){
+          if(r.error){resolve({erro:r.error.message});return;}
+          logAuditoria('DELETE','clientes','Admin (agente) apagou cliente ID: '+input.cliente_id);
+          loadClients();loadDashboard();resolve({sucesso:true});
+        });
+        break;
+      case 'deletar_compromisso':
+        if(!_podeApagar){resolve({erro:'Sem permissão. Apenas admin pode apagar.'});return;}
+        db.from('agenda').delete().eq('id',input.compromisso_id).then(function(r){
+          if(r.error){resolve({erro:r.error.message});return;}
+          logAuditoria('DELETE','agenda','Admin (agente) removeu compromisso ID: '+input.compromisso_id);
+          loadAgenda();resolve({sucesso:true});
+        });
+        break;
       default:
         resolve({erro:'Ferramenta desconhecida: '+nome});
     }
@@ -1117,7 +1257,7 @@ function executarFerramenta(nome, input){
 }
 
 function formatNomeFerramenta(nome){
-  var nomes={buscar_cliente:'Buscando cliente',criar_cliente:'Criando cliente',criar_caso:'Criando caso',adicionar_andamento:'Registrando andamento',agendar_compromisso:'Agendando compromisso',buscar_agenda:'Consultando agenda',buscar_casos:'Buscando casos'};
+  var nomes={buscar_cliente:'Buscando cliente',listar_clientes:'Listando clientes',criar_cliente:'Criando cliente',atualizar_cliente:'Atualizando cliente',buscar_casos:'Buscando casos',listar_casos:'Listando casos',criar_caso:'Criando caso',atualizar_caso:'Atualizando caso',adicionar_andamento:'Registrando andamento',buscar_andamentos:'Buscando andamentos',agendar_compromisso:'Agendando compromisso',buscar_agenda:'Consultando agenda',enviar_email:'Enviando e-mail',deletar_caso:'Apagando caso',deletar_cliente:'Apagando cliente',deletar_compromisso:'Removendo compromisso'};
   return nomes[nome]||nome;
 }
 
@@ -1140,11 +1280,16 @@ function showTyping(){
 
 function buildPayload(){
   var agora=new Date().toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo',dateStyle:'full',timeStyle:'short'});
+  var podeApagar=_podeApagar;
+  var ferramentas=podeApagar?FERRAMENTAS_BASE.concat(FERRAMENTAS_ADMIN):FERRAMENTAS_BASE;
+  var deleteInfo=podeApagar
+    ? '\n- deletar_caso, deletar_cliente, deletar_compromisso: EXCLUSÃO PERMANENTE (use apenas quando o admin Dr. André pedir explicitamente)'
+    : '\n- EXCLUSÃO: você NÃO tem permissão para apagar registros. Somente o admin pode apagar.';
   return {
     model:'claude-sonnet-4-6',
     max_tokens:4096,
-    system:'Você é o Agente Hespanhol, secretário digital do escritório Hespanhol Advogados (Dr. André Luiz Hespanhol Tavares, Formosa/GO). DATA E HORA ATUAL: '+agora+'.\n\nVOCÊ POSSUI AS SEGUINTES FERRAMENTAS INTERNAS DO SISTEMA:\n- buscar_cliente, criar_cliente: gerenciar clientes\n- buscar_casos, criar_caso: gerenciar processos\n- adicionar_andamento: registrar andamentos processuais\n- agendar_compromisso: AGENDAR qualquer compromisso, lembrete, prazo ou tarefa DIRETAMENTE NA AGENDA DO SISTEMA (não é Google Calendar — é a agenda interna)\n- buscar_agenda: consultar compromissos agendados\n\nREGRAS ABSOLUTAS:\n1. NUNCA diga que não pode agendar. Use SEMPRE a ferramenta agendar_compromisso.\n2. Para lembretes recorrentes (diário, semanal, mensal), use o campo recorrencia.\n3. Busque o cliente antes de criar caso.\n4. Execute as ferramentas SEM pedir confirmação.\n5. Responda em português conciso confirmando o que foi feito.',
-    tools:FERRAMENTAS,
+    system:'Você é o Agente Hespanhol, secretário digital do escritório Hespanhol Advogados (Dr. André Luiz Hespanhol Tavares, Formosa/GO). DATA E HORA ATUAL: '+agora+'.\n\nUSUÁRIO ATUAL: '+_userName+' (perfil: '+_perfil+')\n\nVOCÊ É UM SECRETÁRIO INTERNO COMPLETO. SUAS FERRAMENTAS:\n- buscar_cliente, listar_clientes, criar_cliente, atualizar_cliente: gerenciar clientes\n- buscar_casos, listar_casos, criar_caso, atualizar_caso: gerenciar processos\n- adicionar_andamento, buscar_andamentos: andamentos processuais\n- agendar_compromisso, buscar_agenda: agenda interna do escritório\n- enviar_email: ENVIA E-MAIL REAL para clientes via sistema do escritório'+deleteInfo+'\n\nREGRAS ABSOLUTAS:\n1. NUNCA diga que não pode fazer algo que suas ferramentas permitem. Execute diretamente.\n2. Para agendar, use SEMPRE agendar_compromisso. Para lembretes recorrentes, use o campo recorrencia.\n3. Para enviar e-mail, busque primeiro o e-mail do cliente se necessário, depois use enviar_email.\n4. Busque o cliente antes de criar caso.\n5. Execute as ferramentas SEM pedir confirmação — aja e confirme o resultado.\n6. Responda em português conciso confirmando o que foi feito.\n7. Quando listar dados, apresente de forma organizada e legível.',
+    tools:ferramentas,
     messages:_aiMessages
   };
 }

@@ -1,48 +1,45 @@
-import { importPKCS8, SignJWT } from "jose";
+const CREDENTIALS = {
+  client_email: "hespanhol-sistema@hespanhol-advogados.iam.gserviceaccount.com",
+  private_key: process.env.GOOGLE_PRIVATE_KEY,
+};
 
-const CLIENT_EMAIL = "hespanhol-sistema@hespanhol-advogados.iam.gserviceaccount.com";
-const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive";
-
-function normalizePem(raw) {
-  if (!raw) throw new Error("GOOGLE_PRIVATE_KEY não configurada");
-  let s = raw.trim();
-  if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
-    s = s.slice(1, -1).trim();
-  }
-  return s.replace(/\\n/g, "\n");
-}
+const SCOPES = ["https://www.googleapis.com/auth/drive"];
 
 async function getAccessToken() {
-  const pem = normalizePem(process.env.GOOGLE_PRIVATE_KEY);
-  console.log("PEM len:", pem.length, "| starts:", pem.slice(0, 27));
-
-  // Tenta RS256 primeiro (RSA), depois ES256 (EC) — suporte a ambos os tipos de chave Google
-  let privateKey, alg;
-  try {
-    privateKey = await importPKCS8(pem, "RS256");
-    alg = "RS256";
-    console.log("Chave importada como RS256");
-  } catch (e1) {
-    console.log("RS256 falhou:", e1.message, "— tentando ES256");
-    try {
-      privateKey = await importPKCS8(pem, "ES256");
-      alg = "ES256";
-      console.log("Chave importada como ES256");
-    } catch (e2) {
-      throw new Error("Falha ao importar chave (RS256: " + e1.message + " | ES256: " + e2.message + ")");
-    }
-  }
-
+  const header = { alg: "RS256", typ: "JWT" };
   const now = Math.floor(Date.now() / 1000);
-  const jwt = await new SignJWT({
-    scope: DRIVE_SCOPE,
-  })
-    .setProtectedHeader({ alg })
-    .setIssuer(CLIENT_EMAIL)
-    .setAudience("https://oauth2.googleapis.com/token")
-    .setIssuedAt(now)
-    .setExpirationTime(now + 3600)
-    .sign(privateKey);
+  const payload = {
+    iss: CREDENTIALS.client_email,
+    scope: SCOPES.join(" "),
+    aud: "https://oauth2.googleapis.com/token",
+    iat: now,
+    exp: now + 3600,
+  };
+
+  const base64url = (obj) =>
+    Buffer.from(JSON.stringify(obj))
+      .toString("base64")
+      .replace(/=/g, "")
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_");
+
+  const signingInput = `${base64url(header)}.${base64url(payload)}`;
+
+  const { createSign } = await import("crypto");
+  const sign = createSign("RSA-SHA256");
+  sign.update(signingInput);
+
+  const privateKey = CREDENTIALS.private_key.replace(/\\n/g, "\n");
+  console.log("Signing with key len:", privateKey.length, "starts:", privateKey.slice(0, 27));
+
+  const signature = sign
+    .sign(privateKey)
+    .toString("base64")
+    .replace(/=/g, "")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_");
+
+  const jwt = `${signingInput}.${signature}`;
 
   const resp = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",

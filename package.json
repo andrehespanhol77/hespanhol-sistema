@@ -1,5 +1,8 @@
 {
   "name": "hespanhol-sistema",
   "version": "1.0.0",
-  "private": true
+  "private": true,
+  "dependencies": {
+    "google-auth-library": "^9.0.0"
+  }
 }

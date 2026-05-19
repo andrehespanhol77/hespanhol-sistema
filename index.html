@@ -1110,6 +1110,7 @@ var FERRAMENTAS_BASE=[
   {name:'buscar_andamentos',description:'Lista os andamentos de um caso específico',input_schema:{type:'object',properties:{caso_id:{type:'string',description:'UUID do caso'}},required:['caso_id']}},
   {name:'agendar_compromisso',description:'Agenda audiência, prazo, julgamento, reunião ou lembrete. Use recorrencia para tarefas repetitivas.',input_schema:{type:'object',properties:{caso_id:{type:'string'},titulo:{type:'string'},tipo:{type:'string',enum:['audiencia','prazo','julgamento','reuniao','lembrete']},data_hora:{type:'string',description:'Data e hora ISO 8601'},local:{type:'string'},observacoes:{type:'string'},recorrencia:{type:'string',enum:['nenhuma','diaria','semanal','mensal']}},required:['tipo','data_hora']}},
   {name:'buscar_agenda',description:'Consulta compromissos agendados. Pode filtrar por caso ou listar todos os próximos.',input_schema:{type:'object',properties:{caso_id:{type:'string'},dias:{type:'number',description:'Quantos dias à frente consultar (padrão 30)'}}}},
+  {name:'buscar_colaborador',description:'Busca usuários/colaboradores do escritório (advogados, secretárias, estagiários) na base de usuários do sistema pelo nome ou retorna todos.',input_schema:{type:'object',properties:{nome:{type:'string',description:'Nome ou parte do nome (opcional — omita para listar todos)'}}}},
   {name:'enviar_email',description:'Envia e-mail para um cliente ou endereço em nome do escritório Hespanhol Advogados. Use para comunicar andamentos, confirmar audiências, cobrar honorários, etc.',input_schema:{type:'object',properties:{destinatario:{type:'string',description:'E-mail do destinatário'},assunto:{type:'string',description:'Assunto do e-mail'},corpo:{type:'string',description:'Corpo completo do e-mail em texto corrido, com saudação e assinatura'}},required:['destinatario','assunto','corpo']}}
 ];
 var FERRAMENTAS_ADMIN=[
@@ -1166,6 +1167,13 @@ function executarFerramenta(nome, input){
           var q=db.from('agenda').select('*, casos(numero_cnj,clientes(nome))').gte('data_hora',agora).lte('data_hora',futuro).order('data_hora',{ascending:true});
           if(input.caso_id)q=q.eq('caso_id',input.caso_id);
           q.then(function(r){resolve(r.error?{erro:r.error.message}:(r.data||[]));});
+        })();
+        break;
+      case 'buscar_colaborador':
+        (function(){
+          var q=db.from('usuarios').select('nome,email,perfil');
+          if(input.nome)q=q.ilike('nome','%'+input.nome+'%');
+          q.order('nome').then(function(r){resolve(r.error?{erro:r.error.message}:(r.data||[]));});
         })();
         break;
       case 'listar_clientes':
@@ -1257,7 +1265,7 @@ function executarFerramenta(nome, input){
 }
 
 function formatNomeFerramenta(nome){
-  var nomes={buscar_cliente:'Buscando cliente',listar_clientes:'Listando clientes',criar_cliente:'Criando cliente',atualizar_cliente:'Atualizando cliente',buscar_casos:'Buscando casos',listar_casos:'Listando casos',criar_caso:'Criando caso',atualizar_caso:'Atualizando caso',adicionar_andamento:'Registrando andamento',buscar_andamentos:'Buscando andamentos',agendar_compromisso:'Agendando compromisso',buscar_agenda:'Consultando agenda',enviar_email:'Enviando e-mail',deletar_caso:'Apagando caso',deletar_cliente:'Apagando cliente',deletar_compromisso:'Removendo compromisso'};
+  var nomes={buscar_colaborador:'Buscando colaborador',buscar_cliente:'Buscando cliente',listar_clientes:'Listando clientes',criar_cliente:'Criando cliente',atualizar_cliente:'Atualizando cliente',buscar_casos:'Buscando casos',listar_casos:'Listando casos',criar_caso:'Criando caso',atualizar_caso:'Atualizando caso',adicionar_andamento:'Registrando andamento',buscar_andamentos:'Buscando andamentos',agendar_compromisso:'Agendando compromisso',buscar_agenda:'Consultando agenda',enviar_email:'Enviando e-mail',deletar_caso:'Apagando caso',deletar_cliente:'Apagando cliente',deletar_compromisso:'Removendo compromisso'};
   return nomes[nome]||nome;
 }
 

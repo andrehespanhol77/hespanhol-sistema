@@ -219,7 +219,10 @@ tr:hover td{background:var(--sf);}
   <div class="page" id="page-clients">
     <div style="display:flex;justify-content:space-between;margin-bottom:16px">
       <div style="font-size:13px;color:var(--tx3)" id="clients-count">Carregando...</div>
-      <button class="btn bp hide-cliente" onclick="openModalCliente()">+ Novo Cliente</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn bg hide-admin" id="btn-pastas-faltantes" onclick="criarPastasFaltantes()" style="font-size:11px">📁 Pastas Faltantes</button>
+        <button class="btn bp hide-cliente" onclick="openModalCliente()">+ Novo Cliente</button>
+      </div>
     </div>
     <div id="clients-list"><div class="loading">🔄 Carregando do banco...</div></div>
   </div>
@@ -497,6 +500,9 @@ function aplicarPerfil(perfil){
   document.querySelectorAll('.hide-cliente').forEach(function(el){
     el.style.display=ehCliente?'none':'';
   });
+  document.querySelectorAll('.hide-admin').forEach(function(el){
+    el.style.display=(perfil==='admin')?'':'none';
+  });
 
   var labels={admin:'Administrador',autorizado:'Autorizado',escritorio:'Escritório',cliente:'Cliente'};
   var classes={admin:'ra',autorizado:'ra',escritorio:'rv',cliente:'rc'};
@@ -642,6 +648,70 @@ function apagarCliente(id){
     logAuditoria('DELETE','clientes','Admin apagou cliente ID: '+id);
     loadClients();loadDashboard();
   });
+}
+
+async function criarPastasFaltantes(){
+  if(!_podeApagar)return;
+  var btn=document.getElementById('btn-pastas-faltantes');
+  btn.disabled=true;btn.textContent='⏳ Processando...';
+
+  var log=[];
+  function addLog(msg){log.push(msg);btn.title=log.slice(-5).join('\n');}
+
+  try{
+    // ── Clientes sem pasta ──
+    var cr=await db.from('clientes').select('id,nome').is('pasta_drive_id',null);
+    var clientesSem=cr.data||[];
+    addLog('Clientes sem pasta: '+clientesSem.length);
+
+    for(var i=0;i<clientesSem.length;i++){
+      var c=clientesSem[i];
+      btn.textContent='⏳ Cliente '+(i+1)+'/'+clientesSem.length;
+      try{
+        var r=await fetch('/api/create-drive-folder',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({acao:'criar_cliente',nome_cliente:c.nome})});
+        var d=await r.json();
+        if(d.pasta_id){
+          await db.from('clientes').update({pasta_url:d.pasta_url,pasta_drive_id:d.pasta_id}).eq('id',c.id);
+          logAuditoria('UPDATE','clientes','Pasta Drive criada retroativamente para: '+c.nome);
+          addLog('✅ '+c.nome);
+        } else {
+          addLog('❌ '+c.nome+': '+(d.error||'sem id'));
+        }
+      }catch(e){addLog('❌ '+c.nome+': '+e.message);}
+    }
+
+    // ── Casos sem pasta (cujo cliente já tem pasta) ──
+    var casr=await db.from('casos').select('id,tipo_acao,natureza,cliente_id,clientes(pasta_drive_id,nome)').is('pasta_drive_id',null);
+    var casosSem=(casr.data||[]).filter(function(x){return x.clientes&&x.clientes.pasta_drive_id;});
+    addLog('Casos sem pasta (com cliente OK): '+casosSem.length);
+
+    for(var j=0;j<casosSem.length;j++){
+      var cs=casosSem[j];
+      btn.textContent='⏳ Caso '+(j+1)+'/'+casosSem.length;
+      var nomeCaso=(cs.natureza||cs.tipo_acao||'Processo')+' — '+cs.id.slice(0,8);
+      try{
+        var r2=await fetch('/api/create-drive-folder',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({acao:'criar_processo',nome_processo:nomeCaso,cliente_pasta_id:cs.clientes.pasta_drive_id})});
+        var d2=await r2.json();
+        if(d2.pasta_id){
+          await db.from('casos').update({pasta_url:d2.pasta_url,pasta_drive_id:d2.pasta_id}).eq('id',cs.id);
+          logAuditoria('UPDATE','casos','Pasta Drive criada retroativamente para caso: '+cs.id);
+          addLog('✅ caso '+cs.id.slice(0,8));
+        } else {
+          addLog('❌ caso '+cs.id.slice(0,8)+': '+(d2.error||'sem id'));
+        }
+      }catch(e){addLog('❌ caso '+cs.id.slice(0,8)+': '+e.message);}
+    }
+
+    var ok=log.filter(function(l){return l.startsWith('✅');}).length;
+    var er=log.filter(function(l){return l.startsWith('❌');}).length;
+    btn.textContent='📁 Pastas Faltantes';btn.disabled=false;
+    alert('✅ Concluído!\n\nCriadas: '+ok+'\nErros: '+er+'\n\n'+log.join('\n'));
+    loadClients();
+
+  }catch(e){
+    btn.textContent='📁 Pastas Faltantes';btn.disabled=false;
+    alert('Erro geral: '+e.message);
+  }
 }
 
 function loadUsers(){

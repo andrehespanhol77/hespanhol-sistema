@@ -6,39 +6,36 @@ function base64url(data) {
   return buf.toString("base64").replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
 }
 
-function extractPkcs8(rawEnvKey) {
+function normalizePem(rawEnvKey) {
+  if (!rawEnvKey) throw new Error("GOOGLE_PRIVATE_KEY não configurada");
   // Normaliza \n literais e aspas extras
   let s = rawEnvKey.replace(/\\n/g, "\n").replace(/\r/g, "").trim();
   if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
     s = s.slice(1, -1).replace(/\\n/g, "\n").trim();
   }
-  // Extrai base64 puro, remove todos os espaços/newlines
-  const b64 = s
-    .replace(/-----BEGIN PRIVATE KEY-----/g, "")
-    .replace(/-----END PRIVATE KEY-----/g, "")
-    .replace(/-----BEGIN RSA PRIVATE KEY-----/g, "")
-    .replace(/-----END RSA PRIVATE KEY-----/g, "")
-    .replace(/\s/g, "");
-  if (b64.length < 100) throw new Error("Chave privada inválida: b64 len=" + b64.length);
-  console.log("b64 extraído OK, len=" + b64.length);
-  return Buffer.from(b64, "base64");
+  return s;
 }
 
 async function getAccessToken() {
   const rawKey = process.env.GOOGLE_PRIVATE_KEY;
-  if (!rawKey) throw new Error("GOOGLE_PRIVATE_KEY não configurada");
+  const pem = normalizePem(rawKey);
+  console.log("PEM starts:", pem.slice(0, 27), "| len:", pem.length);
 
-  const keyData = extractPkcs8(rawKey);
+  // Usa createPrivateKey do Node (que interpreta PEM corretamente)
+  // e exporta como DER binário para o Web Crypto
+  const { createPrivateKey } = await import("crypto");
+  const keyObj = createPrivateKey({ key: pem, format: "pem" });
+  const derBuf = keyObj.export({ type: "pkcs8", format: "der" });
+  console.log("DER exportado, len:", derBuf.length);
 
-  // Importa chave via Web Crypto API (SubtleCrypto) — sem dependência do módulo crypto do Node
   const cryptoKey = await globalThis.crypto.subtle.importKey(
     "pkcs8",
-    keyData,
+    derBuf,
     { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
     false,
     ["sign"]
   );
-  console.log("Chave importada via SubtleCrypto OK");
+  console.log("SubtleCrypto importKey OK");
 
   const now = Math.floor(Date.now() / 1000);
   const header = base64url(JSON.stringify({ alg: "RS256", typ: "JWT" }));

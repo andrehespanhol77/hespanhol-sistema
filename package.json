@@ -1,8 +1,5 @@
 {
   "name": "hespanhol-sistema",
   "version": "1.0.0",
-  "private": true,
-  "dependencies": {
-    "jose": "^5.0.0"
-  }
+  "private": true
 }

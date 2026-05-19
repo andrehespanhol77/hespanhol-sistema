@@ -520,7 +520,7 @@ function callClaude(payload, onSuccess, onError){
     return;
   }
 
-  fetch('https://api.anthropic.com/v1/messages',{
+  fetch('/api/claude',{
     method:'POST',
     headers:{
       'Content-Type':'application/json',
@@ -631,7 +631,7 @@ function doImport(input){
       return;
     }
     callClaude({
-      model:'claude-sonnet-4-20250514',
+      model:'claude-sonnet-4-6',
       max_tokens:1000,
       system:'Você é um assistente jurídico. Analise o documento PDF e extraia os dados retornando SOMENTE um JSON válido, sem markdown, sem texto adicional, no formato: {"cliente":"nome completo","cpf":"000.000.000-00","email":"email ou vazio","endereco":"endereco completo ou vazio","area":"civel ou penal ou tributario ou trabalhista","processos":[{"cnj":"numero cnj","tribunal":"nome tribunal","tipo":"tipo da acao","fase":"fase processual"}]}. Se não encontrar algum campo deixe string vazia.',
       messages:[{role:'user',content:[{type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}},{type:'text',text:'Extraia os dados desta procuração ou contrato jurídico em JSON.'}]}]
@@ -703,7 +703,7 @@ function genEmail(){
   var box=document.getElementById('email-box');
   box.style.display='block'; box.textContent='✦ Redigindo...';
   callClaude({
-    model:'claude-sonnet-4-20250514',
+    model:'claude-sonnet-4-6',
     max_tokens:400,
     system:'Você é o Agente Hespanhol. Redija e-mails jurídicos formais em português.',
     messages:[{role:'user',content:'Redija e-mail formal sobre audiência em 24/04/2026 às 14h, Sala 3, TJGO.'}]
@@ -723,7 +723,7 @@ function sendAI(){
   var t=document.createElement('div');t.className='aty';t.innerHTML='<span></span><span></span><span></span>';msgs.appendChild(t);
   msgs.scrollTop=msgs.scrollHeight;
   callClaude({
-    model:'claude-sonnet-4-20250514',
+    model:'claude-sonnet-4-6',
     max_tokens:600,
     system:'Você é o Agente Hespanhol do escritório Hespanhol Advogados, do Dr. Andre Luiz Hespanhol Tavares. Responda de forma concisa e profissional em português.',
     messages:[{role:'user',content:text}]

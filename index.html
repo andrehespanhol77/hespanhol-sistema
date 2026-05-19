@@ -1156,37 +1156,34 @@ function callClaudeAsync(payload){
 }
 
 async function agentLoop(typingEl){
-  var response=await callClaudeAsync(buildPayload());
-
-  if(response.stop_reason==='tool_use'){
-    _aiMessages.push({role:'assistant',content:response.content});
-    var toolResults=[];
-
-    for(var i=0;i<response.content.length;i++){
-      var block=response.content[i];
-      if(block.type==='tool_use'){
-        typingEl.remove();
-        var actionEl=appendAIMsg('tool','⚙️ '+formatNomeFerramenta(block.name)+'...');
-        typingEl=showTyping();
-        var result=await executarFerramenta(block.name,block.input);
-        actionEl.textContent='✅ '+formatNomeFerramenta(block.name);
-        toolResults.push({type:'tool_result',tool_use_id:block.id,content:JSON.stringify(result)});
+  var maxRounds=6;
+  for(var round=0;round<maxRounds;round++){
+    var response=await callClaudeAsync(buildPayload());
+    if(response.stop_reason==='tool_use'){
+      _aiMessages.push({role:'assistant',content:response.content});
+      var toolResults=[];
+      for(var i=0;i<response.content.length;i++){
+        var block=response.content[i];
+        if(block.type==='tool_use'){
+          typingEl.remove();
+          var actionEl=appendAIMsg('tool','⚙️ '+formatNomeFerramenta(block.name)+'...');
+          typingEl=showTyping();
+          var result=await executarFerramenta(block.name,block.input);
+          actionEl.textContent='✅ '+formatNomeFerramenta(block.name);
+          toolResults.push({type:'tool_result',tool_use_id:block.id,content:JSON.stringify(result)});
+        }
       }
+      _aiMessages.push({role:'user',content:toolResults});
+    }else{
+      typingEl.remove();
+      var text=response.content.filter(function(b){return b.type==='text';}).map(function(b){return b.text;}).join('');
+      _aiMessages.push({role:'assistant',content:response.content});
+      appendAIMsg('bot',text||'Pronto.');
+      return;
     }
-
-    _aiMessages.push({role:'user',content:toolResults});
-    var finalResponse=await callClaudeAsync(buildPayload());
-    typingEl.remove();
-    var finalText=finalResponse.content.filter(function(b){return b.type==='text';}).map(function(b){return b.text;}).join('');
-    _aiMessages.push({role:'assistant',content:finalResponse.content});
-    appendAIMsg('bot',finalText||'Concluído.');
-
-  }else{
-    typingEl.remove();
-    var text=response.content.filter(function(b){return b.type==='text';}).map(function(b){return b.text;}).join('');
-    _aiMessages.push({role:'assistant',content:response.content});
-    appendAIMsg('bot',text||'Pronto.');
   }
+  typingEl.remove();
+  appendAIMsg('bot','Operação concluída.');
 }
 
 function toggleAI(){document.getElementById('aip').classList.toggle('open');}

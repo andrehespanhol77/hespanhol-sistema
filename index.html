@@ -113,6 +113,9 @@ tr:hover td{background:var(--sf);}
 .moa{display:flex;gap:8px;margin-top:18px;justify-content:flex-end;}
 .sb{background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:7px 12px;color:var(--tx);font-size:12px;font-family:var(--fn);outline:none;width:180px;}
 .loading{text-align:center;padding:24px;color:var(--tx3);font-size:13px;}
+.moc-wide{max-width:860px!important;}
+.clickable{cursor:pointer;}
+.clickable:hover{color:var(--ac)!important;}
 @media(max-width:768px){.sidebar{transform:translateX(-100%)}.main{margin-left:0}.g4{grid-template-columns:repeat(2,1fr)}.g3,.g2{grid-template-columns:1fr}}
 @media print{
   .sidebar,.topbar,.aibtn,.aip,.mo{display:none!important;}
@@ -209,7 +212,7 @@ tr:hover td{background:var(--sf);}
       <div style="font-size:13px;color:var(--tx3)" id="cases-count">Carregando...</div>
       <button class="btn bp hide-cliente" onclick="openModalCaso()">+ Novo Caso</button>
     </div>
-    <table><thead><tr><th>Nº CNJ</th><th>Cliente</th><th>Tipo</th><th>Tribunal</th><th>Fase</th><th>Status</th><th class="hide-financeiro">Valor</th><th class="hide-cliente">Ações</th></tr></thead>
+    <table><thead><tr><th>Nº CNJ</th><th>Cliente</th><th>Natureza / Tipo</th><th>Tribunal</th><th>Fase</th><th>Status</th><th class="hide-financeiro">Valor</th><th>Ações</th></tr></thead>
     <tbody id="cases-tbody"><tr><td colspan="8" class="loading">🔄 Carregando do banco...</td></tr></tbody></table>
   </div>
 
@@ -560,8 +563,12 @@ function loadCases(){
       var tr=document.createElement('tr');
       var nome=c.clientes?c.clientes.nome:'—';
       var status=c.status==='ativo'?'<span class="badge ba">Ativo</span>':'<span class="badge bw">'+safeText(c.status)+'</span>';
-      var acoes=_podeApagar?'<button class="btn bg" style="font-size:10px;padding:4px 8px;color:var(--er)" onclick="apagarCaso(\''+c.id+'\')">🗑</button>':'';
-      tr.innerHTML='<td style="color:var(--tx3);font-size:11px">'+safeText(c.numero_cnj)+'</td><td>'+nome+'</td><td style="color:var(--tx3)">'+safeText(c.tipo_acao)+'</td><td style="color:var(--tx3)">'+safeText(c.tribunal)+'</td><td style="color:var(--tx3)">'+safeText(c.fase)+'</td><td>'+status+'</td><td class="hide-financeiro" style="color:var(--ac);font-weight:600">'+(c.valor_causa?'R$ '+c.valor_causa:'—')+'</td><td class="hide-cliente">'+acoes+'</td>';
+      var tipoDisplay=c.natureza?'<span style="font-weight:600;color:var(--tx)">'+c.natureza+'</span>'+(c.tipo_acao?'<br><span style="font-size:10px;color:var(--tx3)">'+c.tipo_acao+'</span>':''):'<span style="color:var(--tx3)">'+safeText(c.tipo_acao)+'</span>';
+      var del=_podeApagar?'<button class="btn bg" style="font-size:10px;padding:4px 8px;color:var(--er)" onclick="event.stopPropagation();apagarCaso(\''+c.id+'\')">🗑</button>':'';
+      var acoes='<button class="btn bg" style="font-size:10px;padding:4px 8px" onclick="event.stopPropagation();openEditCaso(\''+c.id+'\')">✏️</button>'+del;
+      tr.style.cursor='pointer';
+      tr.onclick=function(){openDetalhesCaso(c.id);};
+      tr.innerHTML='<td style="color:var(--tx3);font-size:11px">'+safeText(c.numero_cnj)+'</td><td>'+nome+'</td><td>'+tipoDisplay+'</td><td style="color:var(--tx3)">'+safeText(c.tribunal)+'</td><td style="color:var(--tx3)">'+safeText(c.fase)+'</td><td>'+status+'</td><td class="hide-financeiro" style="color:var(--ac);font-weight:600">'+(c.valor_causa?'R$ '+c.valor_causa:'—')+'</td><td>'+acoes+'</td>';
       tbody.appendChild(tr);
     });
   });
@@ -594,8 +601,11 @@ function loadClients(){
       var iniciais=nome.split(' ').slice(0,2).map(function(p){return p[0]||'';}).join('').toUpperCase();
       var div=document.createElement('div');
       div.style.cssText='background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);padding:14px 18px;display:flex;align-items:center;gap:14px;margin-bottom:8px';
-      var del=_podeApagar?'<button class="btn bg" style="font-size:10px;padding:4px 8px;color:var(--er)" onclick="apagarCliente(\''+c.id+'\')">🗑</button>':'';
-      div.innerHTML='<div class="av" style="background:rgba(74,159,212,.3);color:var(--ac)">'+iniciais+'</div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--tx)">'+nome+'</div><div style="font-size:11px;color:var(--tx3)">'+(c.cpf_cnpj||'')+(c.email?' · '+c.email:'')+(c.telefone?' · '+c.telefone:'')+'</div></div><span class="badge ba">Ativo</span>'+del;
+      var del=_podeApagar?'<button class="btn bg" style="font-size:10px;padding:4px 8px;color:var(--er)" onclick="event.stopPropagation();apagarCliente(\''+c.id+'\')">🗑</button>':'';
+      var edit='<button class="btn bg" style="font-size:10px;padding:4px 8px" onclick="event.stopPropagation();openEditCliente(\''+c.id+'\')">✏️</button>';
+      div.onclick=function(){openPerfilCliente(c.id);};
+      div.style.cursor='pointer';
+      div.innerHTML='<div class="av" style="background:rgba(74,159,212,.3);color:var(--ac)">'+iniciais+'</div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--tx)">'+nome+'</div><div style="font-size:11px;color:var(--tx3)">'+(c.cpf_cnpj||'')+(c.email?' · '+c.email:'')+(c.telefone?' · '+c.telefone:'')+'</div></div><span class="badge ba">Ativo</span>'+edit+del;
       lista.appendChild(div);
     });
   });
@@ -653,7 +663,8 @@ function loadAgenda(){
       var recorrLabel={diaria:'🔁 Diária',semanal:'🔁 Semanal',mensal:'🔁 Mensal'};
       var recorrBadge=(a.recorrencia&&a.recorrencia!=='nenhuma')?'<span style="font-size:10px;background:rgba(74,159,212,.15);color:var(--ac);padding:1px 6px;border-radius:8px;margin-left:6px">'+recorrLabel[a.recorrencia]+'</span>':'';
       var tituloLabel=a.titulo?'<div style="font-size:12px;color:var(--tx2);margin-bottom:2px">'+safeText(a.titulo)+'</div>':'';
-      div.innerHTML='<div style="font-size:24px">'+emoji+'</div><div style="flex:1">'+tituloLabel+'<div style="font-size:13px;font-weight:600;color:var(--tx)">'+tipoLabel+recorrBadge+'</div><div style="font-size:12px;color:var(--ac);margin:2px 0">'+dt+'</div><div style="font-size:11px;color:var(--tx3)">'+cliente+(cnj?' · '+cnj:'')+(a.local?' · '+a.local:'')+(a.observacoes?'<br><span style="color:var(--tx3)">'+safeText(a.observacoes)+'</span>':'')+'</div></div>';
+      var delBtn=_podeApagar?'<button class="btn bg" style="font-size:10px;padding:4px 8px;color:var(--er)" onclick="apagarAgenda(\''+a.id+'\')">🗑</button>':'';
+      div.innerHTML='<div style="font-size:24px">'+emoji+'</div><div style="flex:1">'+tituloLabel+'<div style="font-size:13px;font-weight:600;color:var(--tx)">'+tipoLabel+recorrBadge+'</div><div style="font-size:12px;color:var(--ac);margin:2px 0">'+dt+'</div><div style="font-size:11px;color:var(--tx3)">'+cliente+(cnj?' · '+cnj:'')+(a.local?' · '+a.local:'')+(a.observacoes?'<br><span style="color:var(--tx3)">'+safeText(a.observacoes)+'</span>':'')+'</div></div><div style="display:flex;gap:6px;flex-direction:column"><button class="btn bg" style="font-size:10px;padding:4px 8px" onclick="openEditAgenda(\''+a.id+'\')">✏️</button>'+delBtn+'</div>';
       lista.appendChild(div);
     });
   });
@@ -674,7 +685,7 @@ function loadMovements(){
       var cnj=a.casos?a.casos.numero_cnj:'';
       var div=document.createElement('div');
       div.style.cssText='background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);padding:12px 18px;margin-bottom:8px';
-      div.innerHTML='<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:12px;font-weight:600;color:var(--tx)">'+cliente+(cnj?' — '+cnj:'')+'</span><span style="font-size:11px;color:var(--tx3)">'+dt+'</span></div><div style="font-size:12px;color:var(--tx2)">'+safeText(a.descricao)+'</div>';
+      div.innerHTML='<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:12px;font-weight:600;color:var(--tx)">'+cliente+(cnj?' — '+cnj:'')+'</span><div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;color:var(--tx3)">'+dt+'</span><button class="btn bg" style="font-size:10px;padding:2px 7px" onclick="openEditAndamento(\''+a.id+'\',\''+encodeURIComponent(a.descricao||'')+'\',\''+a.data_andamento+'\')">✏️</button></div></div><div style="font-size:12px;color:var(--tx2)">'+safeText(a.descricao)+'</div>';
       lista.appendChild(div);
     });
   });
@@ -737,9 +748,13 @@ function loadDashboard(){
 }
 
 // ── MODAIS ─────────────────────────────────────────────────────
-function openModal(titulo,html,onSave){
+function openModal(titulo,html,onSave,wide){
+  var moc=document.querySelector('#modal .moc');
+  moc.className='moc'+(wide?' moc-wide':'');
   document.getElementById('mot').textContent=titulo;
   document.getElementById('mob').innerHTML=html;
+  var moa=document.getElementById('moa');
+  moa.style.display=onSave?'flex':'none';
   var btn=document.getElementById('modal-save-btn');
   btn.textContent='Salvar';btn.disabled=false;
   btn.onclick=onSave;
@@ -783,11 +798,13 @@ function salvarCliente(){
 }
 
 function openModalCaso(){
-  openModal('Novo Caso',
+  openModal('Novo Processo',
     '<div class="fg"><label class="flb">Cliente *</label><select class="inp" id="fca-cliente"><option value="">Carregando...</option></select></div>'+
+    '<div class="fg"><label class="flb">Natureza *</label><select class="inp" id="fca-natureza"><option value="">Selecione a natureza...</option><option>Ação Penal</option><option>Habeas Corpus</option><option>Inquérito Policial</option><option>Apelação</option><option>Recurso Especial</option><option>Recurso Ordinário</option><option>Mandado de Segurança</option><option>Mandado de Injunção</option><option>Revisão Criminal</option><option>Execução Penal</option><option>Agravo</option><option>Cautelar</option><option>Ação Cível</option><option>Ação Trabalhista</option><option>Ação Tributária</option><option>Outro</option></select></div>'+
+    '<div class="fg"><label class="flb">Tipo de Ação / Descrição</label><input class="inp" id="fca-tipo" placeholder="Ex: HC impetrado em razão de AP nº..."></div>'+
+    '<div class="fg"><label class="flb">Processo Principal (se for desdobramento)</label><select class="inp" id="fca-pai"><option value="">Processo independente</option></select></div>'+
     '<div class="fg"><label class="flb">Nº CNJ</label><input class="inp" id="fca-cnj" placeholder="0000000-00.0000.0.00.0000"></div>'+
     '<div class="fg"><label class="flb">Tribunal</label><input class="inp" id="fca-trib" placeholder="TJGO, STJ, TRF1..."></div>'+
-    '<div class="fg"><label class="flb">Tipo de Ação</label><input class="inp" id="fca-tipo" placeholder="Habeas Corpus, Apelação, Recurso..."></div>'+
     '<div class="fg"><label class="flb">Área</label><select class="inp" id="fca-area"><option value="civel">Cível</option><option value="penal">Penal</option><option value="tributario">Tributário</option><option value="trabalhista">Trabalhista</option><option value="outro">Outro</option></select></div>'+
     '<div class="fg"><label class="flb">Fase</label><input class="inp" id="fca-fase" placeholder="1ª Instância, Recursal, STJ..."></div>'+
     '<div class="fg"><label class="flb">Valor da Causa (R$)</label><input class="inp" id="fca-valor" type="number" placeholder="0.00"></div>'+
@@ -800,6 +817,15 @@ function openModalCaso(){
     if(data.length===0){sel.innerHTML='<option value="">Nenhum cliente cadastrado ainda</option>';return;}
     sel.innerHTML='<option value="">Selecione o cliente...</option>'+data.map(function(c){return '<option value="'+c.id+'">'+c.nome+'</option>';}).join('');
   });
+  db.from('casos').select('id,numero_cnj,natureza,tipo_acao,clientes(nome)').order('created_at',{ascending:false}).then(function(res){
+    var sel=document.getElementById('fca-pai');
+    if(!sel)return;
+    var data=res.data||[];
+    sel.innerHTML='<option value="">Processo independente</option>'+data.map(function(c){
+      var label=(c.clientes?c.clientes.nome:'?')+' — '+(c.natureza||c.tipo_acao||'Processo')+(c.numero_cnj?' ('+c.numero_cnj+')':'');
+      return '<option value="'+c.id+'">'+label+'</option>';
+    }).join('');
+  });
 }
 function salvarCaso(){
   var clienteId=document.getElementById('fca-cliente').value;
@@ -807,18 +833,22 @@ function salvarCaso(){
   var btn=document.getElementById('modal-save-btn');
   btn.textContent='Salvando...';btn.disabled=true;
   var cnj=document.getElementById('fca-cnj').value.trim();
+  var natureza=document.getElementById('fca-natureza').value.trim();
+  var paiId=document.getElementById('fca-pai').value;
   db.from('casos').insert({
     cliente_id:clienteId,
     numero_cnj:cnj||null,
+    natureza:natureza||null,
     tribunal:document.getElementById('fca-trib').value.trim()||null,
     tipo_acao:document.getElementById('fca-tipo').value.trim()||null,
     area:document.getElementById('fca-area').value||null,
     fase:document.getElementById('fca-fase').value.trim()||null,
     valor_causa:document.getElementById('fca-valor').value||null,
+    caso_pai_id:paiId||null,
     status:'ativo'
   }).then(function(res){
     if(res.error){showModalStatus('❌ Erro: '+res.error.message,'er');btn.textContent='Salvar';btn.disabled=false;return;}
-    logAuditoria('INSERT','casos',_userName+' cadastrou caso: '+(cnj||'sem CNJ'));
+    logAuditoria('INSERT','casos',_userName+' cadastrou processo: '+(natureza||'')+(cnj?' '+cnj:''));
     closeModal();loadCases();loadDashboard();
   });
 }
@@ -866,7 +896,7 @@ function salvarAgenda(){
   });
 }
 
-function openModalAndamento(){
+function openModalAndamento(preselectedCasoId){
   openModal('Novo Andamento',
     '<div class="fg"><label class="flb">Caso *</label><select class="inp" id="fand-caso"><option value="">Selecione o caso...</option></select></div>'+
     '<div class="fg"><label class="flb">Data do Andamento *</label><input class="inp" id="fand-data" type="date" value="'+new Date().toISOString().split('T')[0]+'"></div>'+
@@ -879,7 +909,7 @@ function openModalAndamento(){
     var data=res.data||[];
     sel.innerHTML='<option value="">Selecione o caso...</option>'+data.map(function(c){
       var label=(c.clientes?c.clientes.nome:'?')+(c.numero_cnj?' — '+c.numero_cnj:'');
-      return '<option value="'+c.id+'">'+label+'</option>';
+      return '<option value="'+c.id+'"'+(preselectedCasoId===c.id?' selected':'')+'>'+label+'</option>';
     }).join('');
   });
 }
@@ -1104,8 +1134,8 @@ var FERRAMENTAS_BASE=[
   {name:'atualizar_cliente',description:'Atualiza dados de um cliente existente',input_schema:{type:'object',properties:{cliente_id:{type:'string'},nome:{type:'string'},cpf_cnpj:{type:'string'},email:{type:'string'},telefone:{type:'string'},endereco:{type:'string'}},required:['cliente_id']}},
   {name:'buscar_casos',description:'Busca casos por número CNJ ou nome do cliente',input_schema:{type:'object',properties:{termo:{type:'string',description:'Número CNJ ou nome do cliente'}},required:['termo']}},
   {name:'listar_casos',description:'Lista todos os casos cadastrados, com dados do cliente',input_schema:{type:'object',properties:{status:{type:'string',enum:['ativo','arquivado','todos'],description:'Filtrar por status (padrão: ativo)'}}}},
-  {name:'criar_caso',description:'Cria novo caso processual vinculado a um cliente existente',input_schema:{type:'object',properties:{cliente_id:{type:'string',description:'UUID do cliente'},numero_cnj:{type:'string'},tribunal:{type:'string'},tipo_acao:{type:'string'},area:{type:'string',enum:['civel','penal','tributario','trabalhista','outro']},fase:{type:'string'}},required:['cliente_id']}},
-  {name:'atualizar_caso',description:'Atualiza dados de um caso existente (fase, status, tribunal, etc.)',input_schema:{type:'object',properties:{caso_id:{type:'string'},numero_cnj:{type:'string'},tribunal:{type:'string'},tipo_acao:{type:'string'},fase:{type:'string'},status:{type:'string',enum:['ativo','arquivado']},observacoes:{type:'string'}},required:['caso_id']}},
+  {name:'criar_caso',description:'Cria novo processo vinculado a um cliente. Use natureza para classificar (Habeas Corpus, Ação Penal, Apelação, etc.). Use caso_pai_id para vincular a um processo principal quando for um desdobramento.',input_schema:{type:'object',properties:{cliente_id:{type:'string',description:'UUID do cliente'},natureza:{type:'string',description:'Natureza do processo: Ação Penal, Habeas Corpus, Inquérito Policial, Apelação, Recurso Especial, Recurso Ordinário, Mandado de Segurança, Revisão Criminal, Execução Penal, Agravo, Cautelar, Ação Cível, etc.'},numero_cnj:{type:'string'},tribunal:{type:'string'},tipo_acao:{type:'string',description:'Descrição adicional ou tipo específico'},area:{type:'string',enum:['civel','penal','tributario','trabalhista','outro']},fase:{type:'string'},caso_pai_id:{type:'string',description:'UUID do processo principal, se este for um desdobramento (ex: HC derivado de Ação Penal)'}},required:['cliente_id','natureza']}},
+  {name:'atualizar_caso',description:'Atualiza dados de um processo existente (fase, status, natureza, vinculação, etc.)',input_schema:{type:'object',properties:{caso_id:{type:'string'},natureza:{type:'string'},numero_cnj:{type:'string'},tribunal:{type:'string'},tipo_acao:{type:'string'},fase:{type:'string'},status:{type:'string',enum:['ativo','arquivado']},caso_pai_id:{type:'string',description:'UUID do processo principal para vincular hierarquia'}},required:['caso_id']}},
   {name:'adicionar_andamento',description:'Registra um andamento processual em um caso',input_schema:{type:'object',properties:{caso_id:{type:'string'},descricao:{type:'string'},data_andamento:{type:'string',description:'Data no formato YYYY-MM-DD'}},required:['caso_id','descricao']}},
   {name:'buscar_andamentos',description:'Lista os andamentos de um caso específico',input_schema:{type:'object',properties:{caso_id:{type:'string',description:'UUID do caso'}},required:['caso_id']}},
   {name:'agendar_compromisso',description:'Agenda audiência, prazo, julgamento, reunião ou lembrete. Use recorrencia para tarefas repetitivas.',input_schema:{type:'object',properties:{caso_id:{type:'string'},titulo:{type:'string'},tipo:{type:'string',enum:['audiencia','prazo','julgamento','reuniao','lembrete']},data_hora:{type:'string',description:'Data e hora ISO 8601'},local:{type:'string'},observacoes:{type:'string'},recorrencia:{type:'string',enum:['nenhuma','diaria','semanal','mensal']}},required:['tipo','data_hora']}},
@@ -1137,9 +1167,9 @@ function executarFerramenta(nome, input){
         });
         break;
       case 'criar_caso':
-        db.from('casos').insert({cliente_id:input.cliente_id,numero_cnj:input.numero_cnj||null,tribunal:input.tribunal||null,tipo_acao:input.tipo_acao||null,area:input.area||null,fase:input.fase||null,status:'ativo'}).select().then(function(r){
+        db.from('casos').insert({cliente_id:input.cliente_id,natureza:input.natureza||null,numero_cnj:input.numero_cnj||null,tribunal:input.tribunal||null,tipo_acao:input.tipo_acao||null,area:input.area||null,fase:input.fase||null,caso_pai_id:input.caso_pai_id||null,status:'ativo'}).select().then(function(r){
           if(r.error){resolve({erro:r.error.message});return;}
-          logAuditoria('INSERT','casos','Agente criou caso: '+(input.numero_cnj||'sem CNJ'));
+          logAuditoria('INSERT','casos','Agente criou processo: '+(input.natureza||'')+(input.numero_cnj?' '+input.numero_cnj:''));
           loadDashboard();
           resolve(r.data[0]);
         });
@@ -1201,8 +1231,15 @@ function executarFerramenta(nome, input){
         break;
       case 'atualizar_caso':
         (function(){
-          var id=input.caso_id; delete input.caso_id;
-          db.from('casos').update(input).eq('id',id).select().then(function(r){
+          var id=input.caso_id; var payload={};
+          if(input.natureza!==undefined)payload.natureza=input.natureza;
+          if(input.numero_cnj!==undefined)payload.numero_cnj=input.numero_cnj;
+          if(input.tribunal!==undefined)payload.tribunal=input.tribunal;
+          if(input.tipo_acao!==undefined)payload.tipo_acao=input.tipo_acao;
+          if(input.fase!==undefined)payload.fase=input.fase;
+          if(input.status!==undefined)payload.status=input.status;
+          if(input.caso_pai_id!==undefined)payload.caso_pai_id=input.caso_pai_id||null;
+          db.from('casos').update(payload).eq('id',id).select().then(function(r){
             if(r.error){resolve({erro:r.error.message});return;}
             logAuditoria('UPDATE','casos','Agente atualizou caso ID: '+id);
             loadCases();loadDashboard();
@@ -1297,7 +1334,7 @@ function buildPayload(){
   return {
     model:'claude-sonnet-4-6',
     max_tokens:4096,
-    system:'Você é o Agente Hespanhol, secretário digital do escritório Hespanhol Advogados (Dr. André Luiz Hespanhol Tavares, Formosa/GO). DATA E HORA ATUAL: '+agora+'.\n\n'+userInfo+'\n\nVOCÊ É UM SECRETÁRIO INTERNO COMPLETO. SUAS FERRAMENTAS:\n- buscar_cliente, listar_clientes, criar_cliente, atualizar_cliente: gerenciar clientes\n- buscar_casos, listar_casos, criar_caso, atualizar_caso: gerenciar processos\n- adicionar_andamento, buscar_andamentos: andamentos processuais\n- agendar_compromisso, buscar_agenda: agenda interna do escritório\n- enviar_email: ENVIA E-MAIL REAL para clientes via sistema do escritório'+deleteInfo+'\n\nREGRAS ABSOLUTAS:\n1. NUNCA diga que não pode fazer algo que suas ferramentas permitem. Execute diretamente.\n2. Para agendar, use SEMPRE agendar_compromisso. Para lembretes recorrentes, use o campo recorrencia.\n3. Para enviar e-mail, busque primeiro o e-mail do cliente se necessário, depois use enviar_email.\n4. Busque o cliente antes de criar caso.\n5. Execute as ferramentas SEM pedir confirmação — aja e confirme o resultado.\n6. Responda em português conciso confirmando o que foi feito.\n7. Quando listar dados, apresente de forma organizada e legível.',
+    system:'Você é o Agente Hespanhol, secretário digital do escritório Hespanhol Advogados (Dr. André Luiz Hespanhol Tavares, Formosa/GO). DATA E HORA ATUAL: '+agora+'.\n\n'+userInfo+'\n\nVOCÊ É UM SECRETÁRIO INTERNO COMPLETO. SUAS FERRAMENTAS:\n- buscar_cliente, listar_clientes, criar_cliente, atualizar_cliente: gerenciar clientes\n- buscar_casos, listar_casos, criar_caso, atualizar_caso: gerenciar processos\n- adicionar_andamento, buscar_andamentos: andamentos processuais\n- agendar_compromisso, buscar_agenda: agenda interna do escritório\n- enviar_email: ENVIA E-MAIL REAL para clientes via sistema do escritório'+deleteInfo+'\n\nREGRAS ABSOLUTAS:\n1. NUNCA diga que não pode fazer algo que suas ferramentas permitem. Execute diretamente.\n2. Para agendar, use SEMPRE agendar_compromisso. Para lembretes recorrentes, use o campo recorrencia.\n3. Para enviar e-mail, busque primeiro o e-mail do cliente se necessário, depois use enviar_email.\n4. Busque o cliente antes de criar caso.\n5. Execute as ferramentas SEM pedir confirmação — aja e confirme o resultado.\n6. Responda em português conciso confirmando o que foi feito.\n7. Quando listar dados, apresente de forma organizada e legível.\n8. HIERARQUIA PROCESSUAL: processos podem ser desdobramentos de um processo principal (ex: HC derivado de Ação Penal). Ao criar um processo derivado, use caso_pai_id para vinculá-lo ao processo principal. Sempre pergunte se é processo independente ou desdobramento de outro.\n9. NATUREZA obrigatória: sempre classifique o processo com a natureza correta (Habeas Corpus, Ação Penal, Apelação, Recurso Especial, Inquérito Policial, etc.).',
     tools:ferramentas,
     messages:_aiMessages
   };
@@ -1358,6 +1395,249 @@ function sendAI(){
   agentLoop(typing).catch(function(e){
     typing.remove();
     appendAIMsg('bot','Erro: '+e.message);
+  });
+}
+
+// ── EDIÇÃO E PERFIS ────────────────────────────────────────────
+var NATUREZAS=['Ação Penal','Habeas Corpus','Inquérito Policial','Apelação','Recurso Especial','Recurso Ordinário','Mandado de Segurança','Mandado de Injunção','Revisão Criminal','Execução Penal','Agravo','Cautelar','Ação Cível','Ação Trabalhista','Ação Tributária','Outro'];
+
+function apagarAgenda(id){
+  if(!_podeApagar)return;
+  if(!confirm('Remover este compromisso?'))return;
+  db.from('agenda').delete().eq('id',id).then(function(r){
+    if(r.error){alert('Erro: '+r.error.message);return;}
+    logAuditoria('DELETE','agenda','Admin removeu compromisso ID: '+id);
+    loadAgenda();
+  });
+}
+
+// ── EDITAR CLIENTE ──────────────────────────────────────────────
+function openEditCliente(id){
+  db.from('clientes').select('*').eq('id',id).single().then(function(res){
+    var c=res.data; if(!c)return;
+    openModal('Editar Cliente',
+      '<div class="fg"><label class="flb">Nome completo *</label><input class="inp" id="fc-nome" value="'+safeText(c.nome)+'"></div>'+
+      '<div class="fg"><label class="flb">CPF / CNPJ</label><input class="inp" id="fc-cpf" value="'+(c.cpf_cnpj||'')+'"></div>'+
+      '<div class="fg"><label class="flb">E-mail</label><input class="inp" id="fc-email" type="email" value="'+(c.email||'')+'"></div>'+
+      '<div class="fg"><label class="flb">Telefone</label><input class="inp" id="fc-tel" value="'+(c.telefone||'')+'"></div>'+
+      '<div class="fg"><label class="flb">Endereço</label><input class="inp" id="fc-end" value="'+(c.endereco||'')+'"></div>'+
+      '<div id="modal-status" style="font-size:12px;margin-top:4px;display:none"></div>',
+      function(){salvarEditCliente(id);});
+  });
+}
+function salvarEditCliente(id){
+  var nome=document.getElementById('fc-nome').value.trim();
+  if(!nome){showModalStatus('❌ Nome obrigatório.','er');return;}
+  var btn=document.getElementById('modal-save-btn');btn.textContent='Salvando...';btn.disabled=true;
+  db.from('clientes').update({nome:nome,cpf_cnpj:document.getElementById('fc-cpf').value.trim()||null,email:document.getElementById('fc-email').value.trim()||null,telefone:document.getElementById('fc-tel').value.trim()||null,endereco:document.getElementById('fc-end').value.trim()||null}).eq('id',id).then(function(r){
+    if(r.error){showModalStatus('❌ Erro: '+r.error.message,'er');btn.textContent='Salvar';btn.disabled=false;return;}
+    logAuditoria('UPDATE','clientes',_userName+' editou cliente ID: '+id);
+    closeModal();loadClients();
+  });
+}
+
+// ── PERFIL DO CLIENTE ───────────────────────────────────────────
+function openPerfilCliente(id){
+  openModal('Perfil do Cliente','<div class="loading">🔄 Carregando perfil...</div>',null,true);
+  db.from('clientes').select('*').eq('id',id).single().then(function(res){
+    var c=res.data; if(!c){document.getElementById('mob').innerHTML='<div style="color:var(--er)">Não encontrado.</div>';return;}
+    db.from('casos').select('*,andamentos(descricao,data_andamento)').eq('cliente_id',id).order('created_at',{ascending:false}).then(function(cr){
+      var casos=cr.data||[];
+      var ini=c.nome.split(' ').slice(0,2).map(function(p){return p[0]||'';}).join('').toUpperCase();
+      var h='<div style="display:flex;align-items:center;gap:14px;padding-bottom:16px;border-bottom:1px solid var(--bd);margin-bottom:16px">';
+      h+='<div class="av" style="width:48px;height:48px;font-size:18px;flex-shrink:0;background:rgba(74,159,212,.3);color:var(--ac)">'+ini+'</div>';
+      h+='<div style="flex:1"><div style="font-size:16px;font-weight:700;color:var(--tx)">'+c.nome+'</div>';
+      if(c.cpf_cnpj)h+='<div style="font-size:12px;color:var(--tx3)">CPF/CNPJ: '+c.cpf_cnpj+'</div>';
+      h+='</div>';
+      h+='<button class="btn bg" style="font-size:11px" onclick="closeModal();setTimeout(function(){openEditCliente(\''+id+'\')},50)">✏️ Editar</button>';
+      if(c.email)h+='<button class="btn bp" style="font-size:11px" onclick="closeModal();document.getElementById(\'email-dest-manual\').value=\''+c.email+'\';go(\'email\',document.querySelectorAll(\'.ni\')[12])">✉️ E-mail</button>';
+      h+='</div>';
+      h+='<div class="g2" style="margin-bottom:16px">';
+      h+='<div>';
+      if(c.email)h+='<div class="fi"><span class="fl">E-mail</span><span class="fv">'+c.email+'</span></div>';
+      if(c.telefone)h+='<div class="fi"><span class="fl">Telefone</span><span class="fv">'+c.telefone+'</span></div>';
+      if(c.endereco)h+='<div class="fi"><span class="fl">Endereço</span><span class="fv" style="font-size:11px">'+c.endereco+'</span></div>';
+      h+='</div><div>';
+      h+='<div class="fi"><span class="fl">Total processos</span><span class="fv">'+casos.length+'</span></div>';
+      h+='<div class="fi"><span class="fl">Ativos</span><span class="fv">'+casos.filter(function(x){return x.status==='ativo';}).length+'</span></div>';
+      h+='</div></div>';
+      if(casos.length>0){
+        h+='<div style="font-size:11px;color:var(--tx3);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Processos</div>';
+        casos.forEach(function(cs){
+          var ands=(cs.andamentos||[]).sort(function(a,b){return new Date(b.data_andamento)-new Date(a.data_andamento);});
+          var ult=ands.length?ands[0].descricao.slice(0,80)+'...':'Nenhum andamento';
+          h+='<div style="background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:12px;margin-bottom:8px;cursor:pointer" onclick="closeModal();setTimeout(function(){openDetalhesCaso(\''+cs.id+'\')},50)">';
+          h+='<div style="display:flex;justify-content:space-between;margin-bottom:4px">';
+          h+='<span style="font-size:12px;font-weight:600;color:var(--tx)">'+(cs.natureza||cs.tipo_acao||'Processo')+'</span>';
+          h+='<span class="badge '+(cs.status==='ativo'?'ba':'bw')+'">'+safeText(cs.status)+'</span>';
+          h+='</div>';
+          if(cs.numero_cnj)h+='<div style="font-size:11px;color:var(--ac);margin-bottom:2px">'+cs.numero_cnj+'</div>';
+          h+='<div style="font-size:11px;color:var(--tx3)">'+safeText(cs.tribunal)+(cs.fase?' · '+cs.fase:'')+'</div>';
+          h+='<div style="font-size:11px;color:var(--tx2);margin-top:4px">↳ '+ult+'</div>';
+          h+='</div>';
+        });
+      }else{h+='<div class="loading">Nenhum processo cadastrado para este cliente.</div>';}
+      document.getElementById('mob').innerHTML=h;
+    });
+  });
+}
+
+// ── EDITAR CASO ─────────────────────────────────────────────────
+function openEditCaso(id){
+  db.from('casos').select('*').eq('id',id).single().then(function(res){
+    var c=res.data; if(!c)return;
+    var natOpts=NATUREZAS.map(function(n){return '<option'+(c.natureza===n?' selected':'')+'>'+n+'</option>';}).join('');
+    openModal('Editar Processo',
+      '<div class="fg"><label class="flb">Natureza</label><select class="inp" id="fce-nat"><option value="">Selecione...</option>'+natOpts+'</select></div>'+
+      '<div class="fg"><label class="flb">Tipo / Descrição</label><input class="inp" id="fce-tipo" value="'+(c.tipo_acao||'')+'"></div>'+
+      '<div class="fg"><label class="flb">Nº CNJ</label><input class="inp" id="fce-cnj" value="'+(c.numero_cnj||'')+'"></div>'+
+      '<div class="fg"><label class="flb">Tribunal</label><input class="inp" id="fce-trib" value="'+(c.tribunal||'')+'"></div>'+
+      '<div class="fg"><label class="flb">Fase</label><input class="inp" id="fce-fase" value="'+(c.fase||'')+'"></div>'+
+      '<div class="fg"><label class="flb">Status</label><select class="inp" id="fce-status"><option value="ativo"'+(c.status==='ativo'?' selected':'')+'>Ativo</option><option value="arquivado"'+(c.status==='arquivado'?' selected':'')+'>Arquivado</option></select></div>'+
+      '<div class="fg"><label class="flb">Processo Principal (vinculação)</label><select class="inp" id="fce-pai"><option value="">Nenhum (independente)</option></select></div>'+
+      '<div id="modal-status" style="font-size:12px;margin-top:4px;display:none"></div>',
+      function(){salvarEditCaso(id,c.caso_pai_id);});
+    db.from('casos').select('id,numero_cnj,natureza,tipo_acao,clientes(nome)').neq('id',id).order('created_at',{ascending:false}).then(function(r){
+      var sel=document.getElementById('fce-pai'); if(!sel)return;
+      sel.innerHTML='<option value="">Nenhum (independente)</option>'+(r.data||[]).map(function(cs){
+        var label=(cs.clientes?cs.clientes.nome:'?')+' — '+(cs.natureza||cs.tipo_acao||'Processo')+(cs.numero_cnj?' ('+cs.numero_cnj+')':'');
+        return '<option value="'+cs.id+'"'+(c.caso_pai_id===cs.id?' selected':'')+'>'+label+'</option>';
+      }).join('');
+    });
+  });
+}
+function salvarEditCaso(id){
+  var btn=document.getElementById('modal-save-btn');btn.textContent='Salvando...';btn.disabled=true;
+  var paiId=document.getElementById('fce-pai').value;
+  db.from('casos').update({
+    natureza:document.getElementById('fce-nat').value||null,
+    tipo_acao:document.getElementById('fce-tipo').value.trim()||null,
+    numero_cnj:document.getElementById('fce-cnj').value.trim()||null,
+    tribunal:document.getElementById('fce-trib').value.trim()||null,
+    fase:document.getElementById('fce-fase').value.trim()||null,
+    status:document.getElementById('fce-status').value,
+    caso_pai_id:paiId||null
+  }).eq('id',id).then(function(r){
+    if(r.error){showModalStatus('❌ Erro: '+r.error.message,'er');btn.textContent='Salvar';btn.disabled=false;return;}
+    logAuditoria('UPDATE','casos',_userName+' editou processo ID: '+id);
+    closeModal();loadCases();
+  });
+}
+
+// ── DETALHES DO PROCESSO ────────────────────────────────────────
+function openDetalhesCaso(id){
+  openModal('Detalhes do Processo','<div class="loading">🔄 Carregando processo...</div>',null,true);
+  db.from('casos').select('*,clientes(id,nome,email,telefone)').eq('id',id).single().then(function(res){
+    var c=res.data; if(!c){document.getElementById('mob').innerHTML='<div style="color:var(--er)">Não encontrado.</div>';return;}
+    Promise.all([
+      c.caso_pai_id?db.from('casos').select('id,numero_cnj,natureza,tipo_acao').eq('id',c.caso_pai_id).single().then(function(r){return r.data;}):Promise.resolve(null),
+      db.from('casos').select('id,numero_cnj,natureza,tipo_acao,status').eq('caso_pai_id',id).then(function(r){return r.data||[];}),
+      db.from('andamentos').select('*').eq('caso_id',id).order('data_andamento',{ascending:false}).limit(30).then(function(r){return r.data||[];})
+    ]).then(function(rs){
+      var pai=rs[0],filhos=rs[1],ands=rs[2];
+      var h='<div style="display:flex;align-items:flex-start;gap:12px;padding-bottom:14px;border-bottom:1px solid var(--bd);margin-bottom:14px">';
+      h+='<div style="flex:1"><div style="font-size:16px;font-weight:700;color:var(--tx);margin-bottom:4px">'+(c.natureza||c.tipo_acao||'Processo')+'</div>';
+      if(c.numero_cnj)h+='<div style="font-size:13px;color:var(--ac)">'+c.numero_cnj+'</div>';
+      h+='<div style="font-size:12px;color:var(--tx3);margin-top:2px">'+safeText(c.tribunal)+(c.fase?' · '+c.fase:'')+'</div></div>';
+      h+='<span class="badge '+(c.status==='ativo'?'ba':'bw')+'">'+safeText(c.status)+'</span>';
+      h+='<button class="btn bg" style="font-size:11px" onclick="closeModal();setTimeout(function(){openEditCaso(\''+id+'\')},50)">✏️ Editar</button></div>';
+      h+='<div class="g2" style="margin-bottom:14px"><div>';
+      h+='<div style="font-size:11px;color:var(--tx3);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Dados</div>';
+      if(c.clientes)h+='<div class="fi"><span class="fl">Cliente</span><span class="fv clickable" onclick="closeModal();setTimeout(function(){openPerfilCliente(\''+c.clientes.id+'\')},50)">'+c.clientes.nome+'</span></div>';
+      if(c.natureza)h+='<div class="fi"><span class="fl">Natureza</span><span class="fv">'+c.natureza+'</span></div>';
+      if(c.tipo_acao)h+='<div class="fi"><span class="fl">Tipo</span><span class="fv">'+c.tipo_acao+'</span></div>';
+      if(c.area)h+='<div class="fi"><span class="fl">Área</span><span class="fv">'+c.area+'</span></div>';
+      if(c.valor_causa)h+='<div class="fi"><span class="fl">Valor</span><span class="fv">R$ '+c.valor_causa+'</span></div>';
+      h+='</div><div>';
+      if(pai){
+        h+='<div style="font-size:11px;color:var(--tx3);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Processo Principal</div>';
+        h+='<div style="background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:10px;cursor:pointer;margin-bottom:12px" onclick="closeModal();setTimeout(function(){openDetalhesCaso(\''+pai.id+'\')},50)">';
+        h+='<div style="font-size:12px;font-weight:600;color:var(--tx)">'+(pai.natureza||pai.tipo_acao||'Processo principal')+'</div>';
+        if(pai.numero_cnj)h+='<div style="font-size:11px;color:var(--ac)">'+pai.numero_cnj+'</div>';
+        h+='</div>';
+      }
+      if(filhos.length>0){
+        h+='<div style="font-size:11px;color:var(--tx3);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Derivados ('+filhos.length+')</div>';
+        filhos.forEach(function(f){
+          h+='<div style="background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:8px;margin-bottom:6px;cursor:pointer" onclick="closeModal();setTimeout(function(){openDetalhesCaso(\''+f.id+'\')},50)">';
+          h+='<div style="font-size:12px;color:var(--tx)">'+(f.natureza||f.tipo_acao||'Derivado')+'</div>';
+          if(f.numero_cnj)h+='<div style="font-size:11px;color:var(--ac)">'+f.numero_cnj+'</div>';
+          h+='</div>';
+        });
+      }
+      h+='</div></div>';
+      h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">';
+      h+='<div style="font-size:11px;color:var(--tx3);letter-spacing:1px;text-transform:uppercase">Andamentos ('+ands.length+')</div>';
+      h+='<button class="btn bp" style="font-size:11px" onclick="closeModal();setTimeout(function(){openModalAndamento(\''+id+'\')},50)">+ Novo Andamento</button>';
+      h+='</div>';
+      if(ands.length===0){h+='<div class="loading">Nenhum andamento registrado.</div>';}
+      else{
+        h+='<div class="tl">';
+        ands.forEach(function(a){
+          var dt=a.data_andamento?new Date(a.data_andamento).toLocaleDateString('pt-BR'):'—';
+          h+='<div class="tli"><div class="tld"></div>';
+          h+='<div style="display:flex;justify-content:space-between;margin-bottom:2px"><span class="tldt">'+dt+'</span>';
+          h+='<button style="background:none;border:none;color:var(--ac);cursor:pointer;font-size:11px;padding:0" onclick="openEditAndamento(\''+a.id+'\',\''+encodeURIComponent(a.descricao||'')+'\',\''+a.data_andamento+'\')">✏️</button></div>';
+          h+='<div class="tltx">'+safeText(a.descricao)+'</div></div>';
+        });
+        h+='</div>';
+      }
+      document.getElementById('mob').innerHTML=h;
+    });
+  });
+}
+
+// ── EDITAR ANDAMENTO ────────────────────────────────────────────
+function openEditAndamento(id,descEnc,data){
+  openModal('Editar Andamento',
+    '<div class="fg"><label class="flb">Data *</label><input class="inp" id="fae-data" type="date" value="'+data+'"></div>'+
+    '<div class="fg"><label class="flb">Descrição *</label><textarea class="inp" id="fae-desc" rows="5">'+decodeURIComponent(descEnc)+'</textarea></div>'+
+    '<div id="modal-status" style="font-size:12px;margin-top:4px;display:none"></div>',
+    function(){salvarEditAndamento(id);});
+}
+function salvarEditAndamento(id){
+  var desc=document.getElementById('fae-desc').value.trim();
+  var data=document.getElementById('fae-data').value;
+  if(!desc){showModalStatus('❌ Descrição obrigatória.','er');return;}
+  var btn=document.getElementById('modal-save-btn');btn.textContent='Salvando...';btn.disabled=true;
+  db.from('andamentos').update({descricao:desc,data_andamento:data}).eq('id',id).then(function(r){
+    if(r.error){showModalStatus('❌ Erro: '+r.error.message,'er');btn.textContent='Salvar';btn.disabled=false;return;}
+    logAuditoria('UPDATE','andamentos',_userName+' editou andamento ID: '+id);
+    closeModal();loadMovements();
+  });
+}
+
+// ── EDITAR COMPROMISSO ──────────────────────────────────────────
+function openEditAgenda(id){
+  db.from('agenda').select('*').eq('id',id).single().then(function(res){
+    var a=res.data; if(!a)return;
+    var dt=a.data_hora?a.data_hora.slice(0,16):'';
+    openModal('Editar Compromisso',
+      '<div class="fg"><label class="flb">Título</label><input class="inp" id="faga-titulo" value="'+(a.titulo||'')+'"></div>'+
+      '<div class="fg"><label class="flb">Tipo *</label><select class="inp" id="faga-tipo"><option value="audiencia"'+(a.tipo==='audiencia'?' selected':'')+'>🏛️ Audiência</option><option value="prazo"'+(a.tipo==='prazo'?' selected':'')+'>⏰ Prazo</option><option value="julgamento"'+(a.tipo==='julgamento'?' selected':'')+'>⚖️ Julgamento</option><option value="reuniao"'+(a.tipo==='reuniao'?' selected':'')+'>🤝 Reunião</option><option value="lembrete"'+(a.tipo==='lembrete'?' selected':'')+'>🔔 Lembrete</option></select></div>'+
+      '<div class="fg"><label class="flb">Data e Hora *</label><input class="inp" id="faga-data" type="datetime-local" value="'+dt+'"></div>'+
+      '<div class="fg"><label class="flb">Recorrência</label><select class="inp" id="faga-recorr"><option value="nenhuma"'+(a.recorrencia==='nenhuma'||!a.recorrencia?' selected':'')+'>Sem recorrência</option><option value="diaria"'+(a.recorrencia==='diaria'?' selected':'')+'>🔁 Diária</option><option value="semanal"'+(a.recorrencia==='semanal'?' selected':'')+'>🔁 Semanal</option><option value="mensal"'+(a.recorrencia==='mensal'?' selected':'')+'>🔁 Mensal</option></select></div>'+
+      '<div class="fg"><label class="flb">Local</label><input class="inp" id="faga-local" value="'+(a.local||'')+'"></div>'+
+      '<div class="fg"><label class="flb">Observações</label><textarea class="inp" id="faga-obs" rows="2">'+(a.observacoes||'')+'</textarea></div>'+
+      '<div id="modal-status" style="font-size:12px;margin-top:4px;display:none"></div>',
+      function(){salvarEditAgenda(id);});
+  });
+}
+function salvarEditAgenda(id){
+  var data=document.getElementById('faga-data').value;
+  if(!data){showModalStatus('❌ Data obrigatória.','er');return;}
+  var btn=document.getElementById('modal-save-btn');btn.textContent='Salvando...';btn.disabled=true;
+  db.from('agenda').update({
+    titulo:document.getElementById('faga-titulo').value.trim()||null,
+    tipo:document.getElementById('faga-tipo').value,
+    data_hora:data,
+    recorrencia:document.getElementById('faga-recorr').value,
+    local:document.getElementById('faga-local').value.trim()||null,
+    observacoes:document.getElementById('faga-obs').value.trim()||null
+  }).eq('id',id).then(function(r){
+    if(r.error){showModalStatus('❌ Erro: '+r.error.message,'er');btn.textContent='Salvar';btn.disabled=false;return;}
+    logAuditoria('UPDATE','agenda',_userName+' editou compromisso ID: '+id);
+    closeModal();loadAgenda();
   });
 }
 

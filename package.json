@@ -2,7 +2,7 @@
   "name": "hespanhol-sistema",
   "version": "1.0.0",
   "private": true,
-  "engines": {
-    "node": "18.x"
+  "dependencies": {
+    "node-forge": "^1.3.1"
   }
 }

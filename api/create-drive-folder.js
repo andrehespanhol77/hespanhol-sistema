@@ -7,15 +7,33 @@ const SCOPES = ["https://www.googleapis.com/auth/drive"];
 
 function parsePrivateKey(raw) {
   if (!raw) throw new Error("GOOGLE_PRIVATE_KEY está vazia");
-  // Converte \n literal para quebra de linha real
+
+  // Normaliza todos os estilos de \n
   let key = raw.replace(/\\n/g, "\n").replace(/\\r/g, "").trim();
-  // Remove aspas extras que às vezes são incluídas ao colar no Vercel
-  if (key.startsWith('"') && key.endsWith('"')) key = key.slice(1, -1).replace(/\\n/g, "\n").trim();
-  console.log("Key diagnóstico: tem BEGIN:", key.includes("BEGIN PRIVATE KEY"), "| len:", key.length, "| primeiros 30:", key.slice(0, 30));
-  if (!key.includes("BEGIN PRIVATE KEY") && !key.includes("BEGIN RSA PRIVATE KEY")) {
-    throw new Error("GOOGLE_PRIVATE_KEY inválida: não contém 'BEGIN PRIVATE KEY'. Verifique o valor no Vercel.");
+  // Remove aspas externas se coladas com elas
+  if (key.startsWith('"') || key.startsWith("'")) key = key.slice(1);
+  if (key.endsWith('"') || key.endsWith("'")) key = key.slice(0, -1);
+  key = key.replace(/\\n/g, "\n").trim();
+
+  // Extrai apenas o conteúdo base64 entre os headers PEM
+  const b64 = key
+    .replace(/-----BEGIN PRIVATE KEY-----/g, "")
+    .replace(/-----END PRIVATE KEY-----/g, "")
+    .replace(/-----BEGIN RSA PRIVATE KEY-----/g, "")
+    .replace(/-----END RSA PRIVATE KEY-----/g, "")
+    .replace(/\s/g, "");
+
+  if (!b64 || b64.length < 100) {
+    throw new Error("GOOGLE_PRIVATE_KEY inválida: conteúdo base64 muito curto ou ausente (len=" + b64.length + ")");
   }
-  return key;
+
+  // Reconstrói o PEM com formatação correta (64 chars por linha)
+  const chunks = b64.match(/.{1,64}/g) || [];
+  const header = key.includes("BEGIN RSA PRIVATE KEY") ? "RSA PRIVATE KEY" : "PRIVATE KEY";
+  const pem = `-----BEGIN ${header}-----\n${chunks.join("\n")}\n-----END ${header}-----\n`;
+
+  console.log("PEM reconstruído: header='" + header + "' | b64 len=" + b64.length + " | linhas=" + chunks.length);
+  return pem;
 }
 
 async function getAccessToken() {
@@ -40,13 +58,14 @@ async function getAccessToken() {
 
   const { createSign, createPrivateKey } = await import("crypto");
 
-  const privateKeyPem = parsePrivateKey(CREDENTIALS.private_key);
-  const privateKeyObj = createPrivateKey({ key: privateKeyPem, format: "pem" });
+  const pem = parsePrivateKey(CREDENTIALS.private_key);
+  const keyObj = createPrivateKey({ key: pem, format: "pem" });
+  console.log("createPrivateKey OK, tipo:", keyObj.asymmetricKeyType);
 
   const sign = createSign("RSA-SHA256");
   sign.update(signingInput);
   const signature = sign
-    .sign(privateKeyObj)
+    .sign(keyObj)
     .toString("base64")
     .replace(/=/g, "")
     .replace(/\+/g, "-")
@@ -117,7 +136,7 @@ export default async function handler(req, res) {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       const listData = await listResp.json();
-      let processosPaiId = listData.files && listData.files[0] ? listData.files[0].id : cliente_pasta_id;
+      const processosPaiId = listData.files && listData.files[0] ? listData.files[0].id : cliente_pasta_id;
       const processoId = await criarPasta(token, nome_processo, processosPaiId);
       await criarPasta(token, "Petições e Docs Instrutórios", processoId);
       await criarPasta(token, "Peças Importantes", processoId);

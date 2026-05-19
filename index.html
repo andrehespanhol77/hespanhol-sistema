@@ -90,18 +90,21 @@ tr:hover td{background:var(--sf);}
 .son{background:var(--ok)}.ssn{background:var(--wn)}
 .adn{text-align:center;padding:60px 20px;color:var(--tx3);}
 .aibtn{position:fixed;bottom:22px;right:22px;width:46px;height:46px;border-radius:50%;background:var(--ac);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 4px 20px rgba(74,159,212,.4);z-index:150;transition:all .2s;}
-.aip{position:fixed;bottom:80px;right:22px;width:310px;background:var(--bg2);border:1px solid var(--bd);border-radius:var(--rl);z-index:150;display:none;flex-direction:column;max-height:420px;box-shadow:0 8px 32px rgba(0,0,0,.5);}
+.aip{position:fixed;bottom:80px;right:22px;width:340px;background:var(--bg2);border:1px solid var(--bd);border-radius:var(--rl);z-index:150;display:none;flex-direction:column;max-height:460px;box-shadow:0 8px 32px rgba(0,0,0,.5);}
 .aip.open{display:flex;}
 .aih{padding:12px 14px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:8px;}
-.aim{flex:1;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:7px;min-height:100px;}
-.aimsg{font-size:12px;padding:7px 10px;border-radius:8px;line-height:1.5;max-width:88%;}
+.aim{flex:1;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:7px;min-height:120px;}
+.aimsg{font-size:12px;padding:7px 10px;border-radius:8px;line-height:1.5;max-width:92%;}
 .bot{background:var(--sf);color:var(--tx2);align-self:flex-start;}
 .usr{background:var(--ac);color:var(--bg2);align-self:flex-end;}
+.tool-action{background:rgba(46,204,113,.1);color:#2ecc71;border:1px solid rgba(46,204,113,.2);font-size:11px;padding:5px 10px;border-radius:6px;align-self:flex-start;}
 .air{padding:8px 10px;border-top:1px solid var(--bd);display:flex;gap:7px;}
 .aii{flex:1;background:var(--sf);border:1px solid var(--bd);border-radius:6px;padding:6px 10px;color:var(--tx);font-size:12px;font-family:var(--fn);outline:none;}
 .ais{background:var(--ac);border:none;border-radius:6px;width:26px;height:26px;cursor:pointer;color:var(--bg2);font-size:12px;}
 .aty{display:flex;gap:3px;align-items:center;padding:7px 10px;background:var(--sf);border-radius:8px;align-self:flex-start;}
 .aty span{width:4px;height:4px;background:var(--tx3);border-radius:50%;animation:bx .8s infinite;}
+.aty span:nth-child(2){animation-delay:.2s;}
+.aty span:nth-child(3){animation-delay:.4s;}
 @keyframes bx{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}}
 .mo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center;}
 .mo.open{display:flex;}
@@ -110,8 +113,6 @@ tr:hover td{background:var(--sf);}
 .moa{display:flex;gap:8px;margin-top:18px;justify-content:flex-end;}
 .sb{background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:7px 12px;color:var(--tx);font-size:12px;font-family:var(--fn);outline:none;width:180px;}
 .loading{text-align:center;padding:24px;color:var(--tx3);font-size:13px;}
-.msg-ok{font-size:12px;color:var(--ok);margin-top:8px;display:none;}
-.msg-er{font-size:12px;color:var(--er);margin-top:8px;display:none;}
 @media(max-width:768px){.sidebar{transform:translateX(-100%)}.main{margin-left:0}.g4{grid-template-columns:repeat(2,1fr)}.g3,.g2{grid-template-columns:1fr}}
 @media print{
   .sidebar,.topbar,.aibtn,.aip,.mo{display:none!important;}
@@ -128,6 +129,7 @@ tr:hover td{background:var(--sf);}
 </style>
 </head>
 <body>
+
 <div class="login-wrap" id="login-wrap">
   <div class="login-box">
     <div style="text-align:center;margin-bottom:28px">
@@ -163,6 +165,7 @@ tr:hover td{background:var(--sf);}
     <div class="ni hide-cliente" onclick="go('email',this)">✉️ Agente E-mail</div>
     <div class="ns hide-cliente">Sistema</div>
     <div class="ni hide-cliente" onclick="go('access',this)">🔐 Controle Acesso</div>
+    <div class="ni hide-cliente" onclick="go('audit',this)">📋 Auditoria</div>
     <div class="ni hide-cliente" onclick="go('connectors',this)">🔌 Conectores</div>
     <div class="ni hide-cliente" onclick="go('settings',this)">⚙️ Configurações</div>
     <div class="ni hide-cliente" onclick="go('relatorio',this)">🖨️ Relatório</div>
@@ -182,11 +185,12 @@ tr:hover td{background:var(--sf);}
 <main class="main">
 <header class="topbar">
   <div style="font-size:14px;font-weight:600;color:var(--tx);flex:1" id="ptitle">Dashboard</div>
-  <input class="sb" placeholder="Buscar...">
+  <input class="sb" placeholder="Buscar..." id="buscaGlobal" oninput="buscaGlobal(this.value)">
   <button class="btn bp hide-cliente" id="btn-novo" onclick="abrirNovoContextual()">+ Novo</button>
 </header>
 
 <div class="content">
+
   <div class="page active" id="page-dashboard">
     <div class="g4">
       <div class="mc"><div class="mi">📁</div><div class="ml">Casos Ativos</div><div class="mv" id="dash-casos">—</div><div class="ms">no banco de dados</div></div>
@@ -196,7 +200,7 @@ tr:hover td{background:var(--sf);}
     </div>
     <div class="g2">
       <div class="card"><div class="ch"><div class="ct">Casos Recentes</div><span style="font-size:11px;color:var(--ac);cursor:pointer" onclick="go('cases',document.querySelectorAll('.ni')[1])">Ver todos →</span></div><div id="dash-casos-list"><div class="loading">🔄 Carregando...</div></div></div>
-      <div class="card"><div class="ch"><div class="ct">Últimas Movimentações</div></div><div class="tl"><div class="tli"><div class="tld"></div><div class="tldt">Hoje — DataJud/CNJ</div><div class="tltx">Monitoramento ativo</div></div><div class="tli"><div class="tld w"></div><div class="tldt">Agente Hespanhol</div><div class="tltx">Relatório diário enviado</div></div></div></div>
+      <div class="card"><div class="ch"><div class="ct">Próximos Compromissos</div></div><div id="dash-agenda-list"><div class="loading">🔄 Carregando...</div></div></div>
     </div>
   </div>
 
@@ -205,7 +209,8 @@ tr:hover td{background:var(--sf);}
       <div style="font-size:13px;color:var(--tx3)" id="cases-count">Carregando...</div>
       <button class="btn bp hide-cliente" onclick="openModalCaso()">+ Novo Caso</button>
     </div>
-    <table><thead><tr><th>Nº CNJ</th><th>Cliente</th><th>Tipo</th><th>Tribunal</th><th>Fase</th><th>Status</th><th class="hide-financeiro">Valor</th></tr></thead><tbody id="cases-tbody"><tr><td colspan="7" class="loading">🔄 Carregando do banco...</td></tr></tbody></table>
+    <table><thead><tr><th>Nº CNJ</th><th>Cliente</th><th>Tipo</th><th>Tribunal</th><th>Fase</th><th>Status</th><th class="hide-financeiro">Valor</th><th class="hide-cliente">Ações</th></tr></thead>
+    <tbody id="cases-tbody"><tr><td colspan="8" class="loading">🔄 Carregando do banco...</td></tr></tbody></table>
   </div>
 
   <div class="page" id="page-clients">
@@ -243,11 +248,18 @@ tr:hover td{background:var(--sf);}
     <div id="rel-tabela"><div class="loading">🔄 Carregando relatório...</div></div>
   </div>
 
-  <div class="page" id="page-movements"><div class="card"><div style="font-size:13px;color:var(--tx2);line-height:1.7">Andamentos processuais serão exibidos aqui automaticamente pelo Agente Hespanhol.</div></div></div>
+  <div class="page" id="page-movements">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div style="font-size:13px;color:var(--tx3)">Andamentos processuais</div>
+      <button class="btn bp hide-cliente" onclick="openModalAndamento()">+ Novo Andamento</button>
+    </div>
+    <div id="movements-list"><div class="loading">🔄 Carregando andamentos...</div></div>
+  </div>
+
   <div class="page" id="page-expenses"><div class="card"><div class="ct">Despesas</div><div class="loading">Em desenvolvimento.</div></div></div>
 
   <div class="page" id="page-docs">
-    <div style="display:flex;justify-content:space-between;margin-bottom:16px"><div style="font-size:13px;color:var(--tx3)">Templates do escritório</div><button class="btn bp">+ Novo Template</button></div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:16px"><div style="font-size:13px;color:var(--tx3)">Templates do escritório</div></div>
     <div class="g3">
       <div class="card"><div style="font-size:28px;margin-bottom:12px">📋</div><div class="ct">Contrato de Honorários</div><div style="font-size:12px;color:var(--tx3);margin:6px 0 14px">Preenchimento automático</div></div>
       <div class="card"><div style="font-size:28px;margin-bottom:12px">📜</div><div class="ct">Procuração Ad Judicia</div><div style="font-size:12px;color:var(--tx3);margin:6px 0 14px">Poderes gerais e especiais</div></div>
@@ -291,8 +303,8 @@ tr:hover td{background:var(--sf);}
   <div class="page" id="page-email">
     <div class="card">
       <div class="ct" style="margin-bottom:14px">✦ Redigir com Agente Hespanhol</div>
-      <div class="fg"><label class="flb">Tipo</label><select class="inp"><option>Atualização de andamento</option><option>Convocação para reunião</option><option>Comunicado de prazo</option></select></div>
-      <div class="fg"><label class="flb">Instruções</label><textarea class="inp" rows="3" placeholder="Tom formal, mencionar prazo..."></textarea></div>
+      <div class="fg"><label class="flb">Tipo</label><select class="inp" id="email-tipo"><option>Atualização de andamento</option><option>Convocação para reunião</option><option>Comunicado de prazo</option></select></div>
+      <div class="fg"><label class="flb">Instruções</label><textarea class="inp" id="email-inst" rows="3" placeholder="Tom formal, mencionar prazo..."></textarea></div>
       <div style="display:flex;gap:8px"><button class="btn bg" style="flex:1" onclick="genEmail()">✦ Gerar com IA</button><button class="btn bp" style="flex:1">Enviar</button></div>
       <div id="email-box" style="display:none;margin-top:12px;background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:12px;font-size:12px;color:var(--tx2);line-height:1.6;white-space:pre-wrap"></div>
     </div>
@@ -305,14 +317,20 @@ tr:hover td{background:var(--sf);}
     </div>
   </div>
 
+  <div class="page" id="page-audit">
+    <div class="card">
+      <div class="ch"><div class="ct">📋 Trilha de Auditoria</div><button class="btn bg" style="font-size:11px" onclick="loadAudit()">↺ Atualizar</button></div>
+      <div id="audit-list"><div class="loading">🔄 Carregando logs...</div></div>
+    </div>
+  </div>
+
   <div class="page" id="page-connectors">
     <div class="cc"><div class="cs son"></div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--tx)">Supabase</div><div style="font-size:11px;color:var(--tx3)">Banco de dados</div></div><span class="badge ba">Ativo</span></div>
     <div class="cc"><div class="cs ssn"></div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--tx)">DataJud / CNJ</div><div style="font-size:11px;color:var(--tx3)">Monitoramento processual</div></div><button class="btn bg" style="font-size:11px">Configurar</button></div>
     <div class="cc"><div class="cs son"></div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--tx)">Vercel</div><div style="font-size:11px;color:var(--tx3)">sistema.andrehespanhol.com</div></div><span class="badge ba">Online</span></div>
     <div class="card" style="margin-top:16px">
-      <div class="ct" style="margin-bottom:14px">🤖 Anthropic API — Chave de Acesso</div>
-      <div style="font-size:12px;color:var(--tx3);margin-bottom:12px">A chave está configurada de forma segura no servidor. Não é necessário inserir aqui.</div>
-      <div id="apikey-status" style="font-size:12px;margin-top:10px;color:var(--ok)">✅ Chave configurada no servidor Vercel.</div>
+      <div class="ct" style="margin-bottom:10px">🤖 Anthropic API</div>
+      <div style="font-size:12px;color:var(--ok)">✅ Chave configurada no servidor Vercel. Nenhuma chave é armazenada no navegador.</div>
     </div>
   </div>
 
@@ -352,12 +370,21 @@ tr:hover td{background:var(--sf);}
 
 <button class="aibtn hide-cliente" onclick="toggleAI()">✦</button>
 <div class="aip" id="aip">
-  <div class="aih"><div style="width:7px;height:7px;border-radius:50%;background:var(--ok)"></div><div style="font-size:12px;font-weight:600;color:var(--tx);flex:1">Agente Hespanhol</div><button style="background:none;border:none;color:var(--tx3);cursor:pointer;font-size:14px" onclick="toggleAI()">✕</button></div>
-  <div class="aim" id="aim"><div class="aimsg bot">Olá, Dr. Andre! Como posso ajudar?</div></div>
-  <div class="air"><input class="aii" id="aii" placeholder="Digite sua pergunta..." onkeydown="if(event.key==='Enter')sendAI()"><button class="ais" onclick="sendAI()">➤</button></div>
+  <div class="aih">
+    <div style="width:7px;height:7px;border-radius:50%;background:var(--ok)"></div>
+    <div style="font-size:12px;font-weight:600;color:var(--tx);flex:1">Agente Hespanhol</div>
+    <button onclick="resetAI()" style="background:none;border:none;color:var(--tx3);cursor:pointer;font-size:13px;padding:0 4px" title="Limpar conversa">↺</button>
+    <button style="background:none;border:none;color:var(--tx3);cursor:pointer;font-size:14px" onclick="toggleAI()">✕</button>
+  </div>
+  <div class="aim" id="aim">
+    <div class="aimsg bot">Olá, Dr. André! Posso criar casos, cadastrar clientes, registrar andamentos e agendar compromissos. Basta me dizer.</div>
+  </div>
+  <div class="air">
+    <input class="aii" id="aii" placeholder="Ex: HC no STJ para José Arnildo..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAI();}">
+    <button class="ais" onclick="sendAI()">➤</button>
+  </div>
 </div>
 
-<!-- Modal genérico -->
 <div class="mo" id="modal" onclick="if(event.target===this)closeModal()">
   <div class="moc">
     <div class="mot" id="mot">Novo</div>
@@ -373,632 +400,66 @@ tr:hover td{background:var(--sf);}
 var SB_URL='https://rdmlxfgwlbroigsisjph.supabase.co';
 var SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkbWx4Zmd3bGJyb2lnc2lzanBoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3NjMxOTIsImV4cCI6MjA5MjMzOTE5Mn0.stw8254uQoJGka6jEx0kXQeGWXn_IOTZcyltM6c5UqA';
 var db=supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,storage:window.localStorage}});
-var ptitles={dashboard:'Dashboard',cases:'Casos',clients:'Clientes',agenda:'Agenda',movements:'Andamentos',expenses:'Despesas',docs:'Documentos',importer:'Importar Documento',financial:'Financeiro',email:'Agente E-mail',access:'Controle de Acesso',connectors:'Conectores',settings:'Configurações',relatorio:'Relatório do Escritório'};
-
-// Perfil atual do usuário logado
-var _perfil = 'escritorio'; // padrão seguro
-var _clienteId = null;      // preenchido se perfil === 'cliente'
-var _userId = null;
-
+var ptitles={dashboard:'Dashboard',cases:'Casos',clients:'Clientes',agenda:'Agenda',movements:'Andamentos',expenses:'Despesas',docs:'Documentos',importer:'Importar Documento',financial:'Financeiro',email:'Agente E-mail',access:'Controle de Acesso',audit:'Auditoria',connectors:'Conectores',settings:'Configurações',relatorio:'Relatório do Escritório'};
+var _perfil='escritorio';
+var _clienteId=null;
+var _userId=null;
+var _userEmail='';
+var _userName='';
+var _aiMessages=[];
+var _podeApagar=false;
 function safeText(v){return (v===null||v===undefined||v==='')?'—':String(v);}
-
-// ── NAVEGAÇÃO ──────────────────────────────────────────────────
-function go(id,el){
-  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
-  document.querySelectorAll('.ni').forEach(function(n){n.classList.remove('active');});
-  var pg=document.getElementById('page-'+id);
-  if(pg)pg.classList.add('active');
-  if(el)el.classList.add('active');
-  var title=document.getElementById('ptitle');
-  if(title)title.textContent=ptitles[id]||id;
-  if(id==='cases')loadCases();
-  if(id==='clients')loadClients();
-  if(id==='access')loadUsers();
-  if(id==='agenda')loadAgenda();
-  if(id==='relatorio')loadRelatorio();
-}
-
-// Botão "+ Novo" da topbar abre o modal certo dependendo da página atual
-function abrirNovoContextual(){
-  var pagina=document.querySelector('.page.active');
-  if(!pagina)return openModalCaso();
-  var id=pagina.id.replace('page-','');
-  if(id==='clients')openModalCliente();
-  else if(id==='agenda')openModalAgenda();
-  else openModalCaso();
-}
-
-// ── CONTROLE DE ACESSO ─────────────────────────────────────────
-function aplicarPerfil(perfil){
-  _perfil=perfil;
-
-  // Visibilidade: financeiro (admin e autorizado)
-  var temFinanceiro=(perfil==='admin'||perfil==='autorizado');
-  document.querySelectorAll('.hide-financeiro').forEach(function(el){
-    el.style.display=temFinanceiro?'':'none';
-  });
-  var fo=document.getElementById('fin-ok'),fn=document.getElementById('fin-no');
-  if(fo)fo.style.display=temFinanceiro?'block':'none';
-  if(fn)fn.style.display=temFinanceiro?'none':'block';
-
-  // Visibilidade: ocultar seções operacionais para cliente
-  var ehCliente=(perfil==='cliente');
-  document.querySelectorAll('.hide-cliente').forEach(function(el){
-    el.style.display=ehCliente?'none':'';
-  });
-
-  // Badge de perfil na sidebar
-  var labels={admin:'Administrador',autorizado:'Autorizado',escritorio:'Escritório',cliente:'Cliente'};
-  var classes={admin:'ra',autorizado:'ra',escritorio:'rv',cliente:'rc'};
-  var rb=document.getElementById('urole');
-  if(rb){rb.textContent=labels[perfil]||perfil;rb.className='rb '+(classes[perfil]||'re');}
-}
-
-// ── AUTENTICAÇÃO ───────────────────────────────────────────────
-function mostrarSistema(session){
-  var login=document.getElementById('login-wrap');
-  if(login)login.style.display='none';
-
-  var email=session&&session.user?session.user.email:'';
-  _userId=session&&session.user?session.user.id:null;
-
-  // Busca perfil na tabela usuarios
-  db.from('usuarios').select('*').eq('email',email).maybeSingle().then(function(res){
-    var u=res.data;
-    var perfil=u?u.perfil:'escritorio';
-    var nome=u?u.nome:(email||'Usuário');
-    var iniciais=nome.split(' ').slice(0,2).map(function(p){return p[0]||'';}).join('').toUpperCase()||'U';
-    _clienteId=u?u.cliente_id:null;
-
-    document.getElementById('uname').textContent=nome;
-    document.getElementById('av').textContent=iniciais;
-    aplicarPerfil(perfil);
-    loadDashboard();
-  });
-}
-
-function fazerLogin(){
-  var email=document.getElementById('login-email').value.trim();
-  var pwd=document.getElementById('login-pwd').value;
-  var btn=document.getElementById('login-btn');
-  var err=document.getElementById('login-err');
-  if(!email||!pwd){err.style.display='block';err.textContent='Preencha e-mail e senha.';return;}
-  btn.textContent='Entrando...';btn.disabled=true;err.style.display='none';
-  db.auth.signInWithPassword({email:email,password:pwd}).then(function(res){
-    if(res.error){err.style.display='block';err.textContent='E-mail ou senha incorretos.';btn.textContent='Entrar';btn.disabled=false;return;}
-    mostrarSistema(res.data.session);
-  });
-}
-
-function fazerLogout(){
-  db.auth.signOut().then(function(){
-    document.getElementById('login-wrap').style.display='flex';
-    document.getElementById('login-email').value='';
-    document.getElementById('login-pwd').value='';
-    document.getElementById('login-btn').textContent='Entrar';
-    document.getElementById('login-btn').disabled=false;
-    _perfil='escritorio';_clienteId=null;_userId=null;
-  });
-}
-
-db.auth.getSession().then(function(res){
-  if(res.data&&res.data.session){mostrarSistema(res.data.session);}
-});
-
-// ── CARREGAR DADOS ─────────────────────────────────────────────
-function loadCases(){
-  var tbody=document.getElementById('cases-tbody');
-  var countEl=document.getElementById('cases-count');
-  if(!tbody)return;
-  tbody.innerHTML='<tr><td colspan="7" class="loading">🔄 Buscando no banco...</td></tr>';
-  var query=db.from('casos').select('*, clientes(nome)');
-  // Cliente vê apenas os próprios casos
-  if(_perfil==='cliente'&&_clienteId){query=query.eq('cliente_id',_clienteId);}
-  query.then(function(res){
-    if(res.error){tbody.innerHTML='<tr><td colspan="7" style="color:var(--er);padding:16px;text-align:center">Erro: '+res.error.message+'</td></tr>';return;}
-    var data=res.data||[];
-    if(countEl)countEl.textContent=data.length+' casos ativos';
-    var nb=document.getElementById('cases-nb'); if(nb)nb.textContent=data.length;
-    if(data.length===0){tbody.innerHTML='<tr><td colspan="7" class="loading">Nenhum caso cadastrado ainda.</td></tr>';return;}
-    tbody.innerHTML='';
-    data.forEach(function(c){
-      var tr=document.createElement('tr');
-      var nome=c.clientes?c.clientes.nome:'—';
-      var status=c.status==='ativo'?'<span class="badge ba">Ativo</span>':'<span class="badge bw">'+safeText(c.status)+'</span>';
-      tr.innerHTML='<td style="color:var(--tx3);font-size:11px">'+safeText(c.numero_cnj)+'</td><td>'+nome+'</td><td style="color:var(--tx3)">'+safeText(c.tipo_acao)+'</td><td style="color:var(--tx3)">'+safeText(c.tribunal)+'</td><td style="color:var(--tx3)">'+safeText(c.fase)+'</td><td>'+status+'</td><td class="hide-financeiro" style="color:var(--ac);font-weight:600">'+(c.valor_causa?'R$'+c.valor_causa:'A definir')+'</td>';
-      tbody.appendChild(tr);
-    });
-  });
-}
-
-function loadClients(){
-  var lista=document.getElementById('clients-list');
-  var countEl=document.getElementById('clients-count');
-  if(!lista)return;
-  lista.innerHTML='<div class="loading">🔄 Buscando no banco...</div>';
-  db.from('clientes').select('*').then(function(res){
-    if(res.error){lista.innerHTML='<div style="color:var(--er);padding:16px">Erro: '+res.error.message+'</div>';return;}
-    var data=res.data||[];
-    if(countEl)countEl.textContent=data.length+' clientes cadastrados';
-    var nb=document.getElementById('clients-nb'); if(nb)nb.textContent=data.length;
-    if(data.length===0){lista.innerHTML='<div class="loading">Nenhum cliente cadastrado ainda.</div>';return;}
-    lista.innerHTML='';
-    data.forEach(function(c){
-      var nome=c.nome||'Cliente';
-      var iniciais=nome.split(' ').slice(0,2).map(function(p){return p[0]||'';}).join('').toUpperCase();
-      var div=document.createElement('div');
-      div.style.cssText='background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);padding:14px 18px;display:flex;align-items:center;gap:14px;margin-bottom:8px';
-      div.innerHTML='<div class="av" style="background:rgba(74,159,212,.3);color:var(--ac)">'+iniciais+'</div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--tx)">'+nome+'</div><div style="font-size:11px;color:var(--tx3)">'+(c.cpf_cnpj||'')+(c.email?' · '+c.email:'')+(c.endereco?' · '+c.endereco:'')+'</div></div><span class="badge ba">Ativo</span>';
-      lista.appendChild(div);
-    });
-  });
-}
-
-function loadUsers(){
-  var lista=document.getElementById('users-list');
-  if(!lista)return;
-  lista.innerHTML='<div class="loading">🔄 Carregando...</div>';
-  db.from('usuarios').select('*').then(function(res){
-    if(res.error){lista.innerHTML='<div style="color:var(--er);padding:16px">Erro: '+res.error.message+'</div>';return;}
-    if(!res.data||res.data.length===0){lista.innerHTML='<div class="loading">Nenhum usuário cadastrado.</div>';return;}
-    lista.innerHTML='';
-    var labels={admin:'Administrador',autorizado:'Autorizado',escritorio:'Escritório',cliente:'Cliente'};
-    res.data.forEach(function(u){
-      var nome=u.nome||'Usuário';
-      var iniciais=nome.split(' ').slice(0,2).map(function(p){return p[0]||'';}).join('').toUpperCase();
-      var div=document.createElement('div');
-      div.style.cssText='display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd)';
-      div.innerHTML='<div class="av">'+iniciais+'</div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--tx)">'+nome+'</div><div style="font-size:11px;color:var(--tx3)">'+safeText(u.email)+'</div></div><span class="rb ra">'+safeText(labels[u.perfil]||u.perfil)+'</span>';
-      lista.appendChild(div);
-    });
-  });
-}
-
-function loadAgenda(){
-  var lista=document.getElementById('agenda-list');
-  if(!lista)return;
-  lista.innerHTML='<div class="loading">🔄 Carregando agenda...</div>';
-  db.from('agenda').select('*, casos(numero_cnj, clientes(nome))').order('data_hora',{ascending:true}).then(function(res){
-    if(res.error){lista.innerHTML='<div style="color:var(--er);padding:16px">Erro: '+res.error.message+' — A tabela agenda pode não existir ainda.</div>';return;}
-    var data=res.data||[];
-    var nb=document.getElementById('agenda-nb'); if(nb)nb.textContent=data.length;
-    if(data.length===0){lista.innerHTML='<div class="loading">Nenhum compromisso cadastrado.</div>';return;}
-    lista.innerHTML='';
-    data.forEach(function(a){
-      var dt=a.data_hora?new Date(a.data_hora).toLocaleString('pt-BR'):'—';
-      var cliente=a.casos&&a.casos.clientes?a.casos.clientes.nome:'—';
-      var cnj=a.casos?a.casos.numero_cnj:'';
-      var tipos={audiencia:'🏛️ Audiência',prazo:'⏰ Prazo',julgamento:'⚖️ Julgamento',reuniao:'🤝 Reunião'};
-      var div=document.createElement('div');
-      div.style.cssText='background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);padding:14px 18px;margin-bottom:8px;display:flex;align-items:center;gap:14px';
-      div.innerHTML='<div style="font-size:24px">'+(tipos[a.tipo]||'📅').split(' ')[0]+'</div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--tx)">'+(tipos[a.tipo]||a.tipo||'Compromisso')+'</div><div style="font-size:12px;color:var(--ac);margin:2px 0">'+dt+'</div><div style="font-size:11px;color:var(--tx3)">'+cliente+(cnj?' · '+cnj:'')+(a.local?' · '+a.local:'')+'</div></div>';
-      lista.appendChild(div);
-    });
-  });
-}
-
-function loadDashboard(){
-  db.from('casos').select('*',{count:'exact',head:true}).then(function(res){
-    var n=res.count||0;
-    var el=document.getElementById('dash-casos'); if(el)el.textContent=n;
-    var nb=document.getElementById('cases-nb'); if(nb)nb.textContent=n;
-  });
-  db.from('clientes').select('*',{count:'exact',head:true}).then(function(res){
-    var n=res.count||0;
-    var el=document.getElementById('dash-clientes'); if(el)el.textContent=n;
-    var nb=document.getElementById('clients-nb'); if(nb)nb.textContent=n;
-  });
-  db.from('casos').select('*, clientes(nome)').limit(4).then(function(res){
-    var lista=document.getElementById('dash-casos-list');
-    if(!lista)return;
-    var data=res.data||[];
-    if(data.length===0){lista.innerHTML='<div class="loading">Nenhum caso ainda.</div>';return;}
-    lista.innerHTML='<table><thead><tr><th>Cliente</th><th>Tipo</th><th>Status</th></tr></thead><tbody>'+data.map(function(c){return '<tr><td>'+(c.clientes?c.clientes.nome:'—')+'</td><td style="color:var(--tx3)">'+safeText(c.tipo_acao)+'</td><td><span class="badge ba">Ativo</span></td></tr>';}).join('')+'</tbody></table>';
-  });
-}
-
-// ── MODAIS ─────────────────────────────────────────────────────
-function openModal(titulo, html, onSave){
-  document.getElementById('mot').textContent=titulo;
-  document.getElementById('mob').innerHTML=html;
-  var btn=document.getElementById('modal-save-btn');
-  btn.textContent='Salvar';btn.disabled=false;
-  btn.onclick=onSave;
-  document.getElementById('modal').classList.add('open');
-}
-
+function logAuditoria(acao,tabela,descricao){db.from('logs_auditoria').insert({usuario_id:_userId||null,usuario_email:_userEmail||null,acao:acao,tabela:tabela,descricao:descricao}).then(function(){});}
+function go(id,el){document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});document.querySelectorAll('.ni').forEach(function(n){n.classList.remove('active');});var pg=document.getElementById('page-'+id);if(pg)pg.classList.add('active');if(el)el.classList.add('active');var title=document.getElementById('ptitle');if(title)title.textContent=ptitles[id]||id;if(id==='cases')loadCases();if(id==='clients')loadClients();if(id==='access')loadUsers();if(id==='agenda')loadAgenda();if(id==='relatorio')loadRelatorio();if(id==='movements')loadMovements();if(id==='audit')loadAudit();}
+function abrirNovoContextual(){var pagina=document.querySelector('.page.active');if(!pagina)return openModalCaso();var id=pagina.id.replace('page-','');if(id==='clients')openModalCliente();else if(id==='agenda')openModalAgenda();else if(id==='movements')openModalAndamento();else openModalCaso();}
+function aplicarPerfil(perfil){_perfil=perfil;_podeApagar=(perfil==='admin');var temFinanceiro=(perfil==='admin'||perfil==='autorizado');document.querySelectorAll('.hide-financeiro').forEach(function(el){el.style.display=temFinanceiro?'':'none';});var fo=document.getElementById('fin-ok'),fn=document.getElementById('fin-no');if(fo)fo.style.display=temFinanceiro?'block':'none';if(fn)fn.style.display=temFinanceiro?'none':'block';var ehCliente=(perfil==='cliente');document.querySelectorAll('.hide-cliente').forEach(function(el){el.style.display=ehCliente?'none':'';});var labels={admin:'Administrador',autorizado:'Autorizado',escritorio:'Escritório',cliente:'Cliente'};var classes={admin:'ra',autorizado:'ra',escritorio:'rv',cliente:'rc'};var rb=document.getElementById('urole');if(rb){rb.textContent=labels[perfil]||perfil;rb.className='rb '+(classes[perfil]||'re');}}
+function mostrarSistema(session){var login=document.getElementById('login-wrap');if(login)login.style.display='none';_userEmail=session&&session.user?session.user.email:'';_userId=session&&session.user?session.user.id:null;db.from('usuarios').select('*').eq('email',_userEmail).maybeSingle().then(function(res){var u=res.data;var perfil=u?u.perfil:'escritorio';var nome=u?u.nome:(_userEmail||'Usuário');var iniciais=nome.split(' ').slice(0,2).map(function(p){return p[0]||'';}).join('').toUpperCase()||'U';_clienteId=u?u.cliente_id:null;_userName=nome;document.getElementById('uname').textContent=nome;document.getElementById('av').textContent=iniciais;aplicarPerfil(perfil);loadDashboard();logAuditoria('LOGIN','sistema','Usuário '+_userEmail+' entrou no sistema');});}
+function fazerLogin(){var email=document.getElementById('login-email').value.trim();var pwd=document.getElementById('login-pwd').value;var btn=document.getElementById('login-btn');var err=document.getElementById('login-err');if(!email||!pwd){err.style.display='block';err.textContent='Preencha e-mail e senha.';return;}btn.textContent='Entrando...';btn.disabled=true;err.style.display='none';db.auth.signInWithPassword({email:email,password:pwd}).then(function(res){if(res.error){err.style.display='block';err.textContent='E-mail ou senha incorretos.';btn.textContent='Entrar';btn.disabled=false;return;}mostrarSistema(res.data.session);});}
+function fazerLogout(){logAuditoria('LOGOUT','sistema','Usuário '+_userEmail+' saiu do sistema');db.auth.signOut().then(function(){document.getElementById('login-wrap').style.display='flex';document.getElementById('login-email').value='';document.getElementById('login-pwd').value='';document.getElementById('login-btn').textContent='Entrar';document.getElementById('login-btn').disabled=false;_perfil='escritorio';_clienteId=null;_userId=null;_userEmail='';_aiMessages=[];});}
+db.auth.getSession().then(function(res){if(res.data&&res.data.session){mostrarSistema(res.data.session);}});
+function loadCases(){var tbody=document.getElementById('cases-tbody');var countEl=document.getElementById('cases-count');if(!tbody)return;tbody.innerHTML='<tr><td colspan="8" class="loading">🔄 Buscando no banco...</td></tr>';var query=db.from('casos').select('*, clientes(nome)');if(_perfil==='cliente'&&_clienteId)query=query.eq('cliente_id',_clienteId);query.order('created_at',{ascending:false}).then(function(res){if(res.error){tbody.innerHTML='<tr><td colspan="8" style="color:var(--er);padding:16px;text-align:center">Erro: '+res.error.message+'</td></tr>';return;}var data=res.data||[];if(countEl)countEl.textContent=data.length+' caso(s) encontrado(s)';var nb=document.getElementById('cases-nb');if(nb)nb.textContent=data.length;if(data.length===0){tbody.innerHTML='<tr><td colspan="8" class="loading">Nenhum caso cadastrado ainda.</td></tr>';return;}tbody.innerHTML='';data.forEach(function(c){var tr=document.createElement('tr');var nome=c.clientes?c.clientes.nome:'—';var status=c.status==='ativo'?'<span class="badge ba">Ativo</span>':'<span class="badge bw">'+safeText(c.status)+'</span>';var acoes=_podeApagar?'<button class="btn bg" style="font-size:10px;padding:4px 8px;color:var(--er)" onclick="apagarCaso(\''+c.id+'\')">🗑</button>':'';tr.innerHTML='<td style="color:var(--tx3);font-size:11px">'+safeText(c.numero_cnj)+'</td><td>'+nome+'</td><td style="color:var(--tx3)">'+safeText(c.tipo_acao)+'</td><td style="color:var(--tx3)">'+safeText(c.tribunal)+'</td><td style="color:var(--tx3)">'+safeText(c.fase)+'</td><td>'+status+'</td><td class="hide-financeiro" style="color:var(--ac);font-weight:600">'+(c.valor_causa?'R$ '+c.valor_causa:'—')+'</td><td class="hide-cliente">'+acoes+'</td>';tbody.appendChild(tr);});});}
+function apagarCaso(id){if(!_podeApagar)return;if(!confirm('Apagar este caso? Esta ação é irreversível.'))return;db.from('casos').delete().eq('id',id).then(function(res){if(res.error){alert('Erro: '+res.error.message);return;}logAuditoria('DELETE','casos','Admin apagou caso ID: '+id);loadCases();loadDashboard();});}
+function loadClients(){var lista=document.getElementById('clients-list');var countEl=document.getElementById('clients-count');if(!lista)return;lista.innerHTML='<div class="loading">🔄 Buscando no banco...</div>';db.from('clientes').select('*').order('nome').then(function(res){if(res.error){lista.innerHTML='<div style="color:var(--er);padding:16px">Erro: '+res.error.message+'</div>';return;}var data=res.data||[];if(countEl)countEl.textContent=data.length+' cliente(s) cadastrado(s)';var nb=document.getElementById('clients-nb');if(nb)nb.textContent=data.length;if(data.length===0){lista.innerHTML='<div class="loading">Nenhum cliente cadastrado ainda.</div>';return;}lista.innerHTML='';data.forEach(function(c){var nome=c.nome||'Cliente';var iniciais=nome.split(' ').slice(0,2).map(function(p){return p[0]||'';}).join('').toUpperCase();var div=document.createElement('div');div.style.cssText='background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);padding:14px 18px;display:flex;align-items:center;gap:14px;margin-bottom:8px';var del=_podeApagar?'<button class="btn bg" style="font-size:10px;padding:4px 8px;color:var(--er)" onclick="apagarCliente(\''+c.id+'\')">🗑</button>':'';div.innerHTML='<div class="av" style="background:rgba(74,159,212,.3);color:var(--ac)">'+iniciais+'</div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--tx)">'+nome+'</div><div style="font-size:11px;color:var(--tx3)">'+(c.cpf_cnpj||'')+(c.email?' · '+c.email:'')+(c.telefone?' · '+c.telefone:'')+'</div></div><span class="badge ba">Ativo</span>'+del;lista.appendChild(div);});});}
+function apagarCliente(id){if(!_podeApagar)return;if(!confirm('Apagar este cliente? Esta ação é irreversível.'))return;db.from('clientes').delete().eq('id',id).then(function(res){if(res.error){alert('Erro: '+res.error.message);return;}logAuditoria('DELETE','clientes','Admin apagou cliente ID: '+id);loadClients();loadDashboard();});}
+function loadUsers(){var lista=document.getElementById('users-list');if(!lista)return;lista.innerHTML='<div class="loading">🔄 Carregando...</div>';db.from('usuarios').select('*').order('nome').then(function(res){if(res.error){lista.innerHTML='<div style="color:var(--er);padding:16px">Erro: '+res.error.message+'</div>';return;}if(!res.data||res.data.length===0){lista.innerHTML='<div class="loading">Nenhum usuário cadastrado.</div>';return;}lista.innerHTML='';var labels={admin:'Administrador',autorizado:'Autorizado',escritorio:'Escritório',cliente:'Cliente'};res.data.forEach(function(u){var nome=u.nome||'Usuário';var iniciais=nome.split(' ').slice(0,2).map(function(p){return p[0]||'';}).join('').toUpperCase();var div=document.createElement('div');div.style.cssText='display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd)';div.innerHTML='<div class="av">'+iniciais+'</div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--tx)">'+nome+'</div><div style="font-size:11px;color:var(--tx3)">'+safeText(u.email)+'</div></div><span class="rb ra">'+safeText(labels[u.perfil]||u.perfil)+'</span>';lista.appendChild(div);});});}
+function loadAgenda(){var lista=document.getElementById('agenda-list');if(!lista)return;lista.innerHTML='<div class="loading">🔄 Carregando agenda...</div>';db.from('agenda').select('*, casos(numero_cnj, clientes(nome))').order('data_hora',{ascending:true}).then(function(res){if(res.error){lista.innerHTML='<div style="color:var(--er);padding:16px">Erro: '+res.error.message+'</div>';return;}var data=res.data||[];var nb=document.getElementById('agenda-nb');if(nb)nb.textContent=data.length;if(data.length===0){lista.innerHTML='<div class="loading">Nenhum compromisso cadastrado.</div>';return;}lista.innerHTML='';var tipos={audiencia:'🏛️ Audiência',prazo:'⏰ Prazo',julgamento:'⚖️ Julgamento',reuniao:'🤝 Reunião'};data.forEach(function(a){var dt=a.data_hora?new Date(a.data_hora).toLocaleString('pt-BR'):'—';var cliente=a.casos&&a.casos.clientes?a.casos.clientes.nome:'—';var cnj=a.casos?a.casos.numero_cnj:'';var div=document.createElement('div');div.style.cssText='background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);padding:14px 18px;margin-bottom:8px;display:flex;align-items:center;gap:14px';var tipoLabel=tipos[a.tipo]||a.tipo||'Compromisso';var emoji=tipoLabel.split(' ')[0];div.innerHTML='<div style="font-size:24px">'+emoji+'</div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--tx)">'+tipoLabel+'</div><div style="font-size:12px;color:var(--ac);margin:2px 0">'+dt+'</div><div style="font-size:11px;color:var(--tx3)">'+cliente+(cnj?' · '+cnj:'')+(a.local?' · '+a.local:'')+(a.observacoes?'<br><span style="color:var(--tx3)">'+a.observacoes+'</span>':'')+'</div></div>';lista.appendChild(div);});});}
+function loadMovements(){var lista=document.getElementById('movements-list');if(!lista)return;lista.innerHTML='<div class="loading">🔄 Carregando andamentos...</div>';db.from('andamentos').select('*, casos(numero_cnj, clientes(nome))').order('data_andamento',{ascending:false}).limit(50).then(function(res){if(res.error){lista.innerHTML='<div style="color:var(--er);padding:16px">Erro: '+res.error.message+'</div>';return;}var data=res.data||[];if(data.length===0){lista.innerHTML='<div class="loading">Nenhum andamento registrado.</div>';return;}lista.innerHTML='';data.forEach(function(a){var dt=a.data_andamento?new Date(a.data_andamento).toLocaleDateString('pt-BR'):'—';var cliente=a.casos&&a.casos.clientes?a.casos.clientes.nome:'—';var cnj=a.casos?a.casos.numero_cnj:'';var div=document.createElement('div');div.style.cssText='background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);padding:12px 18px;margin-bottom:8px';div.innerHTML='<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:12px;font-weight:600;color:var(--tx)">'+cliente+(cnj?' — '+cnj:'')+'</span><span style="font-size:11px;color:var(--tx3)">'+dt+'</span></div><div style="font-size:12px;color:var(--tx2)">'+safeText(a.descricao)+'</div>';lista.appendChild(div);});});}
+function loadAudit(){var lista=document.getElementById('audit-list');if(!lista)return;lista.innerHTML='<div class="loading">🔄 Carregando logs...</div>';db.from('logs_auditoria').select('*').order('created_at',{ascending:false}).limit(100).then(function(res){if(res.error){lista.innerHTML='<div style="color:var(--er);padding:16px">Erro: '+res.error.message+'</div>';return;}var data=res.data||[];if(data.length===0){lista.innerHTML='<div class="loading">Nenhum registro de auditoria ainda.</div>';return;}var html='<table><thead><tr><th>Data/Hora</th><th>Usuário</th><th>Ação</th><th>Tabela</th><th>Descrição</th></tr></thead><tbody>';data.forEach(function(l){var dt=l.created_at?new Date(l.created_at).toLocaleString('pt-BR'):'—';var acaoCor=l.acao==='DELETE'?'var(--er)':l.acao==='INSERT'?'var(--ok)':'var(--tx2)';html+='<tr><td style="font-size:11px;color:var(--tx3)">'+dt+'</td><td style="font-size:11px">'+safeText(l.usuario_email)+'</td><td><span style="font-size:10px;font-weight:700;color:'+acaoCor+'">'+safeText(l.acao)+'</span></td><td style="font-size:11px;color:var(--tx3)">'+safeText(l.tabela)+'</td><td style="font-size:11px">'+safeText(l.descricao)+'</td></tr>';});html+='</tbody></table>';lista.innerHTML=html;});}
+function loadDashboard(){db.from('casos').select('*',{count:'exact',head:true}).then(function(res){var n=res.count||0;var el=document.getElementById('dash-casos');if(el)el.textContent=n;var nb=document.getElementById('cases-nb');if(nb)nb.textContent=n;});db.from('clientes').select('*',{count:'exact',head:true}).then(function(res){var n=res.count||0;var el=document.getElementById('dash-clientes');if(el)el.textContent=n;var nb=document.getElementById('clients-nb');if(nb)nb.textContent=n;});var hoje=new Date();var em7=new Date(hoje);em7.setDate(em7.getDate()+7);db.from('agenda').select('*',{count:'exact',head:true}).gte('data_hora',hoje.toISOString()).lte('data_hora',em7.toISOString()).then(function(res){var el=document.getElementById('dash-prazos');if(el)el.textContent=res.count||0;});db.from('casos').select('*, clientes(nome)').order('created_at',{ascending:false}).limit(5).then(function(res){var lista=document.getElementById('dash-casos-list');if(!lista)return;var data=res.data||[];if(data.length===0){lista.innerHTML='<div class="loading">Nenhum caso ainda.</div>';return;}lista.innerHTML='<table><thead><tr><th>Cliente</th><th>Tipo</th><th>Status</th></tr></thead><tbody>'+data.map(function(c){return '<tr><td>'+(c.clientes?c.clientes.nome:'—')+'</td><td style="color:var(--tx3)">'+safeText(c.tipo_acao)+'</td><td><span class="badge ba">Ativo</span></td></tr>';}).join('')+'</tbody></table>';});db.from('agenda').select('*, casos(numero_cnj)').order('data_hora',{ascending:true}).gte('data_hora',new Date().toISOString()).limit(4).then(function(res){var lista=document.getElementById('dash-agenda-list');if(!lista)return;var data=res.data||[];if(data.length===0){lista.innerHTML='<div class="loading">Sem compromissos próximos.</div>';return;}var tipos={audiencia:'🏛️',prazo:'⏰',julgamento:'⚖️',reuniao:'🤝'};lista.innerHTML=data.map(function(a){var dt=new Date(a.data_hora).toLocaleString('pt-BR');return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bd)"><span style="font-size:16px">'+(tipos[a.tipo]||'📅')+'</span><div><div style="font-size:12px;color:var(--tx)">'+safeText(a.tipo)+'</div><div style="font-size:11px;color:var(--tx3)">'+dt+'</div></div></div>';}).join('');});}
+function openModal(titulo,html,onSave){document.getElementById('mot').textContent=titulo;document.getElementById('mob').innerHTML=html;var btn=document.getElementById('modal-save-btn');btn.textContent='Salvar';btn.disabled=false;btn.onclick=onSave;document.getElementById('modal').classList.add('open');}
 function closeModal(){document.getElementById('modal').classList.remove('open');}
-
-function showModalStatus(msg, tipo){
-  var el=document.getElementById('modal-status');
-  if(!el)return;
-  el.textContent=msg;
-  el.style.display='block';
-  el.style.color=tipo==='ok'?'var(--ok)':'var(--er)';
-}
-
-// Modal Novo Cliente
-function openModalCliente(){
-  openModal('Novo Cliente',
-    '<div class="fg"><label class="flb">Nome completo *</label><input class="inp" id="fc-nome" placeholder="Nome do cliente"></div>'+
-    '<div class="fg"><label class="flb">CPF / CNPJ</label><input class="inp" id="fc-cpf" placeholder="000.000.000-00"></div>'+
-    '<div class="fg"><label class="flb">E-mail</label><input class="inp" id="fc-email" type="email" placeholder="email@exemplo.com"></div>'+
-    '<div class="fg"><label class="flb">Telefone</label><input class="inp" id="fc-tel" placeholder="(00) 00000-0000"></div>'+
-    '<div class="fg"><label class="flb">Endereço</label><input class="inp" id="fc-end" placeholder="Rua, nº, Cidade/UF"></div>'+
-    '<div id="modal-status" style="font-size:12px;margin-top:4px;display:none"></div>',
-    salvarCliente
-  );
-}
-
-function salvarCliente(){
-  var nome=document.getElementById('fc-nome').value.trim();
-  if(!nome){showModalStatus('❌ Nome obrigatório.','er');return;}
-  var btn=document.getElementById('modal-save-btn');
-  btn.textContent='Salvando...';btn.disabled=true;
-  db.from('clientes').insert({
-    nome:nome,
-    cpf_cnpj:document.getElementById('fc-cpf').value.trim()||null,
-    email:document.getElementById('fc-email').value.trim()||null,
-    telefone:document.getElementById('fc-tel').value.trim()||null,
-    endereco:document.getElementById('fc-end').value.trim()||null,
-    tipo:'PF'
-  }).then(function(res){
-    if(res.error){showModalStatus('❌ Erro: '+res.error.message,'er');btn.textContent='Salvar';btn.disabled=false;return;}
-    closeModal();
-    loadClients();
-    loadDashboard();
-  });
-}
-
-// Modal Novo Caso
-function openModalCaso(){
-  openModal('Novo Caso',
-    '<div class="fg"><label class="flb">Cliente *</label><select class="inp" id="fca-cliente"><option value="">Carregando clientes...</option></select></div>'+
-    '<div class="fg"><label class="flb">Nº CNJ</label><input class="inp" id="fca-cnj" placeholder="0000000-00.0000.0.00.0000"></div>'+
-    '<div class="fg"><label class="flb">Tribunal</label><input class="inp" id="fca-trib" placeholder="TJGO, STJ, TRF1..."></div>'+
-    '<div class="fg"><label class="flb">Tipo de Ação</label><input class="inp" id="fca-tipo" placeholder="Ação Penal, Habeas Corpus, Recurso..."></div>'+
-    '<div class="fg"><label class="flb">Área</label><select class="inp" id="fca-area"><option value="civel">Cível</option><option value="penal">Penal</option><option value="tributario">Tributário</option><option value="trabalhista">Trabalhista</option><option value="outro">Outro</option></select></div>'+
-    '<div class="fg"><label class="flb">Fase</label><input class="inp" id="fca-fase" placeholder="1ª Instância, Recursal, STJ..."></div>'+
-    '<div class="fg"><label class="flb">Valor da Causa (R$)</label><input class="inp" id="fca-valor" type="number" placeholder="0,00"></div>'+
-    '<div id="modal-status" style="font-size:12px;margin-top:4px;display:none"></div>',
-    salvarCaso
-  );
-  // Carrega clientes no select
-  db.from('clientes').select('id,nome').order('nome').then(function(res){
-    var sel=document.getElementById('fca-cliente');
-    if(!sel)return;
-    var data=res.data||[];
-    sel.innerHTML='<option value="">Selecione o cliente...</option>'+data.map(function(c){return '<option value="'+c.id+'">'+c.nome+'</option>';}).join('');
-  });
-}
-
-function salvarCaso(){
-  var clienteId=document.getElementById('fca-cliente').value;
-  if(!clienteId){showModalStatus('❌ Selecione o cliente.','er');return;}
-  var btn=document.getElementById('modal-save-btn');
-  btn.textContent='Salvando...';btn.disabled=true;
-  db.from('casos').insert({
-    cliente_id:clienteId,
-    numero_cnj:document.getElementById('fca-cnj').value.trim()||null,
-    tribunal:document.getElementById('fca-trib').value.trim()||null,
-    tipo_acao:document.getElementById('fca-tipo').value.trim()||null,
-    area:document.getElementById('fca-area').value||null,
-    fase:document.getElementById('fca-fase').value.trim()||null,
-    valor_causa:document.getElementById('fca-valor').value||null,
-    status:'ativo'
-  }).then(function(res){
-    if(res.error){showModalStatus('❌ Erro: '+res.error.message,'er');btn.textContent='Salvar';btn.disabled=false;return;}
-    closeModal();
-    loadCases();
-    loadDashboard();
-  });
-}
-
-// Modal Novo Compromisso na Agenda
-function openModalAgenda(){
-  openModal('Novo Compromisso',
-    '<div class="fg"><label class="flb">Tipo *</label><select class="inp" id="fa-tipo"><option value="audiencia">🏛️ Audiência</option><option value="prazo">⏰ Prazo</option><option value="julgamento">⚖️ Julgamento</option><option value="reuniao">🤝 Reunião</option></select></div>'+
-    '<div class="fg"><label class="flb">Caso vinculado</label><select class="inp" id="fa-caso"><option value="">Selecione o caso...</option></select></div>'+
-    '<div class="fg"><label class="flb">Data e Hora *</label><input class="inp" id="fa-data" type="datetime-local"></div>'+
-    '<div class="fg"><label class="flb">Local / Sala</label><input class="inp" id="fa-local" placeholder="Vara, Sala, Link..."></div>'+
-    '<div class="fg"><label class="flb">Observações</label><textarea class="inp" id="fa-obs" rows="2" placeholder="Detalhes adicionais..."></textarea></div>'+
-    '<div id="modal-status" style="font-size:12px;margin-top:4px;display:none"></div>',
-    salvarAgenda
-  );
-  db.from('casos').select('id,numero_cnj,clientes(nome)').then(function(res){
-    var sel=document.getElementById('fa-caso');
-    if(!sel)return;
-    var data=res.data||[];
-    sel.innerHTML='<option value="">Selecione o caso...</option>'+data.map(function(c){
-      var label=(c.clientes?c.clientes.nome:'?')+(c.numero_cnj?' — '+c.numero_cnj:'');
-      return '<option value="'+c.id+'">'+label+'</option>';
-    }).join('');
-  });
-}
-
-function salvarAgenda(){
-  var data=document.getElementById('fa-data').value;
-  if(!data){showModalStatus('❌ Data obrigatória.','er');return;}
-  var btn=document.getElementById('modal-save-btn');
-  btn.textContent='Salvando...';btn.disabled=true;
-  var casoId=document.getElementById('fa-caso').value||null;
-  db.from('agenda').insert({
-    tipo:document.getElementById('fa-tipo').value,
-    caso_id:casoId||null,
-    data_hora:data,
-    local:document.getElementById('fa-local').value.trim()||null,
-    observacoes:document.getElementById('fa-obs').value.trim()||null
-  }).then(function(res){
-    if(res.error){showModalStatus('❌ Erro: '+res.error.message,'er');btn.textContent='Salvar';btn.disabled=false;return;}
-    closeModal();
-    loadAgenda();
-  });
-}
-
-// Modal Novo Usuário
-function openModalUsuario(){
-  openModal('Novo Usuário',
-    '<div class="fg"><label class="flb">Nome completo *</label><input class="inp" id="fu-nome" placeholder="Nome do usuário"></div>'+
-    '<div class="fg"><label class="flb">E-mail *</label><input class="inp" id="fu-email" type="email" placeholder="email@exemplo.com"></div>'+
-    '<div class="fg"><label class="flb">Perfil de acesso *</label><select class="inp" id="fu-perfil"><option value="escritorio">Escritório (sem financeiro)</option><option value="autorizado">Autorizado (acesso total)</option><option value="cliente">Cliente (só o próprio caso)</option></select></div>'+
-    '<div style="background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:12px;font-size:12px;color:var(--tx3);margin-bottom:14px">⚠️ Após salvar, acesse o Supabase → Authentication → Users → "Invite user" com o mesmo e-mail para que o usuário possa fazer login.</div>'+
-    '<div id="modal-status" style="font-size:12px;margin-top:4px;display:none"></div>',
-    salvarUsuario
-  );
-}
-
-function salvarUsuario(){
-  var nome=document.getElementById('fu-nome').value.trim();
-  var email=document.getElementById('fu-email').value.trim();
-  if(!nome||!email){showModalStatus('❌ Nome e e-mail obrigatórios.','er');return;}
-  var btn=document.getElementById('modal-save-btn');
-  btn.textContent='Salvando...';btn.disabled=true;
-  db.from('usuarios').insert({
-    nome:nome,
-    email:email,
-    perfil:document.getElementById('fu-perfil').value
-  }).then(function(res){
-    if(res.error){showModalStatus('❌ Erro: '+res.error.message,'er');btn.textContent='Salvar';btn.disabled=false;return;}
-    closeModal();
-    loadUsers();
-  });
-}
-
-// ── TEMAS ──────────────────────────────────────────────────────
-function setTheme(t,btn){
-  document.body.className=t;
-  document.querySelectorAll('[onclick^="setTheme"]').forEach(function(b){b.style.borderColor='';});
-  if(btn)btn.style.borderColor='var(--ac)';
-}
-
-function stab(id,el){
-  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
-  document.querySelectorAll('.tc').forEach(function(t){t.classList.remove('active');});
-  if(el)el.classList.add('active');
-  var tc=document.getElementById('tab-'+id); if(tc)tc.classList.add('active');
-}
-
-// ── IMPORTADOR DE PDF ──────────────────────────────────────────
-function resetUploadZone(){
-  var zone=document.getElementById('upload-zone');
-  if(!zone)return;
-  zone.innerHTML='<input type="file" id="pdf-upload" accept=".pdf" style="display:none" onchange="doImport(this)"><div style="font-size:36px;margin-bottom:12px">📄</div><div style="font-size:14px;font-weight:600;color:var(--tx);margin-bottom:6px">Importar Procuração ou Contrato</div><div style="font-size:12px;color:var(--tx3)">Clique para selecionar o PDF</div>';
-}
-
-function doImport(input){
-  var zone=document.getElementById('upload-zone')||document.querySelector('.iz');
-  var res=document.getElementById('imp-result');
-  var file=input&&input.files&&input.files[0];
-  if(!file)return;
-  if(file.type&&file.type!=='application/pdf'){
-    zone.innerHTML='<div style="font-size:36px">❌</div><div style="color:var(--er);margin-top:8px">Selecione um arquivo PDF.</div><div style="margin-top:12px"><button class="btn bg" onclick="resetUploadZone()">Tentar novamente</button></div>';
-    return;
-  }
-  zone.innerHTML='<div style="font-size:36px;margin-bottom:12px">⏳</div><div style="font-size:14px;font-weight:600;color:var(--tx)">Lendo '+file.name+'...</div>';
-  res.style.display='none';res.innerHTML='';
-  var reader=new FileReader();
-  reader.onload=function(e){
-    var b64=(e.target.result||'').split(',')[1];
-    if(!b64){
-      zone.innerHTML='<div style="font-size:36px">❌</div><div style="color:var(--er);margin-top:8px">Não foi possível ler o PDF.</div><div style="margin-top:12px"><button class="btn bg" onclick="resetUploadZone()">Tentar novamente</button></div>';
-      return;
-    }
-    callClaude({
-      model:'claude-sonnet-4-6',
-      max_tokens:1000,
-      system:'Você é um assistente jurídico. Analise o documento PDF e extraia os dados retornando SOMENTE um JSON válido, sem markdown, sem texto adicional, no formato: {"cliente":"nome completo","cpf":"000.000.000-00","email":"email ou vazio","telefone":"telefone ou vazio","endereco":"endereco completo ou vazio","area":"civel ou penal ou tributario ou trabalhista","processos":[{"cnj":"numero cnj","tribunal":"nome tribunal","tipo":"tipo da acao","fase":"fase processual"}]}. Se não encontrar algum campo deixe string vazia.',
-      messages:[{role:'user',content:[{type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}},{type:'text',text:'Extraia os dados desta procuração ou contrato jurídico em JSON.'}]}]
-    }, function(d){
-      var text=d.content&&d.content[0]?d.content[0].text:'';
-      var dados;
-      try{
-        var clean=text.replace(/```json/g,'').replace(/```/g,'').trim();
-        var first=clean.indexOf('{');var last=clean.lastIndexOf('}');
-        if(first>=0&&last>first)clean=clean.slice(first,last+1);
-        dados=JSON.parse(clean);
-      }catch(e){
-        zone.innerHTML='<div style="font-size:36px">❌</div><div style="color:var(--er);margin-top:8px">Erro ao interpretar resposta da IA</div><div style="margin-top:12px"><button class="btn bg" onclick="resetUploadZone()">Tentar novamente</button></div>';
-        return;
-      }
-      window._dadosImport=dados;
-      zone.innerHTML='<div style="font-size:36px;margin-bottom:12px">✅</div><div style="font-size:14px;font-weight:600;color:var(--ok)">Lido com sucesso</div><div style="font-size:12px;color:var(--tx3);margin-top:6px">'+safeText(dados.cliente)+'</div><div style="margin-top:12px"><button class="btn bg" onclick="resetUploadZone()">Escolher outro PDF</button></div>';
-      var procs='';
-      if(dados.processos&&dados.processos.length){
-        dados.processos.forEach(function(p,i){
-          procs+='<div style="margin:10px 0 6px;font-size:11px;color:var(--ac);text-transform:uppercase;letter-spacing:1px">'+(i+1)+'º Processo</div>';
-          procs+='<div class="fi"><span class="fl">CNJ</span><span class="fv">'+safeText(p.cnj)+'</span></div>';
-          procs+='<div class="fi"><span class="fl">Tribunal</span><span class="fv">'+safeText(p.tribunal)+'</span></div>';
-          procs+='<div class="fi"><span class="fl">Tipo</span><span class="fv">'+safeText(p.tipo)+'</span></div>';
-        });
-      }
-      res.innerHTML='<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><span style="font-size:18px">✦</span><div style="font-size:13px;font-weight:600;color:var(--ac)">Dados extraídos:</div></div>'
-        +'<div class="fi"><span class="fl">Cliente</span><span class="fv">'+safeText(dados.cliente)+'</span></div>'
-        +'<div class="fi"><span class="fl">CPF</span><span class="fv">'+safeText(dados.cpf)+'</span></div>'
-        +'<div class="fi"><span class="fl">Endereço</span><span class="fv" style="font-size:11px">'+safeText(dados.endereco)+'</span></div>'
-        +procs
-        +'<div style="display:flex;gap:8px;margin-top:14px">'
-        +'<button class="btn bg" style="flex:1" onclick="resetUploadZone();document.getElementById(\'pdf-upload\').click()">Trocar PDF</button>'
-        +'<button class="btn bp" style="flex:1" onclick="salvarNoBanco()">✓ Salvar no Banco</button>'
-        +'</div><div id="save-status" style="margin-top:10px;font-size:12px;display:none"></div>';
-      res.style.display='block';
-    }, function(errMsg){
-      zone.innerHTML='<div style="font-size:36px">❌</div><div style="color:var(--er);margin-top:8px">'+errMsg+'</div><div style="margin-top:12px"><button class="btn bg" onclick="resetUploadZone()">Tentar novamente</button></div>';
-    });
-  };
-  reader.onerror=function(){
-    zone.innerHTML='<div style="font-size:36px">❌</div><div style="color:var(--er);margin-top:8px">Erro ao ler o arquivo.</div><div style="margin-top:12px"><button class="btn bg" onclick="resetUploadZone()">Tentar novamente</button></div>';
-  };
-  reader.readAsDataURL(file);
-}
-
-function salvarNoBanco(){
-  var d=window._dadosImport; if(!d)return;
-  var st=document.getElementById('save-status');
-  st.style.display='block';st.style.color='var(--tx3)';st.textContent='⏳ Salvando no banco...';
-  db.from('clientes').insert({nome:d.cliente||'Cliente sem nome',cpf_cnpj:d.cpf||'',email:d.email||'',telefone:d.telefone||'',endereco:d.endereco||'',tipo:'PF'}).select().then(function(res){
-    if(res.error){st.style.color='var(--er)';st.textContent='Erro: '+res.error.message;return;}
-    var clienteId=res.data&&res.data[0]?res.data[0].id:null;
-    if(!clienteId){st.style.color='var(--er)';st.textContent='Erro: cliente salvo sem ID retornado.';return;}
-    var inserts=(d.processos||[]).map(function(p){
-      return{cliente_id:clienteId,numero_cnj:p.cnj||'',tribunal:p.tribunal||'',tipo_acao:p.tipo||'',fase:p.fase||'Em curso',area:d.area||'',status:'ativo'};
-    });
-    if(inserts.length===0){st.style.color='var(--ok)';st.textContent='✅ Cliente salvo!';loadDashboard();return;}
-    db.from('casos').insert(inserts).then(function(r2){
-      if(r2.error){st.style.color='var(--er)';st.textContent='Erro: '+r2.error.message;return;}
-      st.style.color='var(--ok)';st.textContent='✅ '+(d.cliente||'Cliente')+' salvo com '+inserts.length+' processo(s)!';
-      setTimeout(function(){go('cases',document.querySelectorAll('.ni')[1]);},1500);
-    });
-  });
-}
-
-// ── AGENTE DE E-MAIL ───────────────────────────────────────────
-function genEmail(){
-  var box=document.getElementById('email-box');
-  box.style.display='block';box.textContent='✦ Redigindo...';
-  callClaude({
-    model:'claude-sonnet-4-6',
-    max_tokens:400,
-    system:'Você é o Agente Hespanhol do escritório Hespanhol Advogados. Redija e-mails jurídicos formais em português.',
-    messages:[{role:'user',content:'Redija e-mail formal sobre audiência em 24/04/2026 às 14h, Sala 3, TJGO.'}]
-  }, function(d){
-    box.textContent=d.content&&d.content[0]?d.content[0].text:'Erro.';
-  }, function(errMsg){
-    box.textContent='Agente indisponível: '+errMsg;
-  });
-}
-
-// ── AGENTE HESPANHOL (CHAT) ────────────────────────────────────
+function showModalStatus(msg,tipo){var el=document.getElementById('modal-status');if(!el)return;el.textContent=msg;el.style.display='block';el.style.color=tipo==='ok'?'var(--ok)':'var(--er)';}
+function openModalCliente(){openModal('Novo Cliente','<div class="fg"><label class="flb">Nome completo *</label><input class="inp" id="fc-nome" placeholder="Nome completo do cliente"></div><div class="fg"><label class="flb">CPF / CNPJ</label><input class="inp" id="fc-cpf" placeholder="000.000.000-00"></div><div class="fg"><label class="flb">E-mail</label><input class="inp" id="fc-email" type="email" placeholder="email@exemplo.com"></div><div class="fg"><label class="flb">Telefone</label><input class="inp" id="fc-tel" placeholder="(00) 00000-0000"></div><div class="fg"><label class="flb">Endereço</label><input class="inp" id="fc-end" placeholder="Rua, nº, Cidade/UF"></div><div id="modal-status" style="font-size:12px;margin-top:4px;display:none"></div>',salvarCliente);}
+function salvarCliente(){var nome=document.getElementById('fc-nome').value.trim();if(!nome){showModalStatus('❌ Nome obrigatório.','er');return;}var btn=document.getElementById('modal-save-btn');btn.textContent='Salvando...';btn.disabled=true;db.from('clientes').insert({nome:nome,cpf_cnpj:document.getElementById('fc-cpf').value.trim()||null,email:document.getElementById('fc-email').value.trim()||null,telefone:document.getElementById('fc-tel').value.trim()||null,endereco:document.getElementById('fc-end').value.trim()||null,tipo:'PF'}).then(function(res){if(res.error){showModalStatus('❌ Erro: '+res.error.message,'er');btn.textContent='Salvar';btn.disabled=false;return;}logAuditoria('INSERT','clientes',_userName+' cadastrou cliente: '+nome);closeModal();loadClients();loadDashboard();});}
+function openModalCaso(){openModal('Novo Caso','<div class="fg"><label class="flb">Cliente *</label><select class="inp" id="fca-cliente"><option value="">Carregando...</option></select></div><div class="fg"><label class="flb">Nº CNJ</label><input class="inp" id="fca-cnj" placeholder="0000000-00.0000.0.00.0000"></div><div class="fg"><label class="flb">Tribunal</label><input class="inp" id="fca-trib" placeholder="TJGO, STJ, TRF1..."></div><div class="fg"><label class="flb">Tipo de Ação</label><input class="inp" id="fca-tipo" placeholder="Habeas Corpus, Apelação, Recurso..."></div><div class="fg"><label class="flb">Área</label><select class="inp" id="fca-area"><option value="civel">Cível</option><option value="penal">Penal</option><option value="tributario">Tributário</option><option value="trabalhista">Trabalhista</option><option value="outro">Outro</option></select></div><div class="fg"><label class="flb">Fase</label><input class="inp" id="fca-fase" placeholder="1ª Instância, Recursal, STJ..."></div><div class="fg"><label class="flb">Valor da Causa (R$)</label><input class="inp" id="fca-valor" type="number" placeholder="0.00"></div><div id="modal-status" style="font-size:12px;margin-top:4px;display:none"></div>',salvarCaso);db.from('clientes').select('id,nome').order('nome').then(function(res){var sel=document.getElementById('fca-cliente');if(!sel)return;var data=res.data||[];if(data.length===0){sel.innerHTML='<option value="">Nenhum cliente cadastrado ainda</option>';return;}sel.innerHTML='<option value="">Selecione o cliente...</option>'+data.map(function(c){return '<option value="'+c.id+'">'+c.nome+'</option>';}).join('');});}
+function salvarCaso(){var clienteId=document.getElementById('fca-cliente').value;if(!clienteId){showModalStatus('❌ Selecione o cliente.','er');return;}var btn=document.getElementById('modal-save-btn');btn.textContent='Salvando...';btn.disabled=true;var cnj=document.getElementById('fca-cnj').value.trim();db.from('casos').insert({cliente_id:clienteId,numero_cnj:cnj||null,tribunal:document.getElementById('fca-trib').value.trim()||null,tipo_acao:document.getElementById('fca-tipo').value.trim()||null,area:document.getElementById('fca-area').value||null,fase:document.getElementById('fca-fase').value.trim()||null,valor_causa:document.getElementById('fca-valor').value||null,status:'ativo'}).then(function(res){if(res.error){showModalStatus('❌ Erro: '+res.error.message,'er');btn.textContent='Salvar';btn.disabled=false;return;}logAuditoria('INSERT','casos',_userName+' cadastrou caso: '+(cnj||'sem CNJ'));closeModal();loadCases();loadDashboard();});}
+function openModalAgenda(){openModal('Novo Compromisso','<div class="fg"><label class="flb">Tipo *</label><select class="inp" id="fa-tipo"><option value="audiencia">🏛️ Audiência</option><option value="prazo">⏰ Prazo</option><option value="julgamento">⚖️ Julgamento</option><option value="reuniao">🤝 Reunião</option></select></div><div class="fg"><label class="flb">Caso vinculado</label><select class="inp" id="fa-caso"><option value="">Selecione o caso...</option></select></div><div class="fg"><label class="flb">Data e Hora *</label><input class="inp" id="fa-data" type="datetime-local"></div><div class="fg"><label class="flb">Local / Sala</label><input class="inp" id="fa-local" placeholder="Vara, Sala, Link..."></div><div class="fg"><label class="flb">Observações</label><textarea class="inp" id="fa-obs" rows="2" placeholder="Detalhes adicionais..."></textarea></div><div id="modal-status" style="font-size:12px;margin-top:4px;display:none"></div>',salvarAgenda);db.from('casos').select('id,numero_cnj,clientes(nome)').order('created_at',{ascending:false}).then(function(res){var sel=document.getElementById('fa-caso');if(!sel)return;var data=res.data||[];sel.innerHTML='<option value="">Selecione o caso...</option>'+data.map(function(c){var label=(c.clientes?c.clientes.nome:'?')+(c.numero_cnj?' — '+c.numero_cnj:'');return '<option value="'+c.id+'">'+label+'</option>';}).join('');});}
+function salvarAgenda(){var dataVal=document.getElementById('fa-data').value;if(!dataVal){showModalStatus('❌ Data obrigatória.','er');return;}var btn=document.getElementById('modal-save-btn');btn.textContent='Salvando...';btn.disabled=true;var tipo=document.getElementById('fa-tipo').value;db.from('agenda').insert({tipo:tipo,caso_id:document.getElementById('fa-caso').value||null,data_hora:dataVal,local:document.getElementById('fa-local').value.trim()||null,observacoes:document.getElementById('fa-obs').value.trim()||null}).then(function(res){if(res.error){showModalStatus('❌ Erro: '+res.error.message,'er');btn.textContent='Salvar';btn.disabled=false;return;}logAuditoria('INSERT','agenda',_userName+' agendou: '+tipo+' em '+dataVal);closeModal();loadAgenda();loadDashboard();});}
+function openModalAndamento(){openModal('Novo Andamento','<div class="fg"><label class="flb">Caso *</label><select class="inp" id="fand-caso"><option value="">Selecione o caso...</option></select></div><div class="fg"><label class="flb">Data do Andamento *</label><input class="inp" id="fand-data" type="date" value="'+new Date().toISOString().split('T')[0]+'"></div><div class="fg"><label class="flb">Descrição *</label><textarea class="inp" id="fand-desc" rows="4" placeholder="Descreva o andamento processual..."></textarea></div><div id="modal-status" style="font-size:12px;margin-top:4px;display:none"></div>',salvarAndamento);db.from('casos').select('id,numero_cnj,clientes(nome)').order('created_at',{ascending:false}).then(function(res){var sel=document.getElementById('fand-caso');if(!sel)return;var data=res.data||[];sel.innerHTML='<option value="">Selecione o caso...</option>'+data.map(function(c){var label=(c.clientes?c.clientes.nome:'?')+(c.numero_cnj?' — '+c.numero_cnj:'');return '<option value="'+c.id+'">'+label+'</option>';}).join('');});}
+function salvarAndamento(){var casoId=document.getElementById('fand-caso').value;var desc=document.getElementById('fand-desc').value.trim();var dataVal=document.getElementById('fand-data').value;if(!casoId||!desc){showModalStatus('❌ Caso e descrição obrigatórios.','er');return;}var btn=document.getElementById('modal-save-btn');btn.textContent='Salvando...';btn.disabled=true;db.from('andamentos').insert({caso_id:casoId,descricao:desc,data_andamento:dataVal||new Date().toISOString().split('T')[0],fonte:'manual'}).then(function(res){if(res.error){showModalStatus('❌ Erro: '+res.error.message,'er');btn.textContent='Salvar';btn.disabled=false;return;}logAuditoria('INSERT','andamentos',_userName+' registrou andamento no caso '+casoId);closeModal();loadMovements();});}
+function openModalUsuario(){openModal('Novo Usuário','<div class="fg"><label class="flb">Nome completo *</label><input class="inp" id="fu-nome" placeholder="Nome do usuário"></div><div class="fg"><label class="flb">E-mail *</label><input class="inp" id="fu-email" type="email" placeholder="email@exemplo.com"></div><div class="fg"><label class="flb">Perfil de acesso *</label><select class="inp" id="fu-perfil"><option value="escritorio">Escritório — pode inserir, não apaga, sem financeiro</option><option value="autorizado">Autorizado — acesso financeiro, não apaga</option><option value="cliente">Cliente — só vê o próprio caso</option></select></div><div style="background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:12px;font-size:12px;color:var(--tx3);margin-bottom:14px">⚠️ Após salvar, acesse Supabase → Authentication → Invite user com o mesmo e-mail para liberar o login.</div><div id="modal-status" style="font-size:12px;margin-top:4px;display:none"></div>',salvarUsuario);}
+function salvarUsuario(){var nome=document.getElementById('fu-nome').value.trim();var email=document.getElementById('fu-email').value.trim();if(!nome||!email){showModalStatus('❌ Nome e e-mail obrigatórios.','er');return;}var btn=document.getElementById('modal-save-btn');btn.textContent='Salvando...';btn.disabled=true;db.from('usuarios').insert({nome:nome,email:email,perfil:document.getElementById('fu-perfil').value,ativo:true}).then(function(res){if(res.error){showModalStatus('❌ Erro: '+res.error.message,'er');btn.textContent='Salvar';btn.disabled=false;return;}logAuditoria('INSERT','usuarios',_userName+' criou usuário: '+nome+' ('+email+')');closeModal();loadUsers();});}
+function buscaGlobal(termo){if(!termo||termo.length<2)return;}
+function setTheme(t,btn){document.body.className=t;document.querySelectorAll('[onclick^="setTheme"]').forEach(function(b){b.style.borderColor='';});if(btn)btn.style.borderColor='var(--ac)';}
+function stab(id,el){document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});document.querySelectorAll('.tc').forEach(function(t){t.classList.remove('active');});if(el)el.classList.add('active');var tc=document.getElementById('tab-'+id);if(tc)tc.classList.add('active');}
+function resetUploadZone(){var zone=document.getElementById('upload-zone');if(!zone)return;zone.innerHTML='<input type="file" id="pdf-upload" accept=".pdf" style="display:none" onchange="doImport(this)"><div style="font-size:36px;margin-bottom:12px">📄</div><div style="font-size:14px;font-weight:600;color:var(--tx);margin-bottom:6px">Importar Procuração ou Contrato</div><div style="font-size:12px;color:var(--tx3)">Clique para selecionar o PDF</div>';}
+function doImport(input){var zone=document.getElementById('upload-zone');var res=document.getElementById('imp-result');var file=input&&input.files&&input.files[0];if(!file)return;zone.innerHTML='<div style="font-size:36px;margin-bottom:12px">⏳</div><div style="font-size:14px;font-weight:600;color:var(--tx)">Lendo '+file.name+'...</div>';res.style.display='none';res.innerHTML='';var reader=new FileReader();reader.onload=function(e){var b64=(e.target.result||'').split(',')[1];if(!b64){zone.innerHTML='<div style="font-size:36px">❌</div><div style="color:var(--er);margin-top:8px">Erro ao ler PDF.</div><div style="margin-top:12px"><button class="btn bg" onclick="resetUploadZone()">Tentar novamente</button></div>';return;}callClaude({model:'claude-sonnet-4-6',max_tokens:1000,system:'Analise o PDF e retorne SOMENTE JSON válido sem markdown: {"cliente":"nome","cpf":"cpf ou vazio","email":"email ou vazio","telefone":"tel ou vazio","endereco":"end ou vazio","area":"civel ou penal ou tributario ou trabalhista","processos":[{"cnj":"numero","tribunal":"nome","tipo":"tipo","fase":"fase"}]}',messages:[{role:'user',content:[{type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}},{type:'text',text:'Extraia os dados deste documento jurídico.'}]}]},function(d){var text=d.content&&d.content[0]?d.content[0].text:'';var dados;try{var c=text.replace(/```json/g,'').replace(/```/g,'').trim();var f=c.indexOf('{');var l=c.lastIndexOf('}');if(f>=0&&l>f)c=c.slice(f,l+1);dados=JSON.parse(c);}catch(e){zone.innerHTML='<div style="font-size:36px">❌</div><div style="color:var(--er);margin-top:8px">Erro ao interpretar IA.</div><div style="margin-top:12px"><button class="btn bg" onclick="resetUploadZone()">Tentar novamente</button></div>';return;}window._dadosImport=dados;zone.innerHTML='<div style="font-size:36px;margin-bottom:12px">✅</div><div style="font-size:14px;font-weight:600;color:var(--ok)">Lido com sucesso</div><div style="font-size:12px;color:var(--tx3);margin-top:6px">'+safeText(dados.cliente)+'</div><div style="margin-top:12px"><button class="btn bg" onclick="resetUploadZone()">Escolher outro PDF</button></div>';var procs='';if(dados.processos&&dados.processos.length){dados.processos.forEach(function(p,i){procs+='<div style="margin:10px 0 6px;font-size:11px;color:var(--ac);text-transform:uppercase">'+(i+1)+'º Processo</div><div class="fi"><span class="fl">CNJ</span><span class="fv">'+safeText(p.cnj)+'</span></div><div class="fi"><span class="fl">Tribunal</span><span class="fv">'+safeText(p.tribunal)+'</span></div><div class="fi"><span class="fl">Tipo</span><span class="fv">'+safeText(p.tipo)+'</span></div>';});}res.innerHTML='<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><span style="font-size:18px">✦</span><div style="font-size:13px;font-weight:600;color:var(--ac)">Dados extraídos:</div></div><div class="fi"><span class="fl">Cliente</span><span class="fv">'+safeText(dados.cliente)+'</span></div><div class="fi"><span class="fl">CPF</span><span class="fv">'+safeText(dados.cpf)+'</span></div><div class="fi"><span class="fl">Endereço</span><span class="fv" style="font-size:11px">'+safeText(dados.endereco)+'</span></div>'+procs+'<div style="display:flex;gap:8px;margin-top:14px"><button class="btn bg" style="flex:1" onclick="resetUploadZone()">Trocar PDF</button><button class="btn bp" style="flex:1" onclick="salvarNoBanco()">✓ Salvar no Banco</button></div><div id="save-status" style="margin-top:10px;font-size:12px;display:none"></div>';res.style.display='block';},function(errMsg){zone.innerHTML='<div style="font-size:36px">❌</div><div style="color:var(--er);margin-top:8px">'+errMsg+'</div><div style="margin-top:12px"><button class="btn bg" onclick="resetUploadZone()">Tentar novamente</button></div>';});};reader.onerror=function(){zone.innerHTML='<div style="font-size:36px">❌</div><div style="color:var(--er);margin-top:8px">Erro ao ler arquivo.</div><div style="margin-top:12px"><button class="btn bg" onclick="resetUploadZone()">Tentar novamente</button></div>';};reader.readAsDataURL(file);}
+function salvarNoBanco(){var d=window._dadosImport;if(!d)return;var st=document.getElementById('save-status');st.style.display='block';st.style.color='var(--tx3)';st.textContent='⏳ Salvando...';db.from('clientes').insert({nome:d.cliente||'Cliente sem nome',cpf_cnpj:d.cpf||null,email:d.email||null,telefone:d.telefone||null,endereco:d.endereco||null,tipo:'PF'}).select().then(function(res){if(res.error){st.style.color='var(--er)';st.textContent='Erro: '+res.error.message;return;}var clienteId=res.data&&res.data[0]?res.data[0].id:null;if(!clienteId){st.style.color='var(--er)';st.textContent='Erro: cliente sem ID.';return;}var inserts=(d.processos||[]).map(function(p){return{cliente_id:clienteId,numero_cnj:p.cnj||null,tribunal:p.tribunal||null,tipo_acao:p.tipo||null,fase:p.fase||'Em curso',area:d.area||null,status:'ativo'};});if(inserts.length===0){st.style.color='var(--ok)';st.textContent='✅ Cliente salvo!';logAuditoria('INSERT','clientes',_userName+' importou cliente via PDF: '+d.cliente);loadDashboard();return;}db.from('casos').insert(inserts).then(function(r2){if(r2.error){st.style.color='var(--er)';st.textContent='Erro: '+r2.error.message;return;}st.style.color='var(--ok)';st.textContent='✅ '+(d.cliente||'Cliente')+' e '+inserts.length+' processo(s) salvos!';logAuditoria('INSERT','casos',_userName+' importou '+inserts.length+' caso(s) via PDF para '+d.cliente);setTimeout(function(){go('cases',document.querySelectorAll('.ni')[1]);},1500);});});}
+function genEmail(){var box=document.getElementById('email-box');var tipo=document.getElementById('email-tipo').value;var inst=document.getElementById('email-inst').value;box.style.display='block';box.textContent='✦ Redigindo...';callClaude({model:'claude-sonnet-4-6',max_tokens:500,system:'Você é o Agente Hespanhol do escritório Hespanhol Advogados. Redija e-mails jurídicos formais em português.',messages:[{role:'user',content:'Tipo: '+tipo+'. Instruções: '+(inst||'tom formal')+'.\n\nRedija o e-mail completo.'}]},function(d){box.textContent=d.content&&d.content[0]?d.content[0].text:'Erro.';},function(errMsg){box.textContent='Agente indisponível: '+errMsg;});}
+function loadRelatorio(){var cont=document.getElementById('rel-tabela');var countEl=document.getElementById('rel-count');var filtro=document.getElementById('rel-filtro');if(!cont)return;cont.innerHTML='<div class="loading">🔄 Carregando relatório...</div>';var query=db.from('casos').select('*, clientes(nome,cpf_cnpj), andamentos(descricao,data_andamento)');if(filtro&&filtro.value!=='todos')query=query.eq('status',filtro.value);query.order('created_at',{ascending:false}).then(function(res){if(res.error){cont.innerHTML='<div style="color:var(--er);padding:16px">Erro: '+res.error.message+'</div>';return;}var data=res.data||[];if(countEl)countEl.textContent=data.length+' caso(s) no relatório';var dataGeracao=document.getElementById('rel-data-geracao');if(dataGeracao)dataGeracao.textContent=new Date().toLocaleString('pt-BR');if(data.length===0){cont.innerHTML='<div class="loading">Nenhum caso encontrado.</div>';return;}var html='<table><thead><tr><th>CLIENTE</th><th>Nº CNJ</th><th>TRIBUNAL</th><th>TIPO</th><th>FASE</th><th>ÚLTIMO ANDAMENTO</th><th>DATA</th><th>STATUS</th></tr></thead><tbody>';data.forEach(function(c){var cliente=c.clientes?c.clientes.nome:'—';var ands=(c.andamentos||[]).sort(function(a,b){return new Date(b.data_andamento)-new Date(a.data_andamento);});var ultimoAnd=ands.length?ands[0].descricao:'—';var ultimaData=ands.length?new Date(ands[0].data_andamento).toLocaleDateString('pt-BR'):'—';if(ultimoAnd&&ultimoAnd.length>70)ultimoAnd=ultimoAnd.slice(0,70)+'...';var statusColor=c.status==='ativo'?'#2ecc71':'#f39c12';html+='<tr style="border-bottom:1px solid var(--bd)"><td style="padding:9px 10px;font-size:12px;font-weight:600;color:var(--tx)">'+safeText(cliente)+'</td><td style="padding:9px 10px;font-size:11px;color:var(--tx3)">'+safeText(c.numero_cnj)+'</td><td style="padding:9px 10px;font-size:12px;color:var(--tx2)">'+safeText(c.tribunal)+'</td><td style="padding:9px 10px;font-size:12px;color:var(--tx2)">'+safeText(c.tipo_acao)+'</td><td style="padding:9px 10px;font-size:12px;color:var(--tx2)">'+safeText(c.fase)+'</td><td style="padding:9px 10px;font-size:11px;color:var(--tx2)">'+safeText(ultimoAnd)+'</td><td style="padding:9px 10px;font-size:11px;color:var(--tx3)">'+ultimaData+'</td><td style="padding:9px 10px"><span style="font-size:10px;font-weight:700;color:'+statusColor+'">'+safeText(c.status).toUpperCase()+'</span></td></tr>';});html+='</tbody></table>';cont.innerHTML=html;});}
+function imprimirRelatorio(){var dg=document.getElementById('rel-data-geracao');if(dg)dg.textContent=new Date().toLocaleString('pt-BR');var h=document.querySelector('.print-header');if(h)h.style.display='block';window.print();if(h)h.style.display='none';}
+var FERRAMENTAS=[{name:'buscar_cliente',description:'Busca clientes cadastrados pelo nome',input_schema:{type:'object',properties:{nome:{type:'string',description:'Nome ou parte do nome do cliente'}},required:['nome']}},{name:'criar_cliente',description:'Cadastra um novo cliente no sistema',input_schema:{type:'object',properties:{nome:{type:'string'},cpf_cnpj:{type:'string'},email:{type:'string'},telefone:{type:'string'},endereco:{type:'string'}},required:['nome']}},{name:'criar_caso',description:'Cria novo caso processual vinculado a um cliente existente',input_schema:{type:'object',properties:{cliente_id:{type:'string',description:'UUID do cliente'},numero_cnj:{type:'string',description:'Número CNJ do processo'},tribunal:{type:'string'},tipo_acao:{type:'string'},area:{type:'string',enum:['civel','penal','tributario','trabalhista','outro']},fase:{type:'string'}},required:['cliente_id']}},{name:'adicionar_andamento',description:'Registra um andamento processual em um caso',input_schema:{type:'object',properties:{caso_id:{type:'string'},descricao:{type:'string'},data_andamento:{type:'string',description:'Data no formato YYYY-MM-DD'}},required:['caso_id','descricao']}},{name:'agendar_compromisso',description:'Agenda audiência, prazo, julgamento ou reunião',input_schema:{type:'object',properties:{caso_id:{type:'string'},tipo:{type:'string',enum:['audiencia','prazo','julgamento','reuniao']},data_hora:{type:'string',description:'Data e hora ISO 8601'},local:{type:'string'},observacoes:{type:'string'}},required:['tipo','data_hora']}},{name:'buscar_casos',description:'Busca casos por número CNJ ou nome do cliente',input_schema:{type:'object',properties:{termo:{type:'string',description:'Número CNJ ou nome do cliente'}},required:['termo']}}];
+function executarFerramenta(nome,input){return new Promise(function(resolve){switch(nome){case 'buscar_cliente':db.from('clientes').select('*').ilike('nome','%'+input.nome+'%').limit(5).then(function(r){resolve(r.error?{erro:r.error.message}:(r.data||[]));});break;case 'criar_cliente':db.from('clientes').insert({nome:input.nome,cpf_cnpj:input.cpf_cnpj||null,email:input.email||null,telefone:input.telefone||null,endereco:input.endereco||null,tipo:'PF'}).select().then(function(r){if(r.error){resolve({erro:r.error.message});return;}logAuditoria('INSERT','clientes','Agente criou cliente: '+input.nome);loadDashboard();resolve(r.data[0]);});break;case 'criar_caso':db.from('casos').insert({cliente_id:input.cliente_id,numero_cnj:input.numero_cnj||null,tribunal:input.tribunal||null,tipo_acao:input.tipo_acao||null,area:input.area||null,fase:input.fase||null,status:'ativo'}).select().then(function(r){if(r.error){resolve({erro:r.error.message});return;}logAuditoria('INSERT','casos','Agente criou caso: '+(input.numero_cnj||'sem CNJ'));loadDashboard();resolve(r.data[0]);});break;case 'adicionar_andamento':db.from('andamentos').insert({caso_id:input.caso_id,descricao:input.descricao,data_andamento:input.data_andamento||new Date().toISOString().split('T')[0],fonte:'agente'}).select().then(function(r){if(r.error){resolve({erro:r.error.message});return;}logAuditoria('INSERT','andamentos','Agente registrou andamento');resolve(r.data[0]);});break;case 'agendar_compromisso':db.from('agenda').insert({caso_id:input.caso_id||null,tipo:input.tipo,data_hora:input.data_hora,local:input.local||null,observacoes:input.observacoes||null}).select().then(function(r){if(r.error){resolve({erro:r.error.message});return;}logAuditoria('INSERT','agenda','Agente agendou: '+input.tipo);loadDashboard();resolve(r.data[0]);});break;case 'buscar_casos':db.from('casos').select('*, clientes(nome)').ilike('numero_cnj','%'+input.termo+'%').limit(5).then(function(r1){if(r1.data&&r1.data.length>0){resolve(r1.data);return;}db.from('clientes').select('id').ilike('nome','%'+input.termo+'%').then(function(rc){if(!rc.data||rc.data.length===0){resolve([]);return;}var ids=rc.data.map(function(c){return c.id;});db.from('casos').select('*, clientes(nome)').in('cliente_id',ids).limit(5).then(function(r2){resolve(r2.data||[]);});});});break;default:resolve({erro:'Ferramenta desconhecida: '+nome});}});}
+function formatNomeFerramenta(nome){var nomes={buscar_cliente:'Buscando cliente',criar_cliente:'Criando cliente',criar_caso:'Criando caso',adicionar_andamento:'Registrando andamento',agendar_compromisso:'Agendando compromisso',buscar_casos:'Buscando casos'};return nomes[nome]||nome;}
+function appendAIMsg(tipo,texto){var msgs=document.getElementById('aim');var div=document.createElement('div');div.className='aimsg '+(tipo==='tool'?'tool-action':tipo);div.textContent=texto;msgs.appendChild(div);msgs.scrollTop=msgs.scrollHeight;return div;}
+function showTyping(){var msgs=document.getElementById('aim');var t=document.createElement('div');t.className='aty';t.innerHTML='<span></span><span></span><span></span>';msgs.appendChild(t);msgs.scrollTop=msgs.scrollHeight;return t;}
+function buildPayload(){return{model:'claude-sonnet-4-6',max_tokens:1024,system:'Você é o Agente Hespanhol do escritório Hespanhol Advogados, do Dr. André Luiz Hespanhol Tavares, advogado em Formosa/GO. Você tem ferramentas para consultar e operar o sistema jurídico. Quando o usuário pedir para criar caso, cadastrar cliente, registrar andamento ou agendar compromisso, USE as ferramentas. Sempre: 1) busque o cliente pelo nome antes de criar caso; 2) confirme o que foi feito; 3) responda em português conciso.',tools:FERRAMENTAS,messages:_aiMessages};}
+function callClaudeAsync(payload){return new Promise(function(resolve,reject){callClaude(payload,resolve,function(err){reject(new Error(err));});});}
+async function agentLoop(typingEl){var response=await callClaudeAsync(buildPayload());if(response.stop_reason==='tool_use'){_aiMessages.push({role:'assistant',content:response.content});var toolResults=[];for(var i=0;i<response.content.length;i++){var block=response.content[i];if(block.type==='tool_use'){typingEl.remove();var actionEl=appendAIMsg('tool','⚙️ '+formatNomeFerramenta(block.name)+'...');typingEl=showTyping();var result=await executarFerramenta(block.name,block.input);actionEl.textContent='✅ '+formatNomeFerramenta(block.name);toolResults.push({type:'tool_result',tool_use_id:block.id,content:JSON.stringify(result)});}}_aiMessages.push({role:'user',content:toolResults});var finalResponse=await callClaudeAsync(buildPayload());typingEl.remove();var finalText=finalResponse.content.filter(function(b){return b.type==='text';}).map(function(b){return b.text;}).join('');_aiMessages.push({role:'assistant',content:finalResponse.content});appendAIMsg('bot',finalText||'Concluído.');}else{typingEl.remove();var text=response.content.filter(function(b){return b.type==='text';}).map(function(b){return b.text;}).join('');_aiMessages.push({role:'assistant',content:response.content});appendAIMsg('bot',text||'Pronto.');}}
 function toggleAI(){document.getElementById('aip').classList.toggle('open');}
-
-function sendAI(){
-  var inp=document.getElementById('aii'),msgs=document.getElementById('aim'),text=inp.value.trim();
-  if(!text)return;inp.value='';
-  var u=document.createElement('div');u.className='aimsg usr';u.textContent=text;msgs.appendChild(u);
-  var t=document.createElement('div');t.className='aty';t.innerHTML='<span></span><span></span><span></span>';msgs.appendChild(t);
-  msgs.scrollTop=msgs.scrollHeight;
-  callClaude({
-    model:'claude-sonnet-4-6',
-    max_tokens:600,
-    system:'Você é o Agente Hespanhol do escritório Hespanhol Advogados, do Dr. Andre Luiz Hespanhol Tavares, advogado em Formosa/GO. Responda de forma concisa e profissional em português.',
-    messages:[{role:'user',content:text}]
-  }, function(d){
-    t.remove();
-    var b=document.createElement('div');b.className='aimsg bot';
-    b.textContent=d.content&&d.content[0]?d.content[0].text:'Erro.';
-    msgs.appendChild(b);msgs.scrollTop=msgs.scrollHeight;
-  }, function(errMsg){
-    t.remove();
-    var b=document.createElement('div');b.className='aimsg bot';
-    b.textContent='Indisponível: '+errMsg;
-    msgs.appendChild(b);msgs.scrollTop=msgs.scrollHeight;
-  });
-}
-
-// ── RELATÓRIO IMPRIMÍVEL ───────────────────────────────────────
-function loadRelatorio(){
-  var cont=document.getElementById('rel-tabela');
-  var countEl=document.getElementById('rel-count');
-  var filtro=document.getElementById('rel-filtro');
-  if(!cont)return;
-  cont.innerHTML='<div class="loading">🔄 Carregando relatório...</div>';
-  var query=db.from('casos').select('*, clientes(nome,cpf_cnpj,email,telefone), andamentos(descricao,data_andamento)');
-  if(filtro&&filtro.value!=='todos')query=query.eq('status',filtro.value);
-  query.order('created_at',{ascending:false}).then(function(res){
-    if(res.error){cont.innerHTML='<div style="color:var(--er);padding:16px">Erro: '+res.error.message+'</div>';return;}
-    var data=res.data||[];
-    if(countEl)countEl.textContent=data.length+' caso(s) no relatório';
-    var dataGeracao=document.getElementById('rel-data-geracao');
-    if(dataGeracao)dataGeracao.textContent=new Date().toLocaleString('pt-BR');
-    if(data.length===0){cont.innerHTML='<div class="loading">Nenhum caso encontrado.</div>';return;}
-    var html='<table style="width:100%;border-collapse:collapse">';
-    html+='<thead><tr>';
-    html+='<th style="text-align:left;padding:8px 10px;border-bottom:2px solid var(--bd);font-size:10px;letter-spacing:1px;color:var(--tx3)">CLIENTE</th>';
-    html+='<th style="text-align:left;padding:8px 10px;border-bottom:2px solid var(--bd);font-size:10px;letter-spacing:1px;color:var(--tx3)">Nº CNJ</th>';
-    html+='<th style="text-align:left;padding:8px 10px;border-bottom:2px solid var(--bd);font-size:10px;letter-spacing:1px;color:var(--tx3)">TRIBUNAL</th>';
-    html+='<th style="text-align:left;padding:8px 10px;border-bottom:2px solid var(--bd);font-size:10px;letter-spacing:1px;color:var(--tx3)">TIPO</th>';
-    html+='<th style="text-align:left;padding:8px 10px;border-bottom:2px solid var(--bd);font-size:10px;letter-spacing:1px;color:var(--tx3)">FASE</th>';
-    html+='<th style="text-align:left;padding:8px 10px;border-bottom:2px solid var(--bd);font-size:10px;letter-spacing:1px;color:var(--tx3)">ÚLTIMO ANDAMENTO</th>';
-    html+='<th style="text-align:left;padding:8px 10px;border-bottom:2px solid var(--bd);font-size:10px;letter-spacing:1px;color:var(--tx3)">DATA</th>';
-    html+='<th style="text-align:left;padding:8px 10px;border-bottom:2px solid var(--bd);font-size:10px;letter-spacing:1px;color:var(--tx3)">STATUS</th>';
-    html+='</tr></thead><tbody>';
-    data.forEach(function(c){
-      var cliente=c.clientes?c.clientes.nome:'—';
-      // Pega o andamento mais recente
-      var ands=c.andamentos||[];
-      ands.sort(function(a,b){return new Date(b.data_andamento)-new Date(a.data_andamento);});
-      var ultimoAnd=ands.length?ands[0].descricao:'—';
-      var ultimaData=ands.length?new Date(ands[0].data_andamento).toLocaleDateString('pt-BR'):'—';
-      if(ultimoAnd&&ultimoAnd.length>60)ultimoAnd=ultimoAnd.slice(0,60)+'...';
-      var statusColor=c.status==='ativo'?'#2ecc71':'#f39c12';
-      html+='<tr style="border-bottom:1px solid var(--bd)">';
-      html+='<td style="padding:9px 10px;font-size:12px;font-weight:600;color:var(--tx)">'+safeText(cliente)+'</td>';
-      html+='<td style="padding:9px 10px;font-size:11px;color:var(--tx3)">'+safeText(c.numero_cnj)+'</td>';
-      html+='<td style="padding:9px 10px;font-size:12px;color:var(--tx2)">'+safeText(c.tribunal)+'</td>';
-      html+='<td style="padding:9px 10px;font-size:12px;color:var(--tx2)">'+safeText(c.tipo_acao)+'</td>';
-      html+='<td style="padding:9px 10px;font-size:12px;color:var(--tx2)">'+safeText(c.fase)+'</td>';
-      html+='<td style="padding:9px 10px;font-size:11px;color:var(--tx2)">'+safeText(ultimoAnd)+'</td>';
-      html+='<td style="padding:9px 10px;font-size:11px;color:var(--tx3)">'+ultimaData+'</td>';
-      html+='<td style="padding:9px 10px"><span style="font-size:10px;font-weight:700;color:'+statusColor+'">'+safeText(c.status).toUpperCase()+'</span></td>';
-      html+='</tr>';
-    });
-    html+='</tbody></table>';
-    cont.innerHTML=html;
-  });
-}
-
-function imprimirRelatorio(){
-  var dataGeracao=document.getElementById('rel-data-geracao');
-  if(dataGeracao)dataGeracao.textContent=new Date().toLocaleString('pt-BR');
-  var header=document.querySelector('.print-header');
-  if(header)header.style.display='block';
-  window.print();
-  if(header)header.style.display='none';
-}
-
-// ── API ANTHROPIC (PROXY) ──────────────────────────────────────
-function callClaude(payload, onSuccess, onError){
-  fetch('/api/claude',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify(payload)
-  }).then(async function(r){
-    var text=await r.text();
-    var payloadResp={};
-    try{payloadResp=text?JSON.parse(text):{};}catch(e){payloadResp={raw:text};}
-    if(!r.ok){
-      var msg='Erro HTTP '+r.status;
-      if(payloadResp.error&&payloadResp.error.message){msg+=' — '+payloadResp.error.message;}
-      else if(text){msg+=' — '+text.slice(0,300);}
-      throw new Error(msg);
-    }
-    return payloadResp;
-  }).then(function(d){
-    if(d&&d.error){onError(d.error.message||'Erro da API');return;}
-    onSuccess(d);
-  }).catch(function(e){
-    onError(e.message||'Erro de rede');
-  });
-}
+function resetAI(){_aiMessages=[];var aim=document.getElementById('aim');aim.innerHTML='<div class="aimsg bot">Conversa reiniciada. Como posso ajudar?</div>';}
+function sendAI(){var inp=document.getElementById('aii');var text=inp.value.trim();if(!text)return;inp.value='';appendAIMsg('usr',text);_aiMessages.push({role:'user',content:text});var typing=showTyping();agentLoop(typing).catch(function(e){typing.remove();appendAIMsg('bot','Erro: '+e.message);});}
+function callClaude(payload,onSuccess,onError){fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}).then(async function(r){var text=await r.text();var payloadResp={};try{payloadResp=text?JSON.parse(text):{};}catch(e){payloadResp={raw:text};}if(!r.ok){var msg='Erro HTTP '+r.status;if(payloadResp.error&&payloadResp.error.message)msg+=' — '+payloadResp.error.message;else if(text)msg+=' — '+text.slice(0,200);throw new Error(msg);}return payloadResp;}).then(function(d){if(d&&d.error){onError(d.error.message||'Erro da API');return;}onSuccess(d);}).catch(function(e){onError(e.message||'Erro de rede');});}
 </script>
 </body>
 </html>

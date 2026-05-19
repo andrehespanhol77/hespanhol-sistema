@@ -1,6 +1,16 @@
 {
   "functions": {
-    "api/*.js": {
+    "api/claude.js": {
+      "memory": 512,
+      "maxDuration": 30
+    },
+    "api/create-drive-folder.js": {
+      "runtime": "nodejs18.x"
+    },
+    "api/send-email.js": {
+      "runtime": "nodejs18.x"
+    },
+    "api/invite-user.js": {
       "runtime": "nodejs18.x"
     }
   }

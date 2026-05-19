@@ -333,7 +333,7 @@ tr:hover td{background:var(--sf);}
 
   <div class="page" id="page-audit">
     <div class="card">
-      <div class="ch"><div class="ct">📋 Trilha de Auditoria</div><button class="btn bg" style="font-size:11px" onclick="loadAudit()">↺ Atualizar</button></div>
+      <div class="ch"><div class="ct">📋 Trilha de Auditoria</div><div style="display:flex;gap:8px"><button class="btn bg" style="font-size:11px" onclick="exportarAuditCSV()">⬇️ Exportar CSV</button><button class="btn bg" style="font-size:11px" onclick="loadAudit()">↺ Atualizar</button></div></div>
       <div id="audit-list"><div class="loading">🔄 Carregando logs...</div></div>
     </div>
   </div>
@@ -734,6 +734,26 @@ function loadAudit(){
   });
 }
 
+function exportarAuditCSV(){
+  db.from('logs_auditoria').select('*').order('created_at',{ascending:false}).limit(5000).then(function(res){
+    if(res.error){alert('Erro: '+res.error.message);return;}
+    var rows=res.data||[];
+    if(rows.length===0){alert('Nenhum log para exportar.');return;}
+    var csv='Data/Hora,Usuário,Ação,Tabela,Descrição\n';
+    rows.forEach(function(l){
+      var dt=l.created_at?new Date(l.created_at).toLocaleString('pt-BR'):'';
+      var line=[dt,l.usuario_email||'',l.acao||'',l.tabela||'','"'+(l.descricao||'').replace(/"/g,"''")+'"'];
+      csv+=line.join(',')+'\n';
+    });
+    var blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a');
+    a.href=url;a.download='auditoria_'+new Date().toISOString().slice(0,10)+'.csv';
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+}
+
 function loadDashboard(){
   db.from('casos').select('*',{count:'exact',head:true}).then(function(res){
     var n=res.count||0;
@@ -961,20 +981,37 @@ function openModalUsuario(){
     '<div class="fg"><label class="flb">Nome completo *</label><input class="inp" id="fu-nome" placeholder="Nome do usuário"></div>'+
     '<div class="fg"><label class="flb">E-mail *</label><input class="inp" id="fu-email" type="email" placeholder="email@exemplo.com"></div>'+
     '<div class="fg"><label class="flb">Perfil de acesso *</label><select class="inp" id="fu-perfil"><option value="escritorio">Escritório — pode inserir, não apaga, sem financeiro</option><option value="autorizado">Autorizado — acesso financeiro, não apaga</option><option value="cliente">Cliente — só vê o próprio caso</option></select></div>'+
-    '<div style="background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:12px;font-size:12px;color:var(--tx3);margin-bottom:14px">⚠️ Após salvar, acesse Supabase → Authentication → Invite user com o mesmo e-mail para liberar o login.</div>'+
+    '<div style="background:rgba(46,204,113,.1);border:1px solid rgba(46,204,113,.2);border-radius:8px;padding:12px;font-size:12px;color:#2ecc71;margin-bottom:14px">✅ Um e-mail de convite será enviado automaticamente para o usuário criar a própria senha.</div>'+
     '<div id="modal-status" style="font-size:12px;margin-top:4px;display:none"></div>',
     salvarUsuario);
 }
 function salvarUsuario(){
   var nome=document.getElementById('fu-nome').value.trim();
   var email=document.getElementById('fu-email').value.trim();
+  var perfil=document.getElementById('fu-perfil').value;
   if(!nome||!email){showModalStatus('❌ Nome e e-mail obrigatórios.','er');return;}
   var btn=document.getElementById('modal-save-btn');
   btn.textContent='Salvando...';btn.disabled=true;
-  db.from('usuarios').insert({nome:nome,email:email,perfil:document.getElementById('fu-perfil').value,ativo:true}).then(function(res){
+  db.from('usuarios').insert({nome:nome,email:email,perfil:perfil,ativo:true}).then(function(res){
     if(res.error){showModalStatus('❌ Erro: '+res.error.message,'er');btn.textContent='Salvar';btn.disabled=false;return;}
     logAuditoria('INSERT','usuarios',_userName+' criou usuário: '+nome+' ('+email+')');
-    closeModal();loadUsers();
+    // Enviar convite automático
+    btn.textContent='Enviando convite...';
+    fetch('/api/invite-user',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,nome:nome,perfil:perfil})}).then(async function(r){
+      var d=await r.json();
+      if(!r.ok){
+        showModalStatus('✅ Usuário salvo, mas falha no convite: '+(d.error||r.status)+'. Convide manualmente pelo Supabase.','er');
+        btn.textContent='Fechar';btn.disabled=false;
+        btn.onclick=closeModal;
+        loadUsers();return;
+      }
+      logAuditoria('EMAIL','usuarios',_userName+' enviou convite para '+email);
+      closeModal();loadUsers();
+    }).catch(function(e){
+      showModalStatus('✅ Usuário salvo, mas falha no envio do convite: '+e.message,'er');
+      btn.textContent='Fechar';btn.disabled=false;btn.onclick=closeModal;
+      loadUsers();
+    });
   });
 }
 

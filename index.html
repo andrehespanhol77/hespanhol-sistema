@@ -827,17 +827,32 @@ function salvarCliente(){
   if(!nome){showModalStatus('❌ Nome obrigatório.','er');return;}
   var btn=document.getElementById('modal-save-btn');
   btn.textContent='Salvando...';btn.disabled=true;
-  db.from('clientes').insert({
-    nome:nome,
-    cpf_cnpj:document.getElementById('fc-cpf').value.trim()||null,
-    email:document.getElementById('fc-email').value.trim()||null,
-    telefone:document.getElementById('fc-tel').value.trim()||null,
-    endereco:document.getElementById('fc-end').value.trim()||null,
-    tipo:'PF'
-  }).then(function(res){
-    if(res.error){showModalStatus('❌ Erro: '+res.error.message,'er');btn.textContent='Salvar';btn.disabled=false;return;}
-    logAuditoria('INSERT','clientes',_userName+' cadastrou cliente: '+nome);
-    closeModal();loadClients();loadDashboard();
+  showModalStatus('⏳ Criando pasta no Google Drive...','ok');
+  fetch('/api/create-drive-folder',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({acao:'criar_cliente',nome_cliente:nome})}).then(async function(r){
+    var driveData=await r.json();
+    var pastaUrl=driveData.pasta_url||null;
+    var pastaId=driveData.pasta_id||null;
+    db.from('clientes').insert({
+      nome:nome,
+      cpf_cnpj:document.getElementById('fc-cpf').value.trim()||null,
+      email:document.getElementById('fc-email').value.trim()||null,
+      telefone:document.getElementById('fc-tel').value.trim()||null,
+      endereco:document.getElementById('fc-end').value.trim()||null,
+      tipo:'PF',
+      pasta_url:pastaUrl,
+      pasta_drive_id:pastaId
+    }).then(function(res){
+      if(res.error){showModalStatus('❌ Erro: '+res.error.message,'er');btn.textContent='Salvar';btn.disabled=false;return;}
+      logAuditoria('INSERT','clientes',_userName+' cadastrou cliente: '+nome+(pastaUrl?' | Drive: '+pastaUrl:''));
+      closeModal();loadClients();loadDashboard();
+    });
+  }).catch(function(){
+    // Drive falhou mas salva o cliente sem pasta
+    db.from('clientes').insert({nome:nome,cpf_cnpj:document.getElementById('fc-cpf').value.trim()||null,email:document.getElementById('fc-email').value.trim()||null,telefone:document.getElementById('fc-tel').value.trim()||null,endereco:document.getElementById('fc-end').value.trim()||null,tipo:'PF'}).then(function(res){
+      if(res.error){showModalStatus('❌ Erro: '+res.error.message,'er');btn.textContent='Salvar';btn.disabled=false;return;}
+      logAuditoria('INSERT','clientes',_userName+' cadastrou cliente: '+nome+' (sem pasta Drive)');
+      closeModal();loadClients();loadDashboard();
+    });
   });
 }
 
@@ -879,21 +894,33 @@ function salvarCaso(){
   var cnj=document.getElementById('fca-cnj').value.trim();
   var natureza=document.getElementById('fca-natureza').value.trim();
   var paiId=document.getElementById('fca-pai').value;
-  db.from('casos').insert({
-    cliente_id:clienteId,
-    numero_cnj:cnj||null,
-    natureza:natureza||null,
-    tribunal:document.getElementById('fca-trib').value.trim()||null,
-    tipo_acao:document.getElementById('fca-tipo').value.trim()||null,
-    area:document.getElementById('fca-area').value||null,
-    fase:document.getElementById('fca-fase').value.trim()||null,
-    valor_causa:document.getElementById('fca-valor').value||null,
-    caso_pai_id:paiId||null,
-    status:'ativo'
-  }).then(function(res){
-    if(res.error){showModalStatus('❌ Erro: '+res.error.message,'er');btn.textContent='Salvar';btn.disabled=false;return;}
-    logAuditoria('INSERT','casos',_userName+' cadastrou processo: '+(natureza||'')+(cnj?' '+cnj:''));
-    closeModal();loadCases();loadDashboard();
+  var nomeProcesso=(natureza||'Processo')+(cnj?' — '+cnj:'');
+  showModalStatus('⏳ Criando pasta no Drive...','ok');
+  db.from('clientes').select('pasta_drive_id').eq('id',clienteId).single().then(function(cr){
+    var clientePastaId=cr.data&&cr.data.pasta_drive_id?cr.data.pasta_drive_id:null;
+    var drivePromise=clientePastaId
+      ?fetch('/api/create-drive-folder',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({acao:'criar_processo',nome_processo:nomeProcesso,cliente_pasta_id:clientePastaId})}).then(function(r){return r.json();})
+      :Promise.resolve({});
+    drivePromise.then(function(driveData){
+      db.from('casos').insert({
+        cliente_id:clienteId,
+        numero_cnj:cnj||null,
+        natureza:natureza||null,
+        tribunal:document.getElementById('fca-trib').value.trim()||null,
+        tipo_acao:document.getElementById('fca-tipo').value.trim()||null,
+        area:document.getElementById('fca-area').value||null,
+        fase:document.getElementById('fca-fase').value.trim()||null,
+        valor_causa:document.getElementById('fca-valor').value||null,
+        caso_pai_id:paiId||null,
+        status:'ativo',
+        pasta_url:driveData.pasta_url||null,
+        pasta_drive_id:driveData.pasta_id||null
+      }).then(function(res){
+        if(res.error){showModalStatus('❌ Erro: '+res.error.message,'er');btn.textContent='Salvar';btn.disabled=false;return;}
+        logAuditoria('INSERT','casos',_userName+' cadastrou processo: '+nomeProcesso);
+        closeModal();loadCases();loadDashboard();
+      });
+    });
   });
 }
 
@@ -1539,6 +1566,7 @@ function openPerfilCliente(id){
       h+='</div>';
       h+='<button class="btn bg" style="font-size:11px" onclick="closeModal();setTimeout(function(){openEditCliente(\''+id+'\')},50)">✏️ Editar</button>';
       if(c.email)h+='<button class="btn bp" style="font-size:11px" onclick="closeModal();document.getElementById(\'email-dest-manual\').value=\''+c.email+'\';go(\'email\',document.querySelectorAll(\'.ni\')[12])">✉️ E-mail</button>';
+      if(c.pasta_url)h+='<a href="'+c.pasta_url+'" target="_blank" class="btn bg" style="font-size:11px;text-decoration:none">📁 Drive</a>';
       h+='</div>';
       h+='<div class="g2" style="margin-bottom:16px">';
       h+='<div>';
@@ -1631,6 +1659,7 @@ function openDetalhesCaso(id){
       if(c.numero_cnj)h+='<div style="font-size:13px;color:var(--ac)">'+c.numero_cnj+'</div>';
       h+='<div style="font-size:12px;color:var(--tx3);margin-top:2px">'+safeText(c.tribunal)+(c.fase?' · '+c.fase:'')+'</div></div>';
       h+='<span class="badge '+(c.status==='ativo'?'ba':'bw')+'">'+safeText(c.status)+'</span>';
+      if(c.pasta_url)h+='<a href="'+c.pasta_url+'" target="_blank" class="btn bg" style="font-size:11px;text-decoration:none">📁 Drive</a>';
       h+='<button class="btn bg" style="font-size:11px" onclick="closeModal();setTimeout(function(){openEditCaso(\''+id+'\')},50)">✏️ Editar</button></div>';
       h+='<div class="g2" style="margin-bottom:14px"><div>';
       h+='<div style="font-size:11px;color:var(--tx3);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Dados</div>';

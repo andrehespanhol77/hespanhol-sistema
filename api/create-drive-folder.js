@@ -1,27 +1,58 @@
-import { GoogleAuth } from "google-auth-library";
+import { importPKCS8, SignJWT } from "jose";
 
 const CLIENT_EMAIL = "hespanhol-sistema@hespanhol-advogados.iam.gserviceaccount.com";
-const SCOPES = ["https://www.googleapis.com/auth/drive"];
+const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive";
 
-function getPrivateKey() {
-  const raw = process.env.GOOGLE_PRIVATE_KEY;
+function normalizePem(raw) {
   if (!raw) throw new Error("GOOGLE_PRIVATE_KEY não configurada");
-  // Converte \n literal para quebra de linha real (formato Vercel)
-  return raw.replace(/\\n/g, "\n");
+  let s = raw.trim();
+  if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+    s = s.slice(1, -1).trim();
+  }
+  return s.replace(/\\n/g, "\n");
 }
 
 async function getAccessToken() {
-  const auth = new GoogleAuth({
-    credentials: {
-      client_email: CLIENT_EMAIL,
-      private_key: getPrivateKey(),
-    },
-    scopes: SCOPES,
+  const pem = normalizePem(process.env.GOOGLE_PRIVATE_KEY);
+  console.log("PEM len:", pem.length, "| starts:", pem.slice(0, 27));
+
+  // Tenta RS256 primeiro (RSA), depois ES256 (EC) — suporte a ambos os tipos de chave Google
+  let privateKey, alg;
+  try {
+    privateKey = await importPKCS8(pem, "RS256");
+    alg = "RS256";
+    console.log("Chave importada como RS256");
+  } catch (e1) {
+    console.log("RS256 falhou:", e1.message, "— tentando ES256");
+    try {
+      privateKey = await importPKCS8(pem, "ES256");
+      alg = "ES256";
+      console.log("Chave importada como ES256");
+    } catch (e2) {
+      throw new Error("Falha ao importar chave (RS256: " + e1.message + " | ES256: " + e2.message + ")");
+    }
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  const jwt = await new SignJWT({
+    scope: DRIVE_SCOPE,
+  })
+    .setProtectedHeader({ alg })
+    .setIssuer(CLIENT_EMAIL)
+    .setAudience("https://oauth2.googleapis.com/token")
+    .setIssuedAt(now)
+    .setExpirationTime(now + 3600)
+    .sign(privateKey);
+
+  const resp = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: `grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${jwt}`,
   });
-  const client = await auth.getClient();
-  const tokenResponse = await client.getAccessToken();
-  console.log("Token obtido OK");
-  return tokenResponse.token;
+  const data = await resp.json();
+  console.log("OAuth:", JSON.stringify(data));
+  if (!data.access_token) throw new Error("Falha ao obter token: " + JSON.stringify(data));
+  return data.access_token;
 }
 
 async function criarPasta(token, nome, parentId) {
@@ -39,7 +70,7 @@ async function criarPasta(token, nome, parentId) {
   });
   const data = await resp.json();
   if (!data.id) throw new Error("Erro ao criar pasta '" + nome + "': " + JSON.stringify(data));
-  console.log("Pasta criada:", nome, data.id);
+  console.log("Pasta criada:", nome);
   return data.id;
 }
 

@@ -212,7 +212,7 @@ tr:hover td{background:var(--sf);}
       <div style="font-size:13px;color:var(--tx3)" id="cases-count">Carregando...</div>
       <button class="btn bp hide-cliente" onclick="openModalCaso()">+ Novo Caso</button>
     </div>
-    <table><thead><tr><th>Nº CNJ</th><th>Cliente</th><th>Natureza / Tipo</th><th>Tribunal</th><th>Fase</th><th>Status</th><th class="hide-financeiro">Valor</th><th>Ações</th></tr></thead>
+    <table><thead><tr><th>Nº CNJ</th><th>Cliente</th><th>Natureza / Tipo</th><th>Tribunal</th><th>Fase</th><th>Status</th><th class="hide-escritorio">Valor</th><th>Ações</th></tr></thead>
     <tbody id="cases-tbody"><tr><td colspan="8" class="loading">🔄 Carregando do banco...</td></tr></tbody></table>
   </div>
 
@@ -424,6 +424,7 @@ var _userEmail='';
 var _userName='';
 var _aiMessages=[];
 var _podeApagar=false;
+var _podeVerValor=false;
 
 function safeText(v){return (v===null||v===undefined||v==='')?'—':String(v);}
 
@@ -471,10 +472,14 @@ function abrirNovoContextual(){
 function aplicarPerfil(perfil){
   _perfil=perfil;
   _podeApagar=(perfil==='admin');
+  _podeVerValor=(perfil!=='escritorio');
 
   var temFinanceiro=(perfil==='admin'||perfil==='autorizado');
   document.querySelectorAll('.hide-financeiro').forEach(function(el){
     el.style.display=temFinanceiro?'':'none';
+  });
+  document.querySelectorAll('.hide-escritorio').forEach(function(el){
+    el.style.display=_podeVerValor?'':'none';
   });
   var fo=document.getElementById('fin-ok'),fn=document.getElementById('fin-no');
   if(fo)fo.style.display=temFinanceiro?'block':'none';
@@ -568,7 +573,7 @@ function loadCases(){
       var acoes='<button class="btn bg" style="font-size:10px;padding:4px 8px" onclick="event.stopPropagation();openEditCaso(\''+c.id+'\')">✏️</button>'+del;
       tr.style.cursor='pointer';
       tr.onclick=function(){openDetalhesCaso(c.id);};
-      tr.innerHTML='<td style="color:var(--tx3);font-size:11px">'+safeText(c.numero_cnj)+'</td><td>'+nome+'</td><td>'+tipoDisplay+'</td><td style="color:var(--tx3)">'+safeText(c.tribunal)+'</td><td style="color:var(--tx3)">'+safeText(c.fase)+'</td><td>'+status+'</td><td class="hide-financeiro" style="color:var(--ac);font-weight:600">'+(c.valor_causa?'R$ '+c.valor_causa:'—')+'</td><td>'+acoes+'</td>';
+      tr.innerHTML='<td style="color:var(--tx3);font-size:11px">'+safeText(c.numero_cnj)+'</td><td>'+nome+'</td><td>'+tipoDisplay+'</td><td style="color:var(--tx3)">'+safeText(c.tribunal)+'</td><td style="color:var(--tx3)">'+safeText(c.fase)+'</td><td>'+status+'</td><td class="hide-escritorio" style="color:var(--ac);font-weight:600">'+(c.valor_causa?'R$ '+c.valor_causa:'—')+'</td><td>'+acoes+'</td>';
       tbody.appendChild(tr);
     });
   });
@@ -1495,6 +1500,7 @@ function openEditCaso(id){
       '<div class="fg"><label class="flb">Fase</label><input class="inp" id="fce-fase" value="'+(c.fase||'')+'"></div>'+
       '<div class="fg"><label class="flb">Status</label><select class="inp" id="fce-status"><option value="ativo"'+(c.status==='ativo'?' selected':'')+'>Ativo</option><option value="arquivado"'+(c.status==='arquivado'?' selected':'')+'>Arquivado</option></select></div>'+
       '<div class="fg"><label class="flb">Processo Principal (vinculação)</label><select class="inp" id="fce-pai"><option value="">Nenhum (independente)</option></select></div>'+
+      (_podeVerValor?'<div class="fg"><label class="flb">Valor da Causa (R$)</label><input class="inp" id="fce-valor" type="number" value="'+(c.valor_causa||'')+'"></div>':'')+
       '<div id="modal-status" style="font-size:12px;margin-top:4px;display:none"></div>',
       function(){salvarEditCaso(id,c.caso_pai_id);});
     db.from('casos').select('id,numero_cnj,natureza,tipo_acao,clientes(nome)').neq('id',id).order('created_at',{ascending:false}).then(function(r){
@@ -1509,6 +1515,7 @@ function openEditCaso(id){
 function salvarEditCaso(id){
   var btn=document.getElementById('modal-save-btn');btn.textContent='Salvando...';btn.disabled=true;
   var paiId=document.getElementById('fce-pai').value;
+  var valorEl=document.getElementById('fce-valor');
   db.from('casos').update({
     natureza:document.getElementById('fce-nat').value||null,
     tipo_acao:document.getElementById('fce-tipo').value.trim()||null,
@@ -1516,7 +1523,8 @@ function salvarEditCaso(id){
     tribunal:document.getElementById('fce-trib').value.trim()||null,
     fase:document.getElementById('fce-fase').value.trim()||null,
     status:document.getElementById('fce-status').value,
-    caso_pai_id:paiId||null
+    caso_pai_id:paiId||null,
+    valor_causa:valorEl?valorEl.value||null:undefined
   }).eq('id',id).then(function(r){
     if(r.error){showModalStatus('❌ Erro: '+r.error.message,'er');btn.textContent='Salvar';btn.disabled=false;return;}
     logAuditoria('UPDATE','casos',_userName+' editou processo ID: '+id);
@@ -1547,7 +1555,7 @@ function openDetalhesCaso(id){
       if(c.natureza)h+='<div class="fi"><span class="fl">Natureza</span><span class="fv">'+c.natureza+'</span></div>';
       if(c.tipo_acao)h+='<div class="fi"><span class="fl">Tipo</span><span class="fv">'+c.tipo_acao+'</span></div>';
       if(c.area)h+='<div class="fi"><span class="fl">Área</span><span class="fv">'+c.area+'</span></div>';
-      if(c.valor_causa)h+='<div class="fi"><span class="fl">Valor</span><span class="fv">R$ '+c.valor_causa+'</span></div>';
+      if(c.valor_causa&&_podeVerValor)h+='<div class="fi"><span class="fl">Valor da Causa</span><span class="fv">R$ '+c.valor_causa+'</span></div>';
       h+='</div><div>';
       if(pai){
         h+='<div style="font-size:11px;color:var(--tx3);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Processo Principal</div>';

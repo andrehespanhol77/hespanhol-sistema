@@ -6,36 +6,48 @@ function base64url(data) {
   return buf.toString("base64").replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
 }
 
-function normalizePem(rawEnvKey) {
+function pemToDer(rawEnvKey) {
   if (!rawEnvKey) throw new Error("GOOGLE_PRIVATE_KEY não configurada");
-  // Normaliza \n literais e aspas extras
-  let s = rawEnvKey.replace(/\\n/g, "\n").replace(/\r/g, "").trim();
+
+  // Normaliza todos os formatos possíveis de \n
+  let s = rawEnvKey;
+  // Remove aspas externas se existirem
+  s = s.trim();
   if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
-    s = s.slice(1, -1).replace(/\\n/g, "\n").trim();
+    s = s.slice(1, -1);
   }
-  return s;
+  // Converte \n literal (2 chars) para quebra de linha real
+  s = s.replace(/\\n/g, "\n");
+
+  // Extrai o base64 puro (remove cabeçalhos PEM e todos os espaços/newlines)
+  const b64 = s
+    .replace(/-----BEGIN [A-Z ]+-----/g, "")
+    .replace(/-----END [A-Z ]+-----/g, "")
+    .replace(/\s+/g, "");
+
+  console.log("PEM b64 len=" + b64.length + " | first20=" + b64.slice(0, 20));
+
+  if (b64.length < 500) {
+    throw new Error("Chave muito curta (b64 len=" + b64.length + "). Verifique GOOGLE_PRIVATE_KEY no Vercel.");
+  }
+
+  return Buffer.from(b64, "base64");
 }
 
 async function getAccessToken() {
-  const rawKey = process.env.GOOGLE_PRIVATE_KEY;
-  const pem = normalizePem(rawKey);
-  console.log("PEM starts:", pem.slice(0, 27), "| len:", pem.length);
+  const derBuf = pemToDer(process.env.GOOGLE_PRIVATE_KEY);
 
-  // Usa createPrivateKey do Node (que interpreta PEM corretamente)
-  // e exporta como DER binário para o Web Crypto
-  const { createPrivateKey } = await import("crypto");
-  const keyObj = createPrivateKey({ key: pem, format: "pem" });
-  const derBuf = keyObj.export({ type: "pkcs8", format: "der" });
-  console.log("DER exportado, len:", derBuf.length);
+  const { webcrypto } = await import("node:crypto");
+  const subtle = webcrypto.subtle;
 
-  const cryptoKey = await globalThis.crypto.subtle.importKey(
+  const cryptoKey = await subtle.importKey(
     "pkcs8",
     derBuf,
     { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
     false,
     ["sign"]
   );
-  console.log("SubtleCrypto importKey OK");
+  console.log("importKey OK");
 
   const now = Math.floor(Date.now() / 1000);
   const header = base64url(JSON.stringify({ alg: "RS256", typ: "JWT" }));
@@ -48,13 +60,14 @@ async function getAccessToken() {
   }));
   const signingInput = `${header}.${payload}`;
 
-  const sigBuf = await globalThis.crypto.subtle.sign(
+  const sigBuf = await subtle.sign(
     "RSASSA-PKCS1-v1_5",
     cryptoKey,
     Buffer.from(signingInput)
   );
   const signature = base64url(Buffer.from(sigBuf));
   const jwt = `${signingInput}.${signature}`;
+  console.log("JWT criado OK");
 
   const resp = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
@@ -62,7 +75,7 @@ async function getAccessToken() {
     body: `grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${jwt}`,
   });
   const data = await resp.json();
-  console.log("OAuth response:", JSON.stringify(data));
+  console.log("OAuth:", JSON.stringify(data));
   if (!data.access_token) throw new Error("Falha ao obter token: " + JSON.stringify(data));
   return data.access_token;
 }

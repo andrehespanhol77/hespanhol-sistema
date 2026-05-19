@@ -1,39 +1,47 @@
-const CREDENTIALS = {
-  client_email: "hespanhol-sistema@hespanhol-advogados.iam.gserviceaccount.com",
-  private_key: process.env.GOOGLE_PRIVATE_KEY,
-};
+import forge from "node-forge";
 
-const SCOPES = ["https://www.googleapis.com/auth/drive"];
+const CLIENT_EMAIL = "hespanhol-sistema@hespanhol-advogados.iam.gserviceaccount.com";
+const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive";
+
+function base64url(str) {
+  return Buffer.from(str)
+    .toString("base64")
+    .replace(/=/g, "")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_");
+}
+
+function normalizePem(raw) {
+  if (!raw) throw new Error("GOOGLE_PRIVATE_KEY não configurada");
+  let s = raw.trim();
+  if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+    s = s.slice(1, -1).trim();
+  }
+  return s.replace(/\\n/g, "\n");
+}
 
 async function getAccessToken() {
-  const header = { alg: "RS256", typ: "JWT" };
+  const pem = normalizePem(process.env.GOOGLE_PRIVATE_KEY);
+  console.log("PEM len:", pem.length, "starts:", pem.slice(0, 27));
+
+  const privateKey = forge.pki.privateKeyFromPem(pem);
+  console.log("node-forge: chave importada OK");
+
   const now = Math.floor(Date.now() / 1000);
-  const payload = {
-    iss: CREDENTIALS.client_email,
-    scope: SCOPES.join(" "),
+  const header = base64url(JSON.stringify({ alg: "RS256", typ: "JWT" }));
+  const payload = base64url(JSON.stringify({
+    iss: CLIENT_EMAIL,
+    scope: DRIVE_SCOPE,
     aud: "https://oauth2.googleapis.com/token",
     iat: now,
     exp: now + 3600,
-  };
+  }));
+  const signingInput = `${header}.${payload}`;
 
-  const base64url = (obj) =>
-    Buffer.from(JSON.stringify(obj))
-      .toString("base64")
-      .replace(/=/g, "")
-      .replace(/\+/g, "-")
-      .replace(/\//g, "_");
-
-  const signingInput = `${base64url(header)}.${base64url(payload)}`;
-
-  const { createSign } = await import("crypto");
-  const sign = createSign("RSA-SHA256");
-  sign.update(signingInput);
-
-  const privateKey = CREDENTIALS.private_key.replace(/\\n/g, "\n");
-  console.log("Signing with key len:", privateKey.length, "starts:", privateKey.slice(0, 27));
-
-  const signature = sign
-    .sign(privateKey)
+  const md = forge.md.sha256.create();
+  md.update(signingInput, "utf8");
+  const signatureBytes = privateKey.sign(md);
+  const signature = Buffer.from(signatureBytes, "binary")
     .toString("base64")
     .replace(/=/g, "")
     .replace(/\+/g, "-")

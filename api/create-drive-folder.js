@@ -28,8 +28,16 @@ async function getAccessToken() {
   const { createSign } = await import("crypto");
   const sign = createSign("RSA-SHA256");
   sign.update(signingInput);
+
+  // Suporta tanto \n literal quanto quebras de linha reais
+  const privateKey = CREDENTIALS.private_key
+    ? CREDENTIALS.private_key.replace(/\\n/g, "\n")
+    : null;
+
+  if (!privateKey) throw new Error("GOOGLE_PRIVATE_KEY está vazia ou não configurada");
+
   const signature = sign
-    .sign(CREDENTIALS.private_key.replace(/\\n/g, "\n"))
+    .sign(privateKey)
     .toString("base64")
     .replace(/=/g, "")
     .replace(/\+/g, "-")
@@ -43,6 +51,7 @@ async function getAccessToken() {
     body: `grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${jwt}`,
   });
   const data = await resp.json();
+  console.log("OAuth token response:", JSON.stringify(data));
   if (!data.access_token) throw new Error("Falha ao obter token: " + JSON.stringify(data));
   return data.access_token;
 }
@@ -61,6 +70,7 @@ async function criarPasta(token, nome, parentId) {
     }),
   });
   const data = await resp.json();
+  console.log("criarPasta response:", JSON.stringify(data));
   if (!data.id) throw new Error("Erro ao criar pasta '" + nome + "': " + JSON.stringify(data));
   return data.id;
 }
@@ -80,21 +90,22 @@ export default async function handler(req, res) {
   }
 
   try {
+    console.log("Iniciando getAccessToken...");
     const token = await getAccessToken();
+    console.log("Token obtido com sucesso");
 
     if (acao === "criar_cliente") {
       if (!nome_cliente) return res.status(400).json({ error: "nome_cliente obrigatório" });
 
-      // Pasta do cliente
+      console.log("Criando pasta cliente:", nome_cliente, "em", PASTA_CLIENTES_ID);
       const clienteId = await criarPasta(token, nome_cliente, PASTA_CLIENTES_ID);
-      // Subpastas fixas
       await criarPasta(token, "Documentos Pessoais", clienteId);
       await criarPasta(token, "Processos", clienteId);
 
       return res.status(200).json({
         success: true,
         pasta_id: clienteId,
-        pasta_url: obterLinkPasta(clienteId),
+        pasta_url: await obterLinkPasta(clienteId),
       });
     }
 
@@ -103,7 +114,6 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: "nome_processo e cliente_pasta_id obrigatórios" });
       }
 
-      // Localiza pasta "Processos" dentro do cliente
       const listResp = await fetch(
         `https://www.googleapis.com/drive/v3/files?q='${cliente_pasta_id}'+in+parents+and+name='Processos'+and+mimeType='application/vnd.google-apps.folder'+and+trashed=false&fields=files(id)`,
         { headers: { Authorization: `Bearer ${token}` } }
@@ -111,9 +121,7 @@ export default async function handler(req, res) {
       const listData = await listResp.json();
       let processosPaiId = listData.files && listData.files[0] ? listData.files[0].id : cliente_pasta_id;
 
-      // Pasta do processo
       const processoId = await criarPasta(token, nome_processo, processosPaiId);
-      // Subpastas
       await criarPasta(token, "Petições e Docs Instrutórios", processoId);
       await criarPasta(token, "Peças Importantes", processoId);
       await criarPasta(token, "Relatórios, Planilhas e Estudos", processoId);
@@ -121,12 +129,13 @@ export default async function handler(req, res) {
       return res.status(200).json({
         success: true,
         pasta_id: processoId,
-        pasta_url: obterLinkPasta(processoId),
+        pasta_url: await obterLinkPasta(processoId),
       });
     }
 
     return res.status(400).json({ error: "acao inválida. Use: criar_cliente ou criar_processo" });
   } catch (err) {
+    console.error("Erro em create-drive-folder:", err.message, err.stack);
     return res.status(500).json({ error: err.message });
   }
 }

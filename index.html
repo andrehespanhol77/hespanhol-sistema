@@ -105,12 +105,26 @@ tr:hover td{background:var(--sf);}
 @keyframes bx{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}}
 .mo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center;}
 .mo.open{display:flex;}
-.moc{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--rl);padding:24px;width:92%;max-width:500px;max-height:85vh;overflow-y:auto;}
+.moc{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--rl);padding:24px;width:92%;max-width:520px;max-height:85vh;overflow-y:auto;}
 .mot{font-size:15px;font-weight:600;color:var(--tx);margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid var(--bd);}
 .moa{display:flex;gap:8px;margin-top:18px;justify-content:flex-end;}
 .sb{background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:7px 12px;color:var(--tx);font-size:12px;font-family:var(--fn);outline:none;width:180px;}
 .loading{text-align:center;padding:24px;color:var(--tx3);font-size:13px;}
+.msg-ok{font-size:12px;color:var(--ok);margin-top:8px;display:none;}
+.msg-er{font-size:12px;color:var(--er);margin-top:8px;display:none;}
 @media(max-width:768px){.sidebar{transform:translateX(-100%)}.main{margin-left:0}.g4{grid-template-columns:repeat(2,1fr)}.g3,.g2{grid-template-columns:1fr}}
+@media print{
+  .sidebar,.topbar,.aibtn,.aip,.mo{display:none!important;}
+  .main{margin-left:0!important;}
+  .content{padding:0!important;}
+  body{background:#fff!important;color:#000!important;}
+  .print-header{display:block!important;}
+  .no-print{display:none!important;}
+  table{font-size:10px;}
+  th,td{border:1px solid #ccc!important;color:#000!important;padding:5px 8px!important;}
+  th{background:#f0f0f0!important;}
+  @page{size:A4 landscape;margin:15mm;}
+}
 </style>
 </head>
 <body>
@@ -138,26 +152,27 @@ tr:hover td{background:var(--sf);}
     <div class="ni" onclick="go('cases',this)">📁 Casos <span class="nb" id="cases-nb">—</span></div>
     <div class="ni" onclick="go('clients',this)">👤 Clientes <span class="nb" id="clients-nb">—</span></div>
     <div class="ns">Operacional</div>
-    <div class="ni" onclick="go('agenda',this)">📅 Agenda <span class="nb w">3</span></div>
+    <div class="ni" onclick="go('agenda',this)">📅 Agenda <span class="nb w" id="agenda-nb">0</span></div>
     <div class="ni" onclick="go('movements',this)">📡 Andamentos</div>
     <div class="ni" onclick="go('expenses',this)">🧾 Despesas</div>
     <div class="ni" onclick="go('docs',this)">📄 Documentos</div>
-    <div class="ni" onclick="go('importer',this)">🤖 Importar Doc.</div>
-    <div class="ns fin-only">Financeiro</div>
-    <div class="ni fin-only" onclick="go('financial',this)">💰 Honorários & NF</div>
-    <div class="ns">Comunicação</div>
-    <div class="ni" onclick="go('email',this)">✉️ Agente E-mail</div>
-    <div class="ns">Sistema</div>
-    <div class="ni" onclick="go('access',this)">🔐 Controle Acesso</div>
-    <div class="ni" onclick="go('connectors',this)">🔌 Conectores</div>
-    <div class="ni" onclick="go('settings',this)">⚙️ Configurações</div>
+    <div class="ni hide-cliente" onclick="go('importer',this)">🤖 Importar Doc.</div>
+    <div class="ns hide-financeiro">Financeiro</div>
+    <div class="ni hide-financeiro" onclick="go('financial',this)">💰 Honorários & NF</div>
+    <div class="ns hide-cliente">Comunicação</div>
+    <div class="ni hide-cliente" onclick="go('email',this)">✉️ Agente E-mail</div>
+    <div class="ns hide-cliente">Sistema</div>
+    <div class="ni hide-cliente" onclick="go('access',this)">🔐 Controle Acesso</div>
+    <div class="ni hide-cliente" onclick="go('connectors',this)">🔌 Conectores</div>
+    <div class="ni hide-cliente" onclick="go('settings',this)">⚙️ Configurações</div>
+    <div class="ni hide-cliente" onclick="go('relatorio',this)">🖨️ Relatório</div>
   </nav>
   <div class="sfooter">
     <div style="display:flex;align-items:center;gap:10px">
       <div class="av" id="av">AH</div>
       <div style="flex:1">
-        <div style="font-size:12px;font-weight:600;color:var(--tx)" id="uname">Dr. Andre Hespanhol</div>
-        <div class="rb ra" id="urole">Administrador</div>
+        <div style="font-size:12px;font-weight:600;color:var(--tx)" id="uname">Carregando...</div>
+        <div class="rb ra" id="urole">—</div>
       </div>
       <button onclick="fazerLogout()" style="background:none;border:none;color:var(--tx3);cursor:pointer;font-size:16px" title="Sair">⏻</button>
     </div>
@@ -167,11 +182,8 @@ tr:hover td{background:var(--sf);}
 <main class="main">
 <header class="topbar">
   <div style="font-size:14px;font-weight:600;color:var(--tx);flex:1" id="ptitle">Dashboard</div>
-  <select onchange="switchRole(this.value)" style="background:var(--sf);border:1px solid var(--bd);color:var(--tx2);padding:5px 10px;border-radius:8px;font-size:11px;outline:none;font-family:var(--fn)">
-    <option value="admin">👑 Admin</option><option value="fin">💼 Financeiro</option><option value="adv">⚖️ Advogado</option><option value="est">📚 Estagiário</option><option value="cli">👤 Cliente</option>
-  </select>
   <input class="sb" placeholder="Buscar...">
-  <button class="btn bp" onclick="openModal('new')">+ Novo</button>
+  <button class="btn bp hide-cliente" id="btn-novo" onclick="abrirNovoContextual()">+ Novo</button>
 </header>
 
 <div class="content">
@@ -179,8 +191,8 @@ tr:hover td{background:var(--sf);}
     <div class="g4">
       <div class="mc"><div class="mi">📁</div><div class="ml">Casos Ativos</div><div class="mv" id="dash-casos">—</div><div class="ms">no banco de dados</div></div>
       <div class="mc"><div class="mi">👤</div><div class="ml">Clientes</div><div class="mv" id="dash-clientes">—</div><div class="ms">cadastrados</div></div>
-      <div class="mc admin-only"><div class="mi">💰</div><div class="ml">Honorários/Mês</div><div class="mv">—</div><div class="ms">a configurar</div></div>
-      <div class="mc"><div class="mi">📅</div><div class="ml">Prazos (7 dias)</div><div class="mv">—</div><div class="ms">verificar agenda</div></div>
+      <div class="mc hide-financeiro"><div class="mi">💰</div><div class="ml">Honorários/Mês</div><div class="mv">—</div><div class="ms">a configurar</div></div>
+      <div class="mc"><div class="mi">📅</div><div class="ml">Prazos (7 dias)</div><div class="mv" id="dash-prazos">—</div><div class="ms">verificar agenda</div></div>
     </div>
     <div class="g2">
       <div class="card"><div class="ch"><div class="ct">Casos Recentes</div><span style="font-size:11px;color:var(--ac);cursor:pointer" onclick="go('cases',document.querySelectorAll('.ni')[1])">Ver todos →</span></div><div id="dash-casos-list"><div class="loading">🔄 Carregando...</div></div></div>
@@ -189,18 +201,50 @@ tr:hover td{background:var(--sf);}
   </div>
 
   <div class="page" id="page-cases">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><div style="font-size:13px;color:var(--tx3)" id="cases-count">Carregando...</div><button class="btn bp" onclick="openModal('new')">+ Novo Caso</button></div>
-    <table><thead><tr><th>Nº CNJ</th><th>Cliente</th><th>Tipo</th><th>Tribunal</th><th>Fase</th><th>Status</th><th class="admin-only">Valor</th></tr></thead><tbody id="cases-tbody"><tr><td colspan="7" class="loading">🔄 Carregando do banco...</td></tr></tbody></table>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div style="font-size:13px;color:var(--tx3)" id="cases-count">Carregando...</div>
+      <button class="btn bp hide-cliente" onclick="openModalCaso()">+ Novo Caso</button>
+    </div>
+    <table><thead><tr><th>Nº CNJ</th><th>Cliente</th><th>Tipo</th><th>Tribunal</th><th>Fase</th><th>Status</th><th class="hide-financeiro">Valor</th></tr></thead><tbody id="cases-tbody"><tr><td colspan="7" class="loading">🔄 Carregando do banco...</td></tr></tbody></table>
   </div>
 
   <div class="page" id="page-clients">
-    <div style="display:flex;justify-content:space-between;margin-bottom:16px"><div style="font-size:13px;color:var(--tx3)" id="clients-count">Carregando...</div><button class="btn bp" onclick="openModal('new')">+ Novo Cliente</button></div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:16px">
+      <div style="font-size:13px;color:var(--tx3)" id="clients-count">Carregando...</div>
+      <button class="btn bp hide-cliente" onclick="openModalCliente()">+ Novo Cliente</button>
+    </div>
     <div id="clients-list"><div class="loading">🔄 Carregando do banco...</div></div>
   </div>
 
-  <div class="page" id="page-agenda"><div class="card"><div class="ct">Agenda</div><div class="loading">Próximos compromissos serão exibidos aqui.</div></div></div>
+  <div class="page" id="page-agenda">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div style="font-size:13px;color:var(--tx3)">Compromissos do escritório</div>
+      <button class="btn bp hide-cliente" onclick="openModalAgenda()">+ Novo Compromisso</button>
+    </div>
+    <div id="agenda-list"><div class="loading">🔄 Carregando agenda...</div></div>
+  </div>
+
+  <div class="page" id="page-relatorio">
+    <div class="print-header" style="display:none;margin-bottom:16px">
+      <div style="font-size:16px;font-weight:700">HESPANHOL ADVOGADOS</div>
+      <div style="font-size:11px;color:#666">Dr. Andre Luiz Hespanhol Tavares — OAB/GO · OAB/DF</div>
+      <div style="font-size:11px;color:#666;margin-top:2px">Relatório gerado em: <span id="rel-data-geracao"></span></div>
+      <hr style="margin:10px 0">
+    </div>
+    <div class="no-print" style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+      <div style="font-size:13px;color:var(--tx3);flex:1" id="rel-count">Carregando...</div>
+      <select class="inp no-print" id="rel-filtro" onchange="loadRelatorio()" style="width:160px">
+        <option value="todos">Todos os casos</option>
+        <option value="ativo" selected>Apenas ativos</option>
+        <option value="arquivado">Arquivados</option>
+      </select>
+      <button class="btn bp no-print" onclick="imprimirRelatorio()">🖨️ Imprimir / PDF</button>
+    </div>
+    <div id="rel-tabela"><div class="loading">🔄 Carregando relatório...</div></div>
+  </div>
+
   <div class="page" id="page-movements"><div class="card"><div style="font-size:13px;color:var(--tx2);line-height:1.7">Andamentos processuais serão exibidos aqui automaticamente pelo Agente Hespanhol.</div></div></div>
-  <div class="page" id="page-expenses"><div class="card"><div class="ct">Despesas</div><div class="loading">Custos reembolsáveis.</div></div></div>
+  <div class="page" id="page-expenses"><div class="card"><div class="ct">Despesas</div><div class="loading">Em desenvolvimento.</div></div></div>
 
   <div class="page" id="page-docs">
     <div style="display:flex;justify-content:space-between;margin-bottom:16px"><div style="font-size:13px;color:var(--tx3)">Templates do escritório</div><button class="btn bp">+ Novo Template</button></div>
@@ -235,8 +279,13 @@ tr:hover td{background:var(--sf);}
   </div>
 
   <div class="page" id="page-financial">
-    <div id="fin-ok"><div class="tabs"><div class="tab active" onclick="stab('hon',this)">Honorários</div><div class="tab" onclick="stab('nf',this)">Notas Fiscais</div><div class="tab" onclick="stab('rel',this)">Relatório</div></div><div class="tc active" id="tab-hon"><div class="card"><div class="loading">Nenhum lançamento ainda.</div></div></div><div class="tc" id="tab-nf"><div class="card"><div class="loading">Nenhuma NF emitida ainda.</div></div></div><div class="tc" id="tab-rel"><div class="card"><div class="loading">Relatório disponível após lançamentos.</div></div></div></div>
-    <div id="fin-no" class="adn" style="display:none"><div style="font-size:48px">🔒</div><h3 style="font-size:16px;color:var(--tx2);margin:16px 0 8px">Acesso Restrito</h3></div>
+    <div id="fin-ok">
+      <div class="tabs"><div class="tab active" onclick="stab('hon',this)">Honorários</div><div class="tab" onclick="stab('nf',this)">Notas Fiscais</div><div class="tab" onclick="stab('rel',this)">Relatório</div></div>
+      <div class="tc active" id="tab-hon"><div class="card"><div class="loading">Nenhum lançamento ainda.</div></div></div>
+      <div class="tc" id="tab-nf"><div class="card"><div class="loading">Nenhuma NF emitida ainda.</div></div></div>
+      <div class="tc" id="tab-rel"><div class="card"><div class="loading">Relatório disponível após lançamentos.</div></div></div>
+    </div>
+    <div id="fin-no" class="adn" style="display:none"><div style="font-size:48px">🔒</div><h3 style="font-size:16px;color:var(--tx2);margin:16px 0 8px">Acesso Restrito</h3><p style="font-size:13px">Solicite acesso ao Administrador.</p></div>
   </div>
 
   <div class="page" id="page-email">
@@ -249,22 +298,21 @@ tr:hover td{background:var(--sf);}
     </div>
   </div>
 
-  <div class="page" id="page-access"><div class="card"><div class="ch"><div class="ct">Usuários do Sistema</div><button class="btn bp" style="font-size:11px">+ Usuário</button></div><div id="users-list"><div class="loading">🔄 Carregando usuários...</div></div></div></div>
+  <div class="page" id="page-access">
+    <div class="card">
+      <div class="ch"><div class="ct">Usuários do Sistema</div><button class="btn bp" style="font-size:11px" onclick="openModalUsuario()">+ Usuário</button></div>
+      <div id="users-list"><div class="loading">🔄 Carregando usuários...</div></div>
+    </div>
+  </div>
 
   <div class="page" id="page-connectors">
     <div class="cc"><div class="cs son"></div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--tx)">Supabase</div><div style="font-size:11px;color:var(--tx3)">Banco de dados</div></div><span class="badge ba">Ativo</span></div>
-    <div class="cc"><div class="cs son"></div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--tx)">Resend API</div><div style="font-size:11px;color:var(--tx3)">hespanhol@andrehespanhol.com</div></div><span class="badge ba">Configurado</span></div>
     <div class="cc"><div class="cs ssn"></div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--tx)">DataJud / CNJ</div><div style="font-size:11px;color:var(--tx3)">Monitoramento processual</div></div><button class="btn bg" style="font-size:11px">Configurar</button></div>
     <div class="cc"><div class="cs son"></div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--tx)">Vercel</div><div style="font-size:11px;color:var(--tx3)">sistema.andrehespanhol.com</div></div><span class="badge ba">Online</span></div>
     <div class="card" style="margin-top:16px">
       <div class="ct" style="margin-bottom:14px">🤖 Anthropic API — Chave de Acesso</div>
-      <div style="font-size:12px;color:var(--tx3);margin-bottom:12px">Necessária para Importar Documentos e o Agente Hespanhol. Obtida em console.anthropic.com → API Keys.</div>
-      <div style="display:flex;gap:8px;align-items:center;position:relative;z-index:10;pointer-events:auto">
-        <input class="inp" type="text" id="apikey-input" placeholder="Cole aqui sua chave sk-ant-..." autocomplete="off" autocapitalize="off" spellcheck="false" onclick="event.stopPropagation()" onmousedown="event.stopPropagation()" onfocus="this.removeAttribute('readonly')" style="flex:1;position:relative;z-index:20;pointer-events:auto;user-select:text;-webkit-user-select:text;">
-        <button class="btn bp" style="white-space:nowrap;position:relative;z-index:21;pointer-events:auto" onclick="salvarChave()">Salvar Chave</button>
-        <button class="btn bg" style="white-space:nowrap;position:relative;z-index:21;pointer-events:auto" onclick="colarChaveManual()">Colar Manual</button>
-      </div>
-      <div id="apikey-status" style="font-size:12px;margin-top:10px;display:none"></div>
+      <div style="font-size:12px;color:var(--tx3);margin-bottom:12px">A chave está configurada de forma segura no servidor. Não é necessário inserir aqui.</div>
+      <div id="apikey-status" style="font-size:12px;margin-top:10px;color:var(--ok)">✅ Chave configurada no servidor Vercel.</div>
     </div>
   </div>
 
@@ -274,9 +322,8 @@ tr:hover td{background:var(--sf);}
         <div class="ct" style="margin-bottom:16px">Identidade do Escritório</div>
         <div class="fg"><label class="flb">Nome</label><input class="inp" value="Hespanhol Advogados"></div>
         <div class="fg"><label class="flb">Advogado</label><input class="inp" value="Dr. Andre Luiz Hespanhol Tavares"></div>
-        <div class="fg"><label class="flb">OAB</label><input class="inp" value="OAB/RJ 109.359 · OAB/DF 39.645"></div>
+        <div class="fg"><label class="flb">OAB</label><input class="inp" value="OAB/GO — OAB/DF"></div>
         <div class="fg"><label class="flb">E-mail profissional</label><input class="inp" value="andrehespanhol@andrehespanhol.com"></div>
-        <div class="fg"><label class="flb">E-mail do Agente</label><input class="inp" value="hespanhol@andrehespanhol.com"></div>
       </div>
       <div>
         <div class="card" style="margin-bottom:16px">
@@ -293,7 +340,7 @@ tr:hover td{background:var(--sf);}
           <div style="display:flex;flex-direction:column;gap:8px;font-size:12px;color:var(--tx2)">
             <div style="display:flex;justify-content:space-between"><span>Supabase</span><span style="color:var(--ok)">● Conectado</span></div>
             <div style="display:flex;justify-content:space-between"><span>Vercel</span><span style="color:var(--ok)">● Online</span></div>
-            <div style="display:flex;justify-content:space-between"><span>Agente Hespanhol</span><span style="color:var(--wn)">Em configuração</span></div>
+            <div style="display:flex;justify-content:space-between"><span>Agente Hespanhol</span><span style="color:var(--ok)">● Ativo</span></div>
           </div>
         </div>
       </div>
@@ -303,28 +350,39 @@ tr:hover td{background:var(--sf);}
 </div>
 </main>
 
-<button class="aibtn" onclick="toggleAI()">✦</button>
+<button class="aibtn hide-cliente" onclick="toggleAI()">✦</button>
 <div class="aip" id="aip">
   <div class="aih"><div style="width:7px;height:7px;border-radius:50%;background:var(--ok)"></div><div style="font-size:12px;font-weight:600;color:var(--tx);flex:1">Agente Hespanhol</div><button style="background:none;border:none;color:var(--tx3);cursor:pointer;font-size:14px" onclick="toggleAI()">✕</button></div>
   <div class="aim" id="aim"><div class="aimsg bot">Olá, Dr. Andre! Como posso ajudar?</div></div>
   <div class="air"><input class="aii" id="aii" placeholder="Digite sua pergunta..." onkeydown="if(event.key==='Enter')sendAI()"><button class="ais" onclick="sendAI()">➤</button></div>
 </div>
 
+<!-- Modal genérico -->
 <div class="mo" id="modal" onclick="if(event.target===this)closeModal()">
   <div class="moc">
     <div class="mot" id="mot">Novo</div>
     <div id="mob"></div>
-    <div class="moa"><button class="btn bg" onclick="closeModal()">Cancelar</button><button class="btn bp" onclick="closeModal()">Salvar</button></div>
+    <div class="moa" id="moa">
+      <button class="btn bg" onclick="closeModal()">Cancelar</button>
+      <button class="btn bp" id="modal-save-btn" onclick="closeModal()">Salvar</button>
+    </div>
   </div>
 </div>
 
 <script>
 var SB_URL='https://rdmlxfgwlbroigsisjph.supabase.co';
 var SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkbWx4Zmd3bGJyb2lnc2lzanBoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3NjMxOTIsImV4cCI6MjA5MjMzOTE5Mn0.stw8254uQoJGka6jEx0kXQeGWXn_IOTZcyltM6c5UqA';
-var ANTHROPIC_KEY='';
 var db=supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,storage:window.localStorage}});
-var ptitles={dashboard:'Dashboard',cases:'Casos',clients:'Clientes',agenda:'Agenda',movements:'Andamentos',expenses:'Despesas',docs:'Documentos',importer:'Importar Documento',financial:'Financeiro',email:'Agente E-mail',access:'Controle de Acesso',connectors:'Conectores',settings:'Configurações'};
+var ptitles={dashboard:'Dashboard',cases:'Casos',clients:'Clientes',agenda:'Agenda',movements:'Andamentos',expenses:'Despesas',docs:'Documentos',importer:'Importar Documento',financial:'Financeiro',email:'Agente E-mail',access:'Controle de Acesso',connectors:'Conectores',settings:'Configurações',relatorio:'Relatório do Escritório'};
 
+// Perfil atual do usuário logado
+var _perfil = 'escritorio'; // padrão seguro
+var _clienteId = null;      // preenchido se perfil === 'cliente'
+var _userId = null;
+
+function safeText(v){return (v===null||v===undefined||v==='')?'—':String(v);}
+
+// ── NAVEGAÇÃO ──────────────────────────────────────────────────
 function go(id,el){
   document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
   document.querySelectorAll('.ni').forEach(function(n){n.classList.remove('active');});
@@ -336,16 +394,107 @@ function go(id,el){
   if(id==='cases')loadCases();
   if(id==='clients')loadClients();
   if(id==='access')loadUsers();
+  if(id==='agenda')loadAgenda();
+  if(id==='relatorio')loadRelatorio();
 }
 
-function safeText(v){return (v===null||v===undefined||v==='')?'—':String(v);}
+// Botão "+ Novo" da topbar abre o modal certo dependendo da página atual
+function abrirNovoContextual(){
+  var pagina=document.querySelector('.page.active');
+  if(!pagina)return openModalCaso();
+  var id=pagina.id.replace('page-','');
+  if(id==='clients')openModalCliente();
+  else if(id==='agenda')openModalAgenda();
+  else openModalCaso();
+}
 
+// ── CONTROLE DE ACESSO ─────────────────────────────────────────
+function aplicarPerfil(perfil){
+  _perfil=perfil;
+
+  // Visibilidade: financeiro (admin e autorizado)
+  var temFinanceiro=(perfil==='admin'||perfil==='autorizado');
+  document.querySelectorAll('.hide-financeiro').forEach(function(el){
+    el.style.display=temFinanceiro?'':'none';
+  });
+  var fo=document.getElementById('fin-ok'),fn=document.getElementById('fin-no');
+  if(fo)fo.style.display=temFinanceiro?'block':'none';
+  if(fn)fn.style.display=temFinanceiro?'none':'block';
+
+  // Visibilidade: ocultar seções operacionais para cliente
+  var ehCliente=(perfil==='cliente');
+  document.querySelectorAll('.hide-cliente').forEach(function(el){
+    el.style.display=ehCliente?'none':'';
+  });
+
+  // Badge de perfil na sidebar
+  var labels={admin:'Administrador',autorizado:'Autorizado',escritorio:'Escritório',cliente:'Cliente'};
+  var classes={admin:'ra',autorizado:'ra',escritorio:'rv',cliente:'rc'};
+  var rb=document.getElementById('urole');
+  if(rb){rb.textContent=labels[perfil]||perfil;rb.className='rb '+(classes[perfil]||'re');}
+}
+
+// ── AUTENTICAÇÃO ───────────────────────────────────────────────
+function mostrarSistema(session){
+  var login=document.getElementById('login-wrap');
+  if(login)login.style.display='none';
+
+  var email=session&&session.user?session.user.email:'';
+  _userId=session&&session.user?session.user.id:null;
+
+  // Busca perfil na tabela usuarios
+  db.from('usuarios').select('*').eq('email',email).maybeSingle().then(function(res){
+    var u=res.data;
+    var perfil=u?u.perfil:'escritorio';
+    var nome=u?u.nome:(email||'Usuário');
+    var iniciais=nome.split(' ').slice(0,2).map(function(p){return p[0]||'';}).join('').toUpperCase()||'U';
+    _clienteId=u?u.cliente_id:null;
+
+    document.getElementById('uname').textContent=nome;
+    document.getElementById('av').textContent=iniciais;
+    aplicarPerfil(perfil);
+    loadDashboard();
+  });
+}
+
+function fazerLogin(){
+  var email=document.getElementById('login-email').value.trim();
+  var pwd=document.getElementById('login-pwd').value;
+  var btn=document.getElementById('login-btn');
+  var err=document.getElementById('login-err');
+  if(!email||!pwd){err.style.display='block';err.textContent='Preencha e-mail e senha.';return;}
+  btn.textContent='Entrando...';btn.disabled=true;err.style.display='none';
+  db.auth.signInWithPassword({email:email,password:pwd}).then(function(res){
+    if(res.error){err.style.display='block';err.textContent='E-mail ou senha incorretos.';btn.textContent='Entrar';btn.disabled=false;return;}
+    mostrarSistema(res.data.session);
+  });
+}
+
+function fazerLogout(){
+  db.auth.signOut().then(function(){
+    document.getElementById('login-wrap').style.display='flex';
+    document.getElementById('login-email').value='';
+    document.getElementById('login-pwd').value='';
+    document.getElementById('login-btn').textContent='Entrar';
+    document.getElementById('login-btn').disabled=false;
+    _perfil='escritorio';_clienteId=null;_userId=null;
+  });
+}
+
+db.auth.getSession().then(function(res){
+  if(res.data&&res.data.session){mostrarSistema(res.data.session);}
+});
+
+// ── CARREGAR DADOS ─────────────────────────────────────────────
 function loadCases(){
   var tbody=document.getElementById('cases-tbody');
   var countEl=document.getElementById('cases-count');
   if(!tbody)return;
   tbody.innerHTML='<tr><td colspan="7" class="loading">🔄 Buscando no banco...</td></tr>';
-  db.from('casos').select('*, clientes(nome)').then(function(res){
+  var query=db.from('casos').select('*, clientes(nome)');
+  // Cliente vê apenas os próprios casos
+  if(_perfil==='cliente'&&_clienteId){query=query.eq('cliente_id',_clienteId);}
+  query.then(function(res){
     if(res.error){tbody.innerHTML='<tr><td colspan="7" style="color:var(--er);padding:16px;text-align:center">Erro: '+res.error.message+'</td></tr>';return;}
     var data=res.data||[];
     if(countEl)countEl.textContent=data.length+' casos ativos';
@@ -356,7 +505,7 @@ function loadCases(){
       var tr=document.createElement('tr');
       var nome=c.clientes?c.clientes.nome:'—';
       var status=c.status==='ativo'?'<span class="badge ba">Ativo</span>':'<span class="badge bw">'+safeText(c.status)+'</span>';
-      tr.innerHTML='<td style="color:var(--tx3);font-size:11px">'+safeText(c.numero_cnj)+'</td><td>'+nome+'</td><td style="color:var(--tx3)">'+safeText(c.tipo_acao)+'</td><td style="color:var(--tx3)">'+safeText(c.tribunal)+'</td><td style="color:var(--tx3)">'+safeText(c.fase)+'</td><td>'+status+'</td><td class="admin-only" style="color:var(--ac);font-weight:600">'+(c.valor_causa?'R$'+c.valor_causa:'A definir')+'</td>';
+      tr.innerHTML='<td style="color:var(--tx3);font-size:11px">'+safeText(c.numero_cnj)+'</td><td>'+nome+'</td><td style="color:var(--tx3)">'+safeText(c.tipo_acao)+'</td><td style="color:var(--tx3)">'+safeText(c.tribunal)+'</td><td style="color:var(--tx3)">'+safeText(c.fase)+'</td><td>'+status+'</td><td class="hide-financeiro" style="color:var(--ac);font-weight:600">'+(c.valor_causa?'R$'+c.valor_causa:'A definir')+'</td>';
       tbody.appendChild(tr);
     });
   });
@@ -379,7 +528,7 @@ function loadClients(){
       var iniciais=nome.split(' ').slice(0,2).map(function(p){return p[0]||'';}).join('').toUpperCase();
       var div=document.createElement('div');
       div.style.cssText='background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);padding:14px 18px;display:flex;align-items:center;gap:14px;margin-bottom:8px';
-      div.innerHTML='<div class="av" style="background:rgba(74,159,212,.3);color:var(--ac)">'+iniciais+'</div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--tx)">'+nome+'</div><div style="font-size:11px;color:var(--tx3)">'+(c.cpf_cnpj||'')+(c.endereco?' · '+c.endereco:'')+'</div></div><span class="badge ba">Ativo</span>';
+      div.innerHTML='<div class="av" style="background:rgba(74,159,212,.3);color:var(--ac)">'+iniciais+'</div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--tx)">'+nome+'</div><div style="font-size:11px;color:var(--tx3)">'+(c.cpf_cnpj||'')+(c.email?' · '+c.email:'')+(c.endereco?' · '+c.endereco:'')+'</div></div><span class="badge ba">Ativo</span>';
       lista.appendChild(div);
     });
   });
@@ -393,12 +542,36 @@ function loadUsers(){
     if(res.error){lista.innerHTML='<div style="color:var(--er);padding:16px">Erro: '+res.error.message+'</div>';return;}
     if(!res.data||res.data.length===0){lista.innerHTML='<div class="loading">Nenhum usuário cadastrado.</div>';return;}
     lista.innerHTML='';
+    var labels={admin:'Administrador',autorizado:'Autorizado',escritorio:'Escritório',cliente:'Cliente'};
     res.data.forEach(function(u){
       var nome=u.nome||'Usuário';
       var iniciais=nome.split(' ').slice(0,2).map(function(p){return p[0]||'';}).join('').toUpperCase();
       var div=document.createElement('div');
       div.style.cssText='display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd)';
-      div.innerHTML='<div class="av">'+iniciais+'</div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--tx)">'+nome+'</div><div style="font-size:11px;color:var(--tx3)">'+safeText(u.email)+'</div></div><span class="rb ra">'+safeText(u.perfil)+'</span>';
+      div.innerHTML='<div class="av">'+iniciais+'</div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--tx)">'+nome+'</div><div style="font-size:11px;color:var(--tx3)">'+safeText(u.email)+'</div></div><span class="rb ra">'+safeText(labels[u.perfil]||u.perfil)+'</span>';
+      lista.appendChild(div);
+    });
+  });
+}
+
+function loadAgenda(){
+  var lista=document.getElementById('agenda-list');
+  if(!lista)return;
+  lista.innerHTML='<div class="loading">🔄 Carregando agenda...</div>';
+  db.from('agenda').select('*, casos(numero_cnj, clientes(nome))').order('data_hora',{ascending:true}).then(function(res){
+    if(res.error){lista.innerHTML='<div style="color:var(--er);padding:16px">Erro: '+res.error.message+' — A tabela agenda pode não existir ainda.</div>';return;}
+    var data=res.data||[];
+    var nb=document.getElementById('agenda-nb'); if(nb)nb.textContent=data.length;
+    if(data.length===0){lista.innerHTML='<div class="loading">Nenhum compromisso cadastrado.</div>';return;}
+    lista.innerHTML='';
+    data.forEach(function(a){
+      var dt=a.data_hora?new Date(a.data_hora).toLocaleString('pt-BR'):'—';
+      var cliente=a.casos&&a.casos.clientes?a.casos.clientes.nome:'—';
+      var cnj=a.casos?a.casos.numero_cnj:'';
+      var tipos={audiencia:'🏛️ Audiência',prazo:'⏰ Prazo',julgamento:'⚖️ Julgamento',reuniao:'🤝 Reunião'};
+      var div=document.createElement('div');
+      div.style.cssText='background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);padding:14px 18px;margin-bottom:8px;display:flex;align-items:center;gap:14px';
+      div.innerHTML='<div style="font-size:24px">'+(tipos[a.tipo]||'📅').split(' ')[0]+'</div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--tx)">'+(tipos[a.tipo]||a.tipo||'Compromisso')+'</div><div style="font-size:12px;color:var(--ac);margin:2px 0">'+dt+'</div><div style="font-size:11px;color:var(--tx3)">'+cliente+(cnj?' · '+cnj:'')+(a.local?' · '+a.local:'')+'</div></div>';
       lista.appendChild(div);
     });
   });
@@ -424,155 +597,174 @@ function loadDashboard(){
   });
 }
 
-function mostrarSistema(){
-  var login=document.getElementById('login-wrap');
-  if(login)login.style.display='none';
-  loadDashboard();
-}
-
-function fazerLogin(){
-  var email=document.getElementById('login-email').value.trim();
-  var pwd=document.getElementById('login-pwd').value;
-  var btn=document.getElementById('login-btn');
-  var err=document.getElementById('login-err');
-  if(!email||!pwd){err.style.display='block';err.textContent='Preencha e-mail e senha.';return;}
-  btn.textContent='Entrando...';btn.disabled=true;err.style.display='none';
-  db.auth.signInWithPassword({email:email,password:pwd}).then(function(res){
-    if(res.error){err.style.display='block';err.textContent='Erro no login: '+(res.error.message||'E-mail ou senha incorretos.');btn.textContent='Entrar';btn.disabled=false;return;}
-    mostrarSistema();
-  });
-}
-
-function fazerLogout(){
-  db.auth.signOut().then(function(){
-    document.getElementById('login-wrap').style.display='flex';
-    document.getElementById('login-email').value='';
-    document.getElementById('login-pwd').value='';
-    document.getElementById('login-btn').textContent='Entrar';
-    document.getElementById('login-btn').disabled=false;
-  });
-}
-
-db.auth.getSession().then(function(res){if(res.data&&res.data.session){mostrarSistema();}});
-
-function getApiKey(){
-  var k1='';
-  try{k1=localStorage.getItem('hsp_apikey')||'';}catch(e){k1='';}
-  var k2=window._apiKey||'';
-  var k3=ANTHROPIC_KEY||'';
-  return (k1||k2||k3||'').trim();
-}
-
-function salvarChave(){
-  var input=document.getElementById('apikey-input');
-  var val=input ? input.value.trim() : '';
-  var st=document.getElementById('apikey-status');
-
-  if(!st){
-    alert('Erro interno: campo de status não encontrado.');
-    return;
-  }
-
-  if(!val){
-    st.style.display='block';
-    st.style.color='var(--er)';
-    st.textContent='❌ Campo vazio. Clique em "Colar Manual" ou cole a chave no campo.';
-    if(input){input.focus();}
-    return;
-  }
-
-  try{
-    localStorage.setItem('hsp_apikey',val);
-  }catch(e){
-    st.style.display='block';
-    st.style.color='var(--er)';
-    st.textContent='❌ O navegador bloqueou o salvamento local: '+(e.message||e);
-    return;
-  }
-
-  window._apiKey=val;
-
-  st.style.display='block';
-  if(val.indexOf('sk-ant-')!==0){
-    st.style.color='var(--wn)';
-    st.textContent='⚠️ Chave salva, mas ela não parece começar com sk-ant-. Confira se colou a chave correta.';
-  }else{
-    st.style.color='var(--ok)';
-    st.textContent='✅ Chave salva com sucesso!';
-  }
-}
-
-function colarChaveManual(){
-  var atual='';
-  var input=document.getElementById('apikey-input');
-  if(input){atual=input.value.trim();}
-  var val=prompt('Cole aqui sua chave da Anthropic API:', atual);
-  if(val===null)return;
-  val=val.trim();
-  if(input){input.value=val;}
-  salvarChave();
-}
-
-function callClaude(payload, onSuccess, onError){
-  var key=getApiKey();
-  if(!key){
-    onError('Chave da API não configurada. Vá em Conectores → Colar Manual → Salvar Chave.');
-    return;
-  }
-
-  fetch('/api/claude',{
-    method:'POST',
-    headers:{
-      'Content-Type':'application/json',
-      'x-api-key':key,
-      'anthropic-version':'2023-06-01',
-      'anthropic-dangerous-allow-browser':'true'
-    },
-    body:JSON.stringify(payload)
-  }).then(async function(r){
-    var text=await r.text();
-    var payloadResp={};
-    try{
-      payloadResp=text?JSON.parse(text):{};
-    }catch(e){
-      payloadResp={raw:text};
-    }
-
-    if(!r.ok){
-      var msg='Erro HTTP '+r.status;
-      if(payloadResp.error && payloadResp.error.message){msg+=' — '+payloadResp.error.message;}
-      else if(payloadResp.message){msg+=' — '+payloadResp.message;}
-      else if(text){msg+=' — '+text.slice(0,500);}
-      throw new Error(msg);
-    }
-
-    return payloadResp;
-  }).then(function(d){
-    if(d.error){
-      onError(d.error.message||'Erro da API');
-      return;
-    }
-    onSuccess(d);
-  }).catch(function(e){
-    onError(e.message||'Erro de rede/API');
-  });
-}
-
-function openModal(t){
-  var b={
-    new:'<div class="fg"><label class="flb">Tipo</label><select class="inp"><option>Caso</option><option>Cliente</option><option>Prazo</option></select></div><div class="fg"><label class="flb">Descrição</label><input class="inp" placeholder="Nome do cliente ou caso"></div><div class="fg"><label class="flb">Nº CNJ</label><input class="inp" placeholder="0000000-00.0000.0.00.0000"></div>',
-    expense:'<div class="fg"><label class="flb">Cliente</label><input class="inp" placeholder="Nome do cliente"></div><div class="fg"><label class="flb">Categoria</label><select class="inp"><option>Transporte</option><option>Custas</option><option>Cópias</option><option>Diárias</option></select></div><div class="fg"><label class="flb">Valor</label><input class="inp" placeholder="0,00"></div>'
-  };
-  var tt={new:'Novo Registro',expense:'Lançar Despesa'};
-  document.getElementById('mot').textContent=tt[t]||'Novo';
-  document.getElementById('mob').innerHTML=b[t]||b.new;
-  var saveBtn=document.querySelector('.moa .bp');
-  if(saveBtn)saveBtn.onclick=closeModal;
+// ── MODAIS ─────────────────────────────────────────────────────
+function openModal(titulo, html, onSave){
+  document.getElementById('mot').textContent=titulo;
+  document.getElementById('mob').innerHTML=html;
+  var btn=document.getElementById('modal-save-btn');
+  btn.textContent='Salvar';btn.disabled=false;
+  btn.onclick=onSave;
   document.getElementById('modal').classList.add('open');
 }
 
 function closeModal(){document.getElementById('modal').classList.remove('open');}
 
+function showModalStatus(msg, tipo){
+  var el=document.getElementById('modal-status');
+  if(!el)return;
+  el.textContent=msg;
+  el.style.display='block';
+  el.style.color=tipo==='ok'?'var(--ok)':'var(--er)';
+}
+
+// Modal Novo Cliente
+function openModalCliente(){
+  openModal('Novo Cliente',
+    '<div class="fg"><label class="flb">Nome completo *</label><input class="inp" id="fc-nome" placeholder="Nome do cliente"></div>'+
+    '<div class="fg"><label class="flb">CPF / CNPJ</label><input class="inp" id="fc-cpf" placeholder="000.000.000-00"></div>'+
+    '<div class="fg"><label class="flb">E-mail</label><input class="inp" id="fc-email" type="email" placeholder="email@exemplo.com"></div>'+
+    '<div class="fg"><label class="flb">Telefone</label><input class="inp" id="fc-tel" placeholder="(00) 00000-0000"></div>'+
+    '<div class="fg"><label class="flb">Endereço</label><input class="inp" id="fc-end" placeholder="Rua, nº, Cidade/UF"></div>'+
+    '<div id="modal-status" style="font-size:12px;margin-top:4px;display:none"></div>',
+    salvarCliente
+  );
+}
+
+function salvarCliente(){
+  var nome=document.getElementById('fc-nome').value.trim();
+  if(!nome){showModalStatus('❌ Nome obrigatório.','er');return;}
+  var btn=document.getElementById('modal-save-btn');
+  btn.textContent='Salvando...';btn.disabled=true;
+  db.from('clientes').insert({
+    nome:nome,
+    cpf_cnpj:document.getElementById('fc-cpf').value.trim()||null,
+    email:document.getElementById('fc-email').value.trim()||null,
+    telefone:document.getElementById('fc-tel').value.trim()||null,
+    endereco:document.getElementById('fc-end').value.trim()||null,
+    tipo:'PF'
+  }).then(function(res){
+    if(res.error){showModalStatus('❌ Erro: '+res.error.message,'er');btn.textContent='Salvar';btn.disabled=false;return;}
+    closeModal();
+    loadClients();
+    loadDashboard();
+  });
+}
+
+// Modal Novo Caso
+function openModalCaso(){
+  openModal('Novo Caso',
+    '<div class="fg"><label class="flb">Cliente *</label><select class="inp" id="fca-cliente"><option value="">Carregando clientes...</option></select></div>'+
+    '<div class="fg"><label class="flb">Nº CNJ</label><input class="inp" id="fca-cnj" placeholder="0000000-00.0000.0.00.0000"></div>'+
+    '<div class="fg"><label class="flb">Tribunal</label><input class="inp" id="fca-trib" placeholder="TJGO, STJ, TRF1..."></div>'+
+    '<div class="fg"><label class="flb">Tipo de Ação</label><input class="inp" id="fca-tipo" placeholder="Ação Penal, Habeas Corpus, Recurso..."></div>'+
+    '<div class="fg"><label class="flb">Área</label><select class="inp" id="fca-area"><option value="civel">Cível</option><option value="penal">Penal</option><option value="tributario">Tributário</option><option value="trabalhista">Trabalhista</option><option value="outro">Outro</option></select></div>'+
+    '<div class="fg"><label class="flb">Fase</label><input class="inp" id="fca-fase" placeholder="1ª Instância, Recursal, STJ..."></div>'+
+    '<div class="fg"><label class="flb">Valor da Causa (R$)</label><input class="inp" id="fca-valor" type="number" placeholder="0,00"></div>'+
+    '<div id="modal-status" style="font-size:12px;margin-top:4px;display:none"></div>',
+    salvarCaso
+  );
+  // Carrega clientes no select
+  db.from('clientes').select('id,nome').order('nome').then(function(res){
+    var sel=document.getElementById('fca-cliente');
+    if(!sel)return;
+    var data=res.data||[];
+    sel.innerHTML='<option value="">Selecione o cliente...</option>'+data.map(function(c){return '<option value="'+c.id+'">'+c.nome+'</option>';}).join('');
+  });
+}
+
+function salvarCaso(){
+  var clienteId=document.getElementById('fca-cliente').value;
+  if(!clienteId){showModalStatus('❌ Selecione o cliente.','er');return;}
+  var btn=document.getElementById('modal-save-btn');
+  btn.textContent='Salvando...';btn.disabled=true;
+  db.from('casos').insert({
+    cliente_id:clienteId,
+    numero_cnj:document.getElementById('fca-cnj').value.trim()||null,
+    tribunal:document.getElementById('fca-trib').value.trim()||null,
+    tipo_acao:document.getElementById('fca-tipo').value.trim()||null,
+    area:document.getElementById('fca-area').value||null,
+    fase:document.getElementById('fca-fase').value.trim()||null,
+    valor_causa:document.getElementById('fca-valor').value||null,
+    status:'ativo'
+  }).then(function(res){
+    if(res.error){showModalStatus('❌ Erro: '+res.error.message,'er');btn.textContent='Salvar';btn.disabled=false;return;}
+    closeModal();
+    loadCases();
+    loadDashboard();
+  });
+}
+
+// Modal Novo Compromisso na Agenda
+function openModalAgenda(){
+  openModal('Novo Compromisso',
+    '<div class="fg"><label class="flb">Tipo *</label><select class="inp" id="fa-tipo"><option value="audiencia">🏛️ Audiência</option><option value="prazo">⏰ Prazo</option><option value="julgamento">⚖️ Julgamento</option><option value="reuniao">🤝 Reunião</option></select></div>'+
+    '<div class="fg"><label class="flb">Caso vinculado</label><select class="inp" id="fa-caso"><option value="">Selecione o caso...</option></select></div>'+
+    '<div class="fg"><label class="flb">Data e Hora *</label><input class="inp" id="fa-data" type="datetime-local"></div>'+
+    '<div class="fg"><label class="flb">Local / Sala</label><input class="inp" id="fa-local" placeholder="Vara, Sala, Link..."></div>'+
+    '<div class="fg"><label class="flb">Observações</label><textarea class="inp" id="fa-obs" rows="2" placeholder="Detalhes adicionais..."></textarea></div>'+
+    '<div id="modal-status" style="font-size:12px;margin-top:4px;display:none"></div>',
+    salvarAgenda
+  );
+  db.from('casos').select('id,numero_cnj,clientes(nome)').then(function(res){
+    var sel=document.getElementById('fa-caso');
+    if(!sel)return;
+    var data=res.data||[];
+    sel.innerHTML='<option value="">Selecione o caso...</option>'+data.map(function(c){
+      var label=(c.clientes?c.clientes.nome:'?')+(c.numero_cnj?' — '+c.numero_cnj:'');
+      return '<option value="'+c.id+'">'+label+'</option>';
+    }).join('');
+  });
+}
+
+function salvarAgenda(){
+  var data=document.getElementById('fa-data').value;
+  if(!data){showModalStatus('❌ Data obrigatória.','er');return;}
+  var btn=document.getElementById('modal-save-btn');
+  btn.textContent='Salvando...';btn.disabled=true;
+  var casoId=document.getElementById('fa-caso').value||null;
+  db.from('agenda').insert({
+    tipo:document.getElementById('fa-tipo').value,
+    caso_id:casoId||null,
+    data_hora:data,
+    local:document.getElementById('fa-local').value.trim()||null,
+    observacoes:document.getElementById('fa-obs').value.trim()||null
+  }).then(function(res){
+    if(res.error){showModalStatus('❌ Erro: '+res.error.message,'er');btn.textContent='Salvar';btn.disabled=false;return;}
+    closeModal();
+    loadAgenda();
+  });
+}
+
+// Modal Novo Usuário
+function openModalUsuario(){
+  openModal('Novo Usuário',
+    '<div class="fg"><label class="flb">Nome completo *</label><input class="inp" id="fu-nome" placeholder="Nome do usuário"></div>'+
+    '<div class="fg"><label class="flb">E-mail *</label><input class="inp" id="fu-email" type="email" placeholder="email@exemplo.com"></div>'+
+    '<div class="fg"><label class="flb">Perfil de acesso *</label><select class="inp" id="fu-perfil"><option value="escritorio">Escritório (sem financeiro)</option><option value="autorizado">Autorizado (acesso total)</option><option value="cliente">Cliente (só o próprio caso)</option></select></div>'+
+    '<div style="background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:12px;font-size:12px;color:var(--tx3);margin-bottom:14px">⚠️ Após salvar, acesse o Supabase → Authentication → Users → "Invite user" com o mesmo e-mail para que o usuário possa fazer login.</div>'+
+    '<div id="modal-status" style="font-size:12px;margin-top:4px;display:none"></div>',
+    salvarUsuario
+  );
+}
+
+function salvarUsuario(){
+  var nome=document.getElementById('fu-nome').value.trim();
+  var email=document.getElementById('fu-email').value.trim();
+  if(!nome||!email){showModalStatus('❌ Nome e e-mail obrigatórios.','er');return;}
+  var btn=document.getElementById('modal-save-btn');
+  btn.textContent='Salvando...';btn.disabled=true;
+  db.from('usuarios').insert({
+    nome:nome,
+    email:email,
+    perfil:document.getElementById('fu-perfil').value
+  }).then(function(res){
+    if(res.error){showModalStatus('❌ Erro: '+res.error.message,'er');btn.textContent='Salvar';btn.disabled=false;return;}
+    closeModal();
+    loadUsers();
+  });
+}
+
+// ── TEMAS ──────────────────────────────────────────────────────
 function setTheme(t,btn){
   document.body.className=t;
   document.querySelectorAll('[onclick^="setTheme"]').forEach(function(b){b.style.borderColor='';});
@@ -586,26 +778,7 @@ function stab(id,el){
   var tc=document.getElementById('tab-'+id); if(tc)tc.classList.add('active');
 }
 
-var roles={
-  admin:{name:'Dr. Andre Hespanhol',role:'Administrador',cls:'ra',av:'AH',fin:true,adm:true},
-  fin:{name:'Ricardo Faria',role:'Financeiro',cls:'ra',av:'RF',fin:true,adm:true},
-  adv:{name:'Dra. Carla Melo',role:'Advogada',cls:'rv',av:'CM',fin:false,adm:false},
-  est:{name:'Lucas Silva',role:'Estagiário',cls:'re',av:'LS',fin:false,adm:false},
-  cli:{name:'Cliente',role:'Cliente',cls:'rc',av:'CL',fin:false,adm:false}
-};
-
-function switchRole(r){
-  var c=roles[r]; if(!c)return;
-  document.getElementById('uname').textContent=c.name;
-  document.getElementById('av').textContent=c.av;
-  var rb=document.getElementById('urole'); rb.textContent=c.role; rb.className='rb '+c.cls;
-  document.querySelectorAll('.admin-only').forEach(function(el){el.style.display=c.adm?'':'none';});
-  document.querySelectorAll('.fin-only').forEach(function(el){el.style.display=c.fin?'':'none';});
-  var fo=document.getElementById('fin-ok'),fn=document.getElementById('fin-no');
-  if(fo)fo.style.display=c.fin?'block':'none';
-  if(fn)fn.style.display=c.fin?'none':'block';
-}
-
+// ── IMPORTADOR DE PDF ──────────────────────────────────────────
 function resetUploadZone(){
   var zone=document.getElementById('upload-zone');
   if(!zone)return;
@@ -613,16 +786,16 @@ function resetUploadZone(){
 }
 
 function doImport(input){
-  var zone=document.getElementById('upload-zone') || document.querySelector('.iz');
+  var zone=document.getElementById('upload-zone')||document.querySelector('.iz');
   var res=document.getElementById('imp-result');
   var file=input&&input.files&&input.files[0];
   if(!file)return;
-  if(file.type && file.type!=='application/pdf'){
+  if(file.type&&file.type!=='application/pdf'){
     zone.innerHTML='<div style="font-size:36px">❌</div><div style="color:var(--er);margin-top:8px">Selecione um arquivo PDF.</div><div style="margin-top:12px"><button class="btn bg" onclick="resetUploadZone()">Tentar novamente</button></div>';
     return;
   }
   zone.innerHTML='<div style="font-size:36px;margin-bottom:12px">⏳</div><div style="font-size:14px;font-weight:600;color:var(--tx)">Lendo '+file.name+'...</div>';
-  res.style.display='none'; res.innerHTML='';
+  res.style.display='none';res.innerHTML='';
   var reader=new FileReader();
   reader.onload=function(e){
     var b64=(e.target.result||'').split(',')[1];
@@ -633,19 +806,18 @@ function doImport(input){
     callClaude({
       model:'claude-sonnet-4-6',
       max_tokens:1000,
-      system:'Você é um assistente jurídico. Analise o documento PDF e extraia os dados retornando SOMENTE um JSON válido, sem markdown, sem texto adicional, no formato: {"cliente":"nome completo","cpf":"000.000.000-00","email":"email ou vazio","endereco":"endereco completo ou vazio","area":"civel ou penal ou tributario ou trabalhista","processos":[{"cnj":"numero cnj","tribunal":"nome tribunal","tipo":"tipo da acao","fase":"fase processual"}]}. Se não encontrar algum campo deixe string vazia.',
+      system:'Você é um assistente jurídico. Analise o documento PDF e extraia os dados retornando SOMENTE um JSON válido, sem markdown, sem texto adicional, no formato: {"cliente":"nome completo","cpf":"000.000.000-00","email":"email ou vazio","telefone":"telefone ou vazio","endereco":"endereco completo ou vazio","area":"civel ou penal ou tributario ou trabalhista","processos":[{"cnj":"numero cnj","tribunal":"nome tribunal","tipo":"tipo da acao","fase":"fase processual"}]}. Se não encontrar algum campo deixe string vazia.',
       messages:[{role:'user',content:[{type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}},{type:'text',text:'Extraia os dados desta procuração ou contrato jurídico em JSON.'}]}]
     }, function(d){
       var text=d.content&&d.content[0]?d.content[0].text:'';
       var dados;
       try{
         var clean=text.replace(/```json/g,'').replace(/```/g,'').trim();
-        var first=clean.indexOf('{');
-        var last=clean.lastIndexOf('}');
-        if(first>=0 && last>first)clean=clean.slice(first,last+1);
+        var first=clean.indexOf('{');var last=clean.lastIndexOf('}');
+        if(first>=0&&last>first)clean=clean.slice(first,last+1);
         dados=JSON.parse(clean);
       }catch(e){
-        zone.innerHTML='<div style="font-size:36px">❌</div><div style="color:var(--er);margin-top:8px">Erro ao interpretar resposta da IA</div><div style="font-size:11px;color:var(--tx3);margin-top:8px;white-space:pre-wrap">'+text.slice(0,500)+'</div><div style="margin-top:12px"><button class="btn bg" onclick="resetUploadZone()">Tentar novamente</button></div>';
+        zone.innerHTML='<div style="font-size:36px">❌</div><div style="color:var(--er);margin-top:8px">Erro ao interpretar resposta da IA</div><div style="margin-top:12px"><button class="btn bg" onclick="resetUploadZone()">Tentar novamente</button></div>';
         return;
       }
       window._dadosImport=dados;
@@ -682,15 +854,15 @@ function doImport(input){
 function salvarNoBanco(){
   var d=window._dadosImport; if(!d)return;
   var st=document.getElementById('save-status');
-  st.style.display='block'; st.style.color='var(--tx3)'; st.textContent='⏳ Salvando no banco...';
-  db.from('clientes').insert({nome:d.cliente||'Cliente sem nome',cpf_cnpj:d.cpf||'',email:d.email||'',endereco:d.endereco||'',tipo:'PF'}).select().then(function(res){
+  st.style.display='block';st.style.color='var(--tx3)';st.textContent='⏳ Salvando no banco...';
+  db.from('clientes').insert({nome:d.cliente||'Cliente sem nome',cpf_cnpj:d.cpf||'',email:d.email||'',telefone:d.telefone||'',endereco:d.endereco||'',tipo:'PF'}).select().then(function(res){
     if(res.error){st.style.color='var(--er)';st.textContent='Erro: '+res.error.message;return;}
     var clienteId=res.data&&res.data[0]?res.data[0].id:null;
     if(!clienteId){st.style.color='var(--er)';st.textContent='Erro: cliente salvo sem ID retornado.';return;}
     var inserts=(d.processos||[]).map(function(p){
       return{cliente_id:clienteId,numero_cnj:p.cnj||'',tribunal:p.tribunal||'',tipo_acao:p.tipo||'',fase:p.fase||'Em curso',area:d.area||'',status:'ativo'};
     });
-    if(inserts.length===0){st.style.color='var(--ok)';st.textContent='✅ Cliente salvo!';return;}
+    if(inserts.length===0){st.style.color='var(--ok)';st.textContent='✅ Cliente salvo!';loadDashboard();return;}
     db.from('casos').insert(inserts).then(function(r2){
       if(r2.error){st.style.color='var(--er)';st.textContent='Erro: '+r2.error.message;return;}
       st.style.color='var(--ok)';st.textContent='✅ '+(d.cliente||'Cliente')+' salvo com '+inserts.length+' processo(s)!';
@@ -699,13 +871,14 @@ function salvarNoBanco(){
   });
 }
 
+// ── AGENTE DE E-MAIL ───────────────────────────────────────────
 function genEmail(){
   var box=document.getElementById('email-box');
-  box.style.display='block'; box.textContent='✦ Redigindo...';
+  box.style.display='block';box.textContent='✦ Redigindo...';
   callClaude({
     model:'claude-sonnet-4-6',
     max_tokens:400,
-    system:'Você é o Agente Hespanhol. Redija e-mails jurídicos formais em português.',
+    system:'Você é o Agente Hespanhol do escritório Hespanhol Advogados. Redija e-mails jurídicos formais em português.',
     messages:[{role:'user',content:'Redija e-mail formal sobre audiência em 24/04/2026 às 14h, Sala 3, TJGO.'}]
   }, function(d){
     box.textContent=d.content&&d.content[0]?d.content[0].text:'Erro.';
@@ -714,18 +887,19 @@ function genEmail(){
   });
 }
 
+// ── AGENTE HESPANHOL (CHAT) ────────────────────────────────────
 function toggleAI(){document.getElementById('aip').classList.toggle('open');}
 
 function sendAI(){
   var inp=document.getElementById('aii'),msgs=document.getElementById('aim'),text=inp.value.trim();
-  if(!text)return; inp.value='';
+  if(!text)return;inp.value='';
   var u=document.createElement('div');u.className='aimsg usr';u.textContent=text;msgs.appendChild(u);
   var t=document.createElement('div');t.className='aty';t.innerHTML='<span></span><span></span><span></span>';msgs.appendChild(t);
   msgs.scrollTop=msgs.scrollHeight;
   callClaude({
     model:'claude-sonnet-4-6',
     max_tokens:600,
-    system:'Você é o Agente Hespanhol do escritório Hespanhol Advogados, do Dr. Andre Luiz Hespanhol Tavares. Responda de forma concisa e profissional em português.',
+    system:'Você é o Agente Hespanhol do escritório Hespanhol Advogados, do Dr. Andre Luiz Hespanhol Tavares, advogado em Formosa/GO. Responda de forma concisa e profissional em português.',
     messages:[{role:'user',content:text}]
   }, function(d){
     t.remove();
@@ -740,28 +914,91 @@ function sendAI(){
   });
 }
 
-document.addEventListener('DOMContentLoaded',function(){
-  var existing=getApiKey();
-  var input=document.getElementById('apikey-input');
-  var st=document.getElementById('apikey-status');
+// ── RELATÓRIO IMPRIMÍVEL ───────────────────────────────────────
+function loadRelatorio(){
+  var cont=document.getElementById('rel-tabela');
+  var countEl=document.getElementById('rel-count');
+  var filtro=document.getElementById('rel-filtro');
+  if(!cont)return;
+  cont.innerHTML='<div class="loading">🔄 Carregando relatório...</div>';
+  var query=db.from('casos').select('*, clientes(nome,cpf_cnpj,email,telefone), andamentos(descricao,data_andamento)');
+  if(filtro&&filtro.value!=='todos')query=query.eq('status',filtro.value);
+  query.order('created_at',{ascending:false}).then(function(res){
+    if(res.error){cont.innerHTML='<div style="color:var(--er);padding:16px">Erro: '+res.error.message+'</div>';return;}
+    var data=res.data||[];
+    if(countEl)countEl.textContent=data.length+' caso(s) no relatório';
+    var dataGeracao=document.getElementById('rel-data-geracao');
+    if(dataGeracao)dataGeracao.textContent=new Date().toLocaleString('pt-BR');
+    if(data.length===0){cont.innerHTML='<div class="loading">Nenhum caso encontrado.</div>';return;}
+    var html='<table style="width:100%;border-collapse:collapse">';
+    html+='<thead><tr>';
+    html+='<th style="text-align:left;padding:8px 10px;border-bottom:2px solid var(--bd);font-size:10px;letter-spacing:1px;color:var(--tx3)">CLIENTE</th>';
+    html+='<th style="text-align:left;padding:8px 10px;border-bottom:2px solid var(--bd);font-size:10px;letter-spacing:1px;color:var(--tx3)">Nº CNJ</th>';
+    html+='<th style="text-align:left;padding:8px 10px;border-bottom:2px solid var(--bd);font-size:10px;letter-spacing:1px;color:var(--tx3)">TRIBUNAL</th>';
+    html+='<th style="text-align:left;padding:8px 10px;border-bottom:2px solid var(--bd);font-size:10px;letter-spacing:1px;color:var(--tx3)">TIPO</th>';
+    html+='<th style="text-align:left;padding:8px 10px;border-bottom:2px solid var(--bd);font-size:10px;letter-spacing:1px;color:var(--tx3)">FASE</th>';
+    html+='<th style="text-align:left;padding:8px 10px;border-bottom:2px solid var(--bd);font-size:10px;letter-spacing:1px;color:var(--tx3)">ÚLTIMO ANDAMENTO</th>';
+    html+='<th style="text-align:left;padding:8px 10px;border-bottom:2px solid var(--bd);font-size:10px;letter-spacing:1px;color:var(--tx3)">DATA</th>';
+    html+='<th style="text-align:left;padding:8px 10px;border-bottom:2px solid var(--bd);font-size:10px;letter-spacing:1px;color:var(--tx3)">STATUS</th>';
+    html+='</tr></thead><tbody>';
+    data.forEach(function(c){
+      var cliente=c.clientes?c.clientes.nome:'—';
+      // Pega o andamento mais recente
+      var ands=c.andamentos||[];
+      ands.sort(function(a,b){return new Date(b.data_andamento)-new Date(a.data_andamento);});
+      var ultimoAnd=ands.length?ands[0].descricao:'—';
+      var ultimaData=ands.length?new Date(ands[0].data_andamento).toLocaleDateString('pt-BR'):'—';
+      if(ultimoAnd&&ultimoAnd.length>60)ultimoAnd=ultimoAnd.slice(0,60)+'...';
+      var statusColor=c.status==='ativo'?'#2ecc71':'#f39c12';
+      html+='<tr style="border-bottom:1px solid var(--bd)">';
+      html+='<td style="padding:9px 10px;font-size:12px;font-weight:600;color:var(--tx)">'+safeText(cliente)+'</td>';
+      html+='<td style="padding:9px 10px;font-size:11px;color:var(--tx3)">'+safeText(c.numero_cnj)+'</td>';
+      html+='<td style="padding:9px 10px;font-size:12px;color:var(--tx2)">'+safeText(c.tribunal)+'</td>';
+      html+='<td style="padding:9px 10px;font-size:12px;color:var(--tx2)">'+safeText(c.tipo_acao)+'</td>';
+      html+='<td style="padding:9px 10px;font-size:12px;color:var(--tx2)">'+safeText(c.fase)+'</td>';
+      html+='<td style="padding:9px 10px;font-size:11px;color:var(--tx2)">'+safeText(ultimoAnd)+'</td>';
+      html+='<td style="padding:9px 10px;font-size:11px;color:var(--tx3)">'+ultimaData+'</td>';
+      html+='<td style="padding:9px 10px"><span style="font-size:10px;font-weight:700;color:'+statusColor+'">'+safeText(c.status).toUpperCase()+'</span></td>';
+      html+='</tr>';
+    });
+    html+='</tbody></table>';
+    cont.innerHTML=html;
+  });
+}
 
-  if(input){
-    input.disabled=false;
-    input.readOnly=false;
-    input.style.pointerEvents='auto';
-    input.style.userSelect='text';
-    input.style.webkitUserSelect='text';
-    input.style.position='relative';
-    input.style.zIndex='20';
-    if(existing)input.value=existing;
-  }
+function imprimirRelatorio(){
+  var dataGeracao=document.getElementById('rel-data-geracao');
+  if(dataGeracao)dataGeracao.textContent=new Date().toLocaleString('pt-BR');
+  var header=document.querySelector('.print-header');
+  if(header)header.style.display='block';
+  window.print();
+  if(header)header.style.display='none';
+}
 
-  if(st && existing){
-    st.style.display='block';
-    st.style.color='var(--ok)';
-    st.textContent='✅ Chave já está salva neste navegador.';
-  }
-});
+// ── API ANTHROPIC (PROXY) ──────────────────────────────────────
+function callClaude(payload, onSuccess, onError){
+  fetch('/api/claude',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(payload)
+  }).then(async function(r){
+    var text=await r.text();
+    var payloadResp={};
+    try{payloadResp=text?JSON.parse(text):{};}catch(e){payloadResp={raw:text};}
+    if(!r.ok){
+      var msg='Erro HTTP '+r.status;
+      if(payloadResp.error&&payloadResp.error.message){msg+=' — '+payloadResp.error.message;}
+      else if(text){msg+=' — '+text.slice(0,300);}
+      throw new Error(msg);
+    }
+    return payloadResp;
+  }).then(function(d){
+    if(d&&d.error){onError(d.error.message||'Erro da API');return;}
+    onSuccess(d);
+  }).catch(function(e){
+    onError(e.message||'Erro de rede');
+  });
+}
 </script>
 </body>
 </html>

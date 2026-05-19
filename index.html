@@ -474,7 +474,7 @@ function aplicarPerfil(perfil){
   _podeApagar=(perfil==='admin');
   _podeVerValor=(perfil!=='escritorio');
 
-  var temFinanceiro=(perfil==='admin'||perfil==='autorizado');
+  var temFinanceiro=(perfil==='admin'||perfil==='autorizado'||perfil==='cliente');
   document.querySelectorAll('.hide-financeiro').forEach(function(el){
     el.style.display=temFinanceiro?'':'none';
   });

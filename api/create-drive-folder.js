@@ -1,76 +1,62 @@
-const CREDENTIALS = {
-  client_email: "hespanhol-sistema@hespanhol-advogados.iam.gserviceaccount.com",
-  private_key: process.env.GOOGLE_PRIVATE_KEY,
-};
+const CLIENT_EMAIL = "hespanhol-sistema@hespanhol-advogados.iam.gserviceaccount.com";
+const SCOPES = "https://www.googleapis.com/auth/drive";
 
-const SCOPES = ["https://www.googleapis.com/auth/drive"];
+function base64url(data) {
+  const buf = typeof data === "string" ? Buffer.from(data) : data;
+  return buf.toString("base64").replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+}
 
-function parsePrivateKey(raw) {
-  if (!raw) throw new Error("GOOGLE_PRIVATE_KEY está vazia");
-
-  // Normaliza todos os estilos de \n
-  let key = raw.replace(/\\n/g, "\n").replace(/\\r/g, "").trim();
-  // Remove aspas externas se coladas com elas
-  if (key.startsWith('"') || key.startsWith("'")) key = key.slice(1);
-  if (key.endsWith('"') || key.endsWith("'")) key = key.slice(0, -1);
-  key = key.replace(/\\n/g, "\n").trim();
-
-  // Extrai apenas o conteúdo base64 entre os headers PEM
-  const b64 = key
+function extractPkcs8(rawEnvKey) {
+  // Normaliza \n literais e aspas extras
+  let s = rawEnvKey.replace(/\\n/g, "\n").replace(/\r/g, "").trim();
+  if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+    s = s.slice(1, -1).replace(/\\n/g, "\n").trim();
+  }
+  // Extrai base64 puro, remove todos os espaços/newlines
+  const b64 = s
     .replace(/-----BEGIN PRIVATE KEY-----/g, "")
     .replace(/-----END PRIVATE KEY-----/g, "")
     .replace(/-----BEGIN RSA PRIVATE KEY-----/g, "")
     .replace(/-----END RSA PRIVATE KEY-----/g, "")
     .replace(/\s/g, "");
-
-  if (!b64 || b64.length < 100) {
-    throw new Error("GOOGLE_PRIVATE_KEY inválida: conteúdo base64 muito curto ou ausente (len=" + b64.length + ")");
-  }
-
-  // Reconstrói o PEM com formatação correta (64 chars por linha)
-  const chunks = b64.match(/.{1,64}/g) || [];
-  const header = key.includes("BEGIN RSA PRIVATE KEY") ? "RSA PRIVATE KEY" : "PRIVATE KEY";
-  const pem = `-----BEGIN ${header}-----\n${chunks.join("\n")}\n-----END ${header}-----\n`;
-
-  console.log("PEM reconstruído: header='" + header + "' | b64 len=" + b64.length + " | linhas=" + chunks.length);
-  return pem;
+  if (b64.length < 100) throw new Error("Chave privada inválida: b64 len=" + b64.length);
+  console.log("b64 extraído OK, len=" + b64.length);
+  return Buffer.from(b64, "base64");
 }
 
 async function getAccessToken() {
-  const header = { alg: "RS256", typ: "JWT" };
+  const rawKey = process.env.GOOGLE_PRIVATE_KEY;
+  if (!rawKey) throw new Error("GOOGLE_PRIVATE_KEY não configurada");
+
+  const keyData = extractPkcs8(rawKey);
+
+  // Importa chave via Web Crypto API (SubtleCrypto) — sem dependência do módulo crypto do Node
+  const cryptoKey = await globalThis.crypto.subtle.importKey(
+    "pkcs8",
+    keyData,
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  console.log("Chave importada via SubtleCrypto OK");
+
   const now = Math.floor(Date.now() / 1000);
-  const payload = {
-    iss: CREDENTIALS.client_email,
-    scope: SCOPES.join(" "),
+  const header = base64url(JSON.stringify({ alg: "RS256", typ: "JWT" }));
+  const payload = base64url(JSON.stringify({
+    iss: CLIENT_EMAIL,
+    scope: SCOPES,
     aud: "https://oauth2.googleapis.com/token",
     iat: now,
     exp: now + 3600,
-  };
+  }));
+  const signingInput = `${header}.${payload}`;
 
-  const base64url = (obj) =>
-    Buffer.from(JSON.stringify(obj))
-      .toString("base64")
-      .replace(/=/g, "")
-      .replace(/\+/g, "-")
-      .replace(/\//g, "_");
-
-  const signingInput = `${base64url(header)}.${base64url(payload)}`;
-
-  const { createSign, createPrivateKey } = await import("crypto");
-
-  const pem = parsePrivateKey(CREDENTIALS.private_key);
-  const keyObj = createPrivateKey({ key: pem, format: "pem" });
-  console.log("createPrivateKey OK, tipo:", keyObj.asymmetricKeyType);
-
-  const sign = createSign("RSA-SHA256");
-  sign.update(signingInput);
-  const signature = sign
-    .sign(keyObj)
-    .toString("base64")
-    .replace(/=/g, "")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_");
-
+  const sigBuf = await globalThis.crypto.subtle.sign(
+    "RSASSA-PKCS1-v1_5",
+    cryptoKey,
+    Buffer.from(signingInput)
+  );
+  const signature = base64url(Buffer.from(sigBuf));
   const jwt = `${signingInput}.${signature}`;
 
   const resp = await fetch("https://oauth2.googleapis.com/token", {

@@ -425,6 +425,14 @@ var _userName='';
 var _aiMessages=[];
 var _podeApagar=false;
 var _podeVerValor=false;
+var _autorizacoesCasos=[];
+
+function podeVerFinanceiroCaso(casoId){
+  return _podeVerValor||_autorizacoesCasos.indexOf(casoId)>=0;
+}
+function podeVerQualquerFinanceiro(){
+  return _podeVerValor||_autorizacoesCasos.length>0;
+}
 
 function safeText(v){return (v===null||v===undefined||v==='')?'—':String(v);}
 
@@ -479,7 +487,7 @@ function aplicarPerfil(perfil){
     el.style.display=temFinanceiro?'':'none';
   });
   document.querySelectorAll('.hide-escritorio').forEach(function(el){
-    el.style.display=_podeVerValor?'':'none';
+    el.style.display=podeVerQualquerFinanceiro()?'':'none';
   });
   var fo=document.getElementById('fin-ok'),fn=document.getElementById('fin-no');
   if(fo)fo.style.display=temFinanceiro?'block':'none';
@@ -515,6 +523,15 @@ function mostrarSistema(session){
     document.getElementById('uname').textContent=nome;
     document.getElementById('av').textContent=iniciais;
     aplicarPerfil(perfil);
+    // Carregar autorizações de caso específicas
+    if(_userId){
+      db.from('autorizacoes_caso').select('caso_id').eq('usuario_id',_userId).then(function(r){
+        _autorizacoesCasos=(r.data||[]).map(function(a){return a.caso_id;});
+        document.querySelectorAll('.hide-escritorio').forEach(function(el){
+          el.style.display=podeVerQualquerFinanceiro()?'':'none';
+        });
+      });
+    }
     loadDashboard();
     logAuditoria('LOGIN','sistema','Usuário '+_userEmail+' entrou no sistema');
   });
@@ -541,7 +558,7 @@ function fazerLogout(){
     document.getElementById('login-pwd').value='';
     document.getElementById('login-btn').textContent='Entrar';
     document.getElementById('login-btn').disabled=false;
-    _perfil='escritorio';_clienteId=null;_userId=null;_userEmail='';_aiMessages=[];
+    _perfil='escritorio';_clienteId=null;_userId=null;_userEmail='';_aiMessages=[];_autorizacoesCasos=[];
   });
 }
 
@@ -573,7 +590,8 @@ function loadCases(){
       var acoes='<button class="btn bg" style="font-size:10px;padding:4px 8px" onclick="event.stopPropagation();openEditCaso(\''+c.id+'\')">✏️</button>'+del;
       tr.style.cursor='pointer';
       tr.onclick=function(){openDetalhesCaso(c.id);};
-      tr.innerHTML='<td style="color:var(--tx3);font-size:11px">'+safeText(c.numero_cnj)+'</td><td>'+nome+'</td><td>'+tipoDisplay+'</td><td style="color:var(--tx3)">'+safeText(c.tribunal)+'</td><td style="color:var(--tx3)">'+safeText(c.fase)+'</td><td>'+status+'</td><td class="hide-escritorio" style="color:var(--ac);font-weight:600">'+(c.valor_causa?'R$ '+c.valor_causa:'—')+'</td><td>'+acoes+'</td>';
+      var valorCell=podeVerFinanceiroCaso(c.id)?(c.valor_causa?'R$ '+c.valor_causa:'—'):'';
+      tr.innerHTML='<td style="color:var(--tx3);font-size:11px">'+safeText(c.numero_cnj)+'</td><td>'+nome+'</td><td>'+tipoDisplay+'</td><td style="color:var(--tx3)">'+safeText(c.tribunal)+'</td><td style="color:var(--tx3)">'+safeText(c.fase)+'</td><td>'+status+'</td><td class="hide-escritorio" style="color:var(--ac);font-weight:600">'+valorCell+'</td><td>'+acoes+'</td>';
       tbody.appendChild(tr);
     });
   });
@@ -640,7 +658,8 @@ function loadUsers(){
       var iniciais=nome.split(' ').slice(0,2).map(function(p){return p[0]||'';}).join('').toUpperCase();
       var div=document.createElement('div');
       div.style.cssText='display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd)';
-      div.innerHTML='<div class="av">'+iniciais+'</div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--tx)">'+nome+'</div><div style="font-size:11px;color:var(--tx3)">'+safeText(u.email)+'</div></div><span class="rb ra">'+safeText(labels[u.perfil]||u.perfil)+'</span>';
+      var authBadge=u.perfil==='escritorio'?'<button class="btn bg" style="font-size:10px;padding:3px 8px" onclick="verAutorizacoesUsuario(\''+u.id+'\',\''+nome+'\')">🔑 Acessos</button>':'';
+      div.innerHTML='<div class="av">'+iniciais+'</div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--tx)">'+nome+'</div><div style="font-size:11px;color:var(--tx3)">'+safeText(u.email)+'</div><div id="auths-'+u.id+'" style="margin-top:4px"></div></div><span class="rb ra">'+safeText(labels[u.perfil]||u.perfil)+'</span>'+authBadge;
       lista.appendChild(div);
     });
   });
@@ -1403,6 +1422,33 @@ function sendAI(){
   });
 }
 
+// ── GESTÃO DE ACESSOS POR USUÁRIO ─────────────────────────────
+function verAutorizacoesUsuario(userId,nomeUsuario){
+  openModal('Acessos Financeiros — '+nomeUsuario,'<div class="loading">🔄 Carregando...</div>',null,true);
+  document.getElementById('moa').style.display='none';
+  db.from('autorizacoes_caso').select('id,caso_id,criado_por,created_at').eq('usuario_id',userId).then(function(r){
+    var auths=r.data||[];
+    if(auths.length===0){
+      document.getElementById('mob').innerHTML='<div style="font-size:13px;color:var(--tx3);text-align:center;padding:24px">Este usuário não tem acessos financeiros específicos.<br>Acessa apenas dados gerais do perfil Escritório.</div>';
+      return;
+    }
+    db.from('casos').select('id,numero_cnj,natureza,tipo_acao,clientes(nome)').in('id',auths.map(function(a){return a.caso_id;})).then(function(cr){
+      var cmap={}; (cr.data||[]).forEach(function(c){cmap[c.id]=c;});
+      var h='<div style="font-size:12px;color:var(--tx3);margin-bottom:12px">'+auths.length+' acesso(s) financeiro(s) específico(s) concedido(s):</div>';
+      h+=auths.map(function(a){
+        var c=cmap[a.caso_id]||{};
+        return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd)">'
+          +'<div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--tx)">'+(c.natureza||c.tipo_acao||'Processo')+'</div>'
+          +'<div style="font-size:11px;color:var(--ac)">'+(c.numero_cnj||'')+'</div>'
+          +'<div style="font-size:11px;color:var(--tx3)">'+(c.clientes?c.clientes.nome:'')+(a.criado_por?' · Concedido por: '+a.criado_por:'')+'</div></div>'
+          +(_podeApagar?'<button class="btn bg" style="font-size:10px;padding:3px 8px;color:var(--er)" onclick="revogarAcessoCaso(\''+a.id+'\',null);this.closest(\'div\').remove()">Revogar</button>':'')
+          +'</div>';
+      }).join('');
+      document.getElementById('mob').innerHTML=h;
+    });
+  });
+}
+
 // ── EDIÇÃO E PERFIS ────────────────────────────────────────────
 var NATUREZAS=['Ação Penal','Habeas Corpus','Inquérito Policial','Apelação','Recurso Especial','Recurso Ordinário','Mandado de Segurança','Mandado de Injunção','Revisão Criminal','Execução Penal','Agravo','Cautelar','Ação Cível','Ação Trabalhista','Ação Tributária','Outro'];
 
@@ -1555,7 +1601,7 @@ function openDetalhesCaso(id){
       if(c.natureza)h+='<div class="fi"><span class="fl">Natureza</span><span class="fv">'+c.natureza+'</span></div>';
       if(c.tipo_acao)h+='<div class="fi"><span class="fl">Tipo</span><span class="fv">'+c.tipo_acao+'</span></div>';
       if(c.area)h+='<div class="fi"><span class="fl">Área</span><span class="fv">'+c.area+'</span></div>';
-      if(c.valor_causa&&_podeVerValor)h+='<div class="fi"><span class="fl">Valor da Causa</span><span class="fv">R$ '+c.valor_causa+'</span></div>';
+      if(c.valor_causa&&podeVerFinanceiroCaso(id))h+='<div class="fi"><span class="fl">Valor da Causa</span><span class="fv">R$ '+c.valor_causa+'</span></div>';
       h+='</div><div>';
       if(pai){
         h+='<div style="font-size:11px;color:var(--tx3);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Processo Principal</div>';
@@ -1590,8 +1636,72 @@ function openDetalhesCaso(id){
         });
         h+='</div>';
       }
+      // Seção de acesso financeiro (admin)
+      if(_podeApagar){
+        h+='<div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--bd)">';
+        h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">';
+        h+='<div style="font-size:11px;color:var(--tx3);letter-spacing:1px;text-transform:uppercase">Acesso Financeiro por Caso</div>';
+        h+='<button class="btn bg" style="font-size:11px" onclick="abrirConcederAcesso(\''+id+'\')">+ Conceder Acesso</button>';
+        h+='</div>';
+        h+='<div id="autorizacoes-lista-'+id+'"><div class="loading" style="font-size:12px">🔄 Carregando...</div></div>';
+        h+='</div>';
+      }
       document.getElementById('mob').innerHTML=h;
+      if(_podeApagar)carregarAutorizacoesCaso(id);
     });
+  });
+}
+
+function carregarAutorizacoesCaso(casoId){
+  var cont=document.getElementById('autorizacoes-lista-'+casoId);
+  if(!cont)return;
+  db.from('autorizacoes_caso').select('id,usuario_id,criado_por,created_at').eq('caso_id',casoId).then(function(r){
+    var auths=r.data||[];
+    if(auths.length===0){cont.innerHTML='<div style="font-size:12px;color:var(--tx3)">Nenhum acesso específico concedido. Têm acesso: admin e usuários com perfil "Autorizado".</div>';return;}
+    db.from('usuarios').select('id,nome,email,perfil').in('id',auths.map(function(a){return a.usuario_id;})).then(function(ur){
+      var umap={}; (ur.data||[]).forEach(function(u){umap[u.id]=u;});
+      cont.innerHTML=auths.map(function(a){
+        var u=umap[a.usuario_id]||{};
+        return '<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--bd)">'
+          +'<div style="flex:1"><div style="font-size:12px;color:var(--tx)">'+(u.nome||'Usuário desconhecido')+'</div>'
+          +'<div style="font-size:11px;color:var(--tx3)">'+(u.email||'')+(a.criado_por?' · Concedido por: '+a.criado_por:'')+'</div></div>'
+          +'<button class="btn bg" style="font-size:10px;padding:3px 8px;color:var(--er)" onclick="revogarAcessoCaso(\''+a.id+'\',\''+casoId+'\')">Revogar</button>'
+          +'</div>';
+      }).join('');
+    });
+  });
+}
+
+function abrirConcederAcesso(casoId){
+  db.from('usuarios').select('id,nome,email,perfil').eq('perfil','escritorio').order('nome').then(function(r){
+    var users=r.data||[];
+    if(users.length===0){alert('Nenhum usuário com perfil Escritório encontrado.');return;}
+    var opts=users.map(function(u){return '<option value="'+u.id+'">'+u.nome+' ('+u.email+')</option>';}).join('');
+    var sel='<div class="fg"><label class="flb">Usuário</label><select class="inp" id="conc-user">'+opts+'</select></div>';
+    openModal('Conceder Acesso Financeiro',
+      sel+'<div style="font-size:12px;color:var(--tx3);background:var(--sf);border-radius:8px;padding:10px">Este usuário poderá visualizar o valor da causa e dados financeiros exclusivamente deste processo.</div>',
+      function(){concederAcessoCaso(casoId);});
+  });
+}
+
+function concederAcessoCaso(casoId){
+  var userId=document.getElementById('conc-user').value;
+  if(!userId)return;
+  var btn=document.getElementById('modal-save-btn');btn.textContent='Salvando...';btn.disabled=true;
+  db.from('autorizacoes_caso').insert({usuario_id:userId,caso_id:casoId,criado_por:_userName}).then(function(r){
+    if(r.error){alert('Erro: '+r.error.message+(r.error.message.includes('unique')?'\n(Este usuário já tem acesso a este caso)':''));btn.textContent='Salvar';btn.disabled=false;return;}
+    logAuditoria('INSERT','autorizacoes_caso',_userName+' concedeu acesso financeiro ao caso '+casoId);
+    closeModal();
+    setTimeout(function(){openDetalhesCaso(casoId);},50);
+  });
+}
+
+function revogarAcessoCaso(authId,casoId){
+  if(!confirm('Revogar este acesso financeiro?'))return;
+  db.from('autorizacoes_caso').delete().eq('id',authId).then(function(r){
+    if(r.error){alert('Erro: '+r.error.message);return;}
+    logAuditoria('DELETE','autorizacoes_caso',_userName+' revogou acesso financeiro ID: '+authId);
+    carregarAutorizacoesCaso(casoId);
   });
 }
 

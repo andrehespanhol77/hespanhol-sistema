@@ -66,7 +66,16 @@ export default async function handler(req, res) {
     if (!resp.ok) return res.status(502).json({ error: 'Erro DataJud: ' + JSON.stringify(data) });
 
     const hits = data?.hits?.hits || [];
-    if (hits.length === 0) return res.status(404).json({ error: 'Processo não encontrado no DataJud. Verifique o número CNJ.' });
+    if (hits.length === 0) return res.status(404).json({
+      error: 'Processo não encontrado no DataJud.',
+      debug: {
+        index_usado: index,
+        url: `${BASE_URL}/${index}/_search`,
+        numero_buscado: numero_cnj.replace(/\D/g, ''),
+        numero_original: numero_cnj,
+        total_hits: data?.hits?.total?.value ?? 0,
+      }
+    });
 
     const processo = hits[0]._source;
     const movimentos = (processo.movimentos || [])

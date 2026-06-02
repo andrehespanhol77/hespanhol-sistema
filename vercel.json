@@ -3,6 +3,15 @@
     "api/claude.js": {
       "memory": 512,
       "maxDuration": 30
+    },
+    "api/monitor-processos.js": {
+      "maxDuration": 60
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/monitor-processos",
+      "schedule": "0 10 * * *"
+    }
+  ]
 }

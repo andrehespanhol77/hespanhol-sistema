@@ -89,14 +89,29 @@ export default async function handler(req, res) {
     const processo = hits[0]._source;
     const movimentos = (processo.movimentos || [])
       .map(function(m) {
-        var desc = m.nome || '';
-        var comps = (m.complementosTabelados || []).map(function(c){ return c.valor||c.nome||''; }).filter(Boolean);
+        // Complementos tabelados (mais específicos que o nome genérico)
+        var comps = (m.complementosTabelados || []).map(function(c){ return c.nome||''; }).filter(Boolean);
+        // Complementos livres (texto livre quando existe)
         var compsLivre = (m.complementos || []).map(function(c){ return c.descricao||''; }).filter(Boolean);
-        var extra = comps.concat(compsLivre).join(' — ');
-        if (extra) desc += ': ' + extra;
+        // Órgão julgador
+        var orgao = (m.orgaoJulgador && m.orgaoJulgador.nome) ? m.orgaoJulgador.nome : '';
+
+        // Monta descrição: complementos são o texto principal; nome genérico é o contexto
+        var partes = [];
+        if (comps.length > 0) {
+          // "Petição — Agravo (inominado/legal)" em vez de "Petição: Agravo..."
+          partes.push(m.nome + ' — ' + comps.join(', '));
+        } else {
+          partes.push(m.nome || '');
+        }
+        // Texto livre após
+        if (compsLivre.length > 0) partes.push(compsLivre.join(' | '));
+        // Órgão julgador no final entre colchetes
+        if (orgao) partes.push('[' + orgao + ']');
+
         return {
           codigo: m.codigo,
-          descricao: desc,
+          descricao: partes.filter(Boolean).join(' · '),
           data: m.dataHora ? m.dataHora.split('T')[0] : null,
         };
       })

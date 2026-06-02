@@ -1,30 +1,30 @@
 const DATAJUD_KEY = process.env.DATAJUD_API_KEY || 'cDZHYzlZa0JadVREZDJCendQbXY6SkJlTzNjLV9TRENyQk1RdnFKZGRQdw==';
-const BASE_URL = 'https://api-publica.datajud.cnj.jus.br/api-publica';
+const BASE_URL = 'https://api-publica.datajud.cnj.jus.br';
 
 // Mapa J.TT → índice DataJud (formato CNJ: NNNNNNN-DD.AAAA.J.TT.OOOO)
 const TRIBUNAL_MAP = {
-  '1.00':'esaj_stf','2.00':'esaj_cnj','3.00':'esaj_stj',
-  '4.01':'esaj_trf1','4.02':'esaj_trf2','4.03':'esaj_trf3','4.04':'esaj_trf4','4.05':'esaj_trf5','4.06':'esaj_trf6',
-  '5.00':'esaj_tst',
-  '5.01':'esaj_trt1','5.02':'esaj_trt2','5.03':'esaj_trt3','5.04':'esaj_trt4','5.05':'esaj_trt5',
-  '5.06':'esaj_trt6','5.07':'esaj_trt7','5.08':'esaj_trt8','5.09':'esaj_trt9','5.10':'esaj_trt10',
-  '5.11':'esaj_trt11','5.12':'esaj_trt12','5.13':'esaj_trt13','5.14':'esaj_trt14','5.15':'esaj_trt15',
-  '5.16':'esaj_trt16','5.17':'esaj_trt17','5.18':'esaj_trt18','5.19':'esaj_trt19','5.20':'esaj_trt20',
-  '5.21':'esaj_trt21','5.22':'esaj_trt22','5.23':'esaj_trt23','5.24':'esaj_trt24',
-  '6.00':'esaj_tse',
-  '6.01':'esaj_tre_ac','6.02':'esaj_tre_al','6.03':'esaj_tre_ap','6.04':'esaj_tre_am','6.05':'esaj_tre_ba',
-  '6.06':'esaj_tre_ce','6.07':'esaj_tre_df','6.08':'esaj_tre_es','6.09':'esaj_tre_go','6.10':'esaj_tre_ma',
-  '6.11':'esaj_tre_mt','6.12':'esaj_tre_ms','6.13':'esaj_tre_mg','6.14':'esaj_tre_pa','6.15':'esaj_tre_pb',
-  '6.16':'esaj_tre_pr','6.17':'esaj_tre_pe','6.18':'esaj_tre_pi','6.19':'esaj_tre_rj','6.20':'esaj_tre_rn',
-  '6.21':'esaj_tre_rs','6.22':'esaj_tre_ro','6.23':'esaj_tre_rr','6.24':'esaj_tre_sc','6.25':'esaj_tre_se',
-  '6.26':'esaj_tre_sp','6.27':'esaj_tre_to',
-  '7.00':'esaj_stm',
-  '8.01':'esaj_tjac','8.02':'esaj_tjal','8.03':'esaj_tjap','8.04':'esaj_tjam','8.05':'esaj_tjba',
-  '8.06':'esaj_tjce','8.07':'esaj_tjdft','8.08':'esaj_tjes','8.09':'esaj_tjgo','8.10':'esaj_tjma',
-  '8.11':'esaj_tjmt','8.12':'esaj_tjms','8.13':'esaj_tjmg','8.14':'esaj_tjpa','8.15':'esaj_tjpb',
-  '8.16':'esaj_tjpr','8.17':'esaj_tjpe','8.18':'esaj_tjpi','8.19':'esaj_tjrj','8.20':'esaj_tjrn',
-  '8.21':'esaj_tjrs','8.22':'esaj_tjro','8.23':'esaj_tjrr','8.24':'esaj_tjsc','8.25':'esaj_tjse',
-  '8.26':'esaj_tjsp','8.27':'esaj_tjto',
+  '1.00':'api_publica_stf','2.00':'api_publica_cnj','3.00':'api_publica_stj',
+  '4.01':'api_publica_trf1','4.02':'api_publica_trf2','4.03':'api_publica_trf3','4.04':'api_publica_trf4','4.05':'api_publica_trf5','4.06':'api_publica_trf6',
+  '5.00':'api_publica_tst',
+  '5.01':'api_publica_trt1','5.02':'api_publica_trt2','5.03':'api_publica_trt3','5.04':'api_publica_trt4','5.05':'api_publica_trt5',
+  '5.06':'api_publica_trt6','5.07':'api_publica_trt7','5.08':'api_publica_trt8','5.09':'api_publica_trt9','5.10':'api_publica_trt10',
+  '5.11':'api_publica_trt11','5.12':'api_publica_trt12','5.13':'api_publica_trt13','5.14':'api_publica_trt14','5.15':'api_publica_trt15',
+  '5.16':'api_publica_trt16','5.17':'api_publica_trt17','5.18':'api_publica_trt18','5.19':'api_publica_trt19','5.20':'api_publica_trt20',
+  '5.21':'api_publica_trt21','5.22':'api_publica_trt22','5.23':'api_publica_trt23','5.24':'api_publica_trt24',
+  '6.00':'api_publica_tse',
+  '6.01':'api_publica_tre-ac','6.02':'api_publica_tre-al','6.03':'api_publica_tre-ap','6.04':'api_publica_tre-am','6.05':'api_publica_tre-ba',
+  '6.06':'api_publica_tre-ce','6.07':'api_publica_tre-df','6.08':'api_publica_tre-es','6.09':'api_publica_tre-go','6.10':'api_publica_tre-ma',
+  '6.11':'api_publica_tre-mt','6.12':'api_publica_tre-ms','6.13':'api_publica_tre-mg','6.14':'api_publica_tre-pa','6.15':'api_publica_tre-pb',
+  '6.16':'api_publica_tre-pr','6.17':'api_publica_tre-pe','6.18':'api_publica_tre-pi','6.19':'api_publica_tre-rj','6.20':'api_publica_tre-rn',
+  '6.21':'api_publica_tre-rs','6.22':'api_publica_tre-ro','6.23':'api_publica_tre-rr','6.24':'api_publica_tre-sc','6.25':'api_publica_tre-se',
+  '6.26':'api_publica_tre-sp','6.27':'api_publica_tre-to',
+  '7.00':'api_publica_stm',
+  '8.01':'api_publica_tjac','8.02':'api_publica_tjal','8.03':'api_publica_tjap','8.04':'api_publica_tjam','8.05':'api_publica_tjba',
+  '8.06':'api_publica_tjce','8.07':'api_publica_tjdft','8.08':'api_publica_tjes','8.09':'api_publica_tjgo','8.10':'api_publica_tjma',
+  '8.11':'api_publica_tjmt','8.12':'api_publica_tjms','8.13':'api_publica_tjmg','8.14':'api_publica_tjpa','8.15':'api_publica_tjpb',
+  '8.16':'api_publica_tjpr','8.17':'api_publica_tjpe','8.18':'api_publica_tjpi','8.19':'api_publica_tjrj','8.20':'api_publica_tjrn',
+  '8.21':'api_publica_tjrs','8.22':'api_publica_tjro','8.23':'api_publica_tjrr','8.24':'api_publica_tjsc','8.25':'api_publica_tjse',
+  '8.26':'api_publica_tjsp','8.27':'api_publica_tjto',
 };
 
 function getIndex(numero) {
@@ -71,7 +71,6 @@ export default async function handler(req, res) {
     const processo = hits[0]._source;
     const movimentos = (processo.movimentos || [])
       .map(function(m) {
-        // Monta descrição com complementos se existirem
         var desc = m.nome || '';
         var comps = (m.complementosTabelados || []).map(function(c){ return c.valor||c.nome||''; }).filter(Boolean);
         var compsLivre = (m.complementos || []).map(function(c){ return c.descricao||''; }).filter(Boolean);
@@ -86,7 +85,7 @@ export default async function handler(req, res) {
       .sort(function(a, b) { return (b.data||'') < (a.data||'') ? -1 : 1; });
 
     return res.status(200).json({
-      tribunal: processo.tribunal || index.replace('esaj_','').toUpperCase(),
+      tribunal: processo.tribunal || index.replace('api_publica_','').toUpperCase(),
       classe: processo.classe?.nome || null,
       orgao: processo.orgaoJulgador?.nome || null,
       ajuizamento: processo.dataAjuizamento ? processo.dataAjuizamento.split('T')[0] : null,

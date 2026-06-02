@@ -1779,7 +1779,10 @@ function openDetalhesCaso(id){
       h+='</div></div>';
       h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">';
       h+='<div style="font-size:11px;color:var(--tx3);letter-spacing:1px;text-transform:uppercase">Andamentos ('+ands.length+')</div>';
+      h+='<div style="display:flex;gap:6px">';
+      if(c.numero_cnj)h+='<button class="btn bg" style="font-size:11px" onclick="buscarDataJud(\''+id+'\',\''+encodeURIComponent(c.numero_cnj)+'\')">🔄 DataJud</button>';
       h+='<button class="btn bp" style="font-size:11px" onclick="closeModal();setTimeout(function(){openModalAndamento(\''+id+'\')},50)">+ Novo Andamento</button>';
+      h+='</div>';
       h+='</div>';
       if(ands.length===0){h+='<div class="loading">Nenhum andamento registrado.</div>';}
       else{
@@ -1859,6 +1862,70 @@ function revogarAcessoCaso(authId,casoId){
     if(r.error){alert('Erro: '+r.error.message);return;}
     logAuditoria('DELETE','autorizacoes_caso',_userName+' revogou acesso financeiro ID: '+authId);
     carregarAutorizacoesCaso(casoId);
+  });
+}
+
+// ── DATAJUD / CNJ ──────────────────────────────────────────────
+function buscarDataJud(casoId,numeroCnj){
+  var num=decodeURIComponent(numeroCnj);
+  openModal('🔄 Consultando DataJud...','<div class="loading">Consultando CNJ: '+safeText(num)+'...</div>',null,true);
+  Promise.all([
+    fetch('/api/datajud',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({numero_cnj:num})}).then(function(r){return r.json();}),
+    db.from('andamentos').select('data_andamento,descricao').eq('caso_id',casoId).then(function(r){return r.data||[];})
+  ]).then(function(rs){
+    var data=rs[0],existentes=rs[1];
+    var mob=document.getElementById('mob');
+    if(data.error){mob.innerHTML='<div style="color:var(--er);padding:20px;text-align:center">❌ '+safeText(data.error)+'</div>';return;}
+    var movimentos=data.movimentos||[];
+    if(!movimentos.length){mob.innerHTML='<div style="padding:20px;text-align:center;color:var(--tx3)">Nenhum movimento encontrado no DataJud.</div>';return;}
+    var existSet={};
+    existentes.forEach(function(a){existSet[(a.data_andamento||'')+'|'+(a.descricao||'').substring(0,80)]=true;});
+    var h='<div style="font-size:12px;color:var(--tx3);margin-bottom:10px;padding:8px;background:var(--sf);border-radius:6px">';
+    h+='<strong style="color:var(--tx)">'+safeText(data.tribunal||'')+'</strong>';
+    if(data.classe)h+=' · '+safeText(data.classe);
+    if(data.orgao)h+='<br>'+safeText(data.orgao);
+    if(data.ajuizamento)h+=' · Ajuizamento: '+new Date(data.ajuizamento+'T12:00:00').toLocaleDateString('pt-BR');
+    h+='<br><span style="color:var(--ac)">'+data.total_movimentos+' movimentos encontrados</span></div>';
+    h+='<div style="display:flex;gap:6px;margin-bottom:8px">';
+    h+='<button class="btn bg" style="font-size:10px;padding:3px 8px" onclick="djSelAll(true)">Selecionar todos</button>';
+    h+='<button class="btn bg" style="font-size:10px;padding:3px 8px" onclick="djSelAll(false)">Desmarcar todos</button>';
+    h+='</div>';
+    h+='<div style="max-height:380px;overflow-y:auto">';
+    movimentos.forEach(function(m,i){
+      var key=(m.data||'')+'|'+(m.descricao||'').substring(0,80);
+      var dup=!!existSet[key];
+      h+='<div style="display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-bottom:1px solid var(--bd)'+(dup?';opacity:0.55':'')+'">';
+      h+='<input type="checkbox" id="djm'+i+'" '+(dup?'':'checked')+' style="margin-top:2px;flex-shrink:0">';
+      h+='<label for="djm'+i+'" style="cursor:pointer;flex:1">';
+      h+='<div style="font-size:11px;color:var(--tx3)">'+(m.data?new Date(m.data+'T12:00:00').toLocaleDateString('pt-BR'):'—')+(dup?' <span style="color:var(--er)">⚠ já importado</span>':'')+'</div>';
+      h+='<div style="font-size:12px;color:var(--tx)">'+safeText(m.descricao)+'</div>';
+      h+='</label></div>';
+    });
+    h+='</div>';
+    mob.innerHTML=h;
+    document.getElementById('mot').textContent='📋 DataJud — '+movimentos.length+' movimentos';
+    window._djMov=movimentos; window._djCasoId=casoId;
+    var moa=document.getElementById('moa'); moa.style.display='flex';
+    var btn=document.getElementById('modal-save-btn');
+    btn.textContent='⬇ Importar Selecionados'; btn.disabled=false;
+    btn.onclick=importarAndamentosDataJud;
+  }).catch(function(err){
+    document.getElementById('mob').innerHTML='<div style="color:var(--er);padding:20px">❌ Erro: '+safeText(err.message)+'</div>';
+  });
+}
+function djSelAll(v){var i=0;while(document.getElementById('djm'+i)){document.getElementById('djm'+i).checked=v;i++;}}
+function importarAndamentosDataJud(){
+  var movimentos=window._djMov||[],casoId=window._djCasoId;
+  var sel=[];
+  movimentos.forEach(function(m,i){var cb=document.getElementById('djm'+i);if(cb&&cb.checked)sel.push(m);});
+  if(!sel.length){alert('Selecione ao menos um movimento.');return;}
+  var btn=document.getElementById('modal-save-btn');btn.textContent='Importando...';btn.disabled=true;
+  var rows=sel.map(function(m){return{caso_id:casoId,descricao:m.descricao,data_andamento:m.data||new Date().toISOString().split('T')[0],fonte:'datajud'};});
+  db.from('andamentos').insert(rows).then(function(r){
+    if(r.error){alert('Erro: '+r.error.message);btn.textContent='⬇ Importar Selecionados';btn.disabled=false;return;}
+    logAuditoria('INSERT','andamentos',_userName+' importou '+sel.length+' andamentos DataJud para caso '+casoId);
+    closeModal();
+    setTimeout(function(){openDetalhesCaso(casoId);},50);
   });
 }
 

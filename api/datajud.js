@@ -65,16 +65,25 @@ export default async function handler(req, res) {
 
     if (!resp.ok) return res.status(502).json({ error: 'Erro DataJud: ' + JSON.stringify(data) });
 
-    const hits = data?.hits?.hits || [];
+    let hits = data?.hits?.hits || [];
+
+    // Fallback: tenta match com número formatado se term não achou nada
+    if (hits.length === 0) {
+      const resp2 = await fetch(`${BASE_URL}/${index}/_search`, {
+        method: 'POST',
+        headers: { 'Authorization': `APIKey ${DATAJUD_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: { match: { "numeroProcesso": numero_cnj.trim() } },
+          _source: ['numeroProcesso','movimentos','tribunal','classe','orgaoJulgador','dataAjuizamento','assuntos'],
+          size: 1,
+        }),
+      });
+      const data2 = await resp2.json();
+      hits = data2?.hits?.hits || [];
+    }
+
     if (hits.length === 0) return res.status(404).json({
-      error: 'Processo não encontrado no DataJud.',
-      debug: {
-        index_usado: index,
-        url: `${BASE_URL}/${index}/_search`,
-        numero_buscado: numero_cnj.replace(/\D/g, ''),
-        numero_original: numero_cnj,
-        total_hits: data?.hits?.total?.value ?? 0,
-      }
+      error: `Processo não encontrado no DataJud.\n\nDiagnóstico:\n• Índice: ${index}\n• Número buscado: ${numero_cnj.replace(/\D/g, '')}\n• Número original: ${numero_cnj}\n\nPossíveis causas: processo anterior a 2020, tribunal ainda não integrado ao DataJud, ou número CNJ incorreto.`
     });
 
     const processo = hits[0]._source;

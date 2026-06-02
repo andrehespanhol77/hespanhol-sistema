@@ -1,4 +1,4 @@
-const DATAJUD_KEY = process.env.DATAJUD_API_KEY || 'cDZHYzlZa0JadVREZDJCendFbXNpRnJpclBYbFp0SmVDcHRBdFY=';
+const DATAJUD_KEY = process.env.DATAJUD_API_KEY || 'cDZHYzlZa0JadVREZDJCendQbXY6SkJlTzNjLV9TRENyQk1RdnFKZGRQdw==';
 const BASE_URL = 'https://api-publica.datajud.cnj.jus.br/api-publica';
 
 // Mapa J.TT → índice DataJud (formato CNJ: NNNNNNN-DD.AAAA.J.TT.OOOO)

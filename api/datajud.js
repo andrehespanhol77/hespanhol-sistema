@@ -54,7 +54,7 @@ export default async function handler(req, res) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        query: { term: { numeroProcesso: numero_cnj.replace(/\s/g, '') } },
+        query: { term: { "numeroProcesso": numero_cnj.replace(/\D/g, '') } },
         _source: ['numeroProcesso','movimentos','tribunal','classe','orgaoJulgador','dataAjuizamento','assuntos'],
         size: 1,
       }),

@@ -5,6 +5,9 @@
 
 const DATAJUD_KEY = process.env.DATAJUD_API_KEY || 'cDZHYzlZa0JadVREZDJCendQbXY6SkJlTzNjLV9TRENyQk1RdnFKZGRQdw==';
 const SB_URL = 'https://rdmlxfgwlbroigsisjph.supabase.co';
+// Chave anon (pública) — necessária no header apikey para identificar o projeto
+const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkbWx4Zmd3bGJyb2lnc2lzanBoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3NjMxOTIsImV4cCI6MjA5MjMzOTE5Mn0.stw8254uQoJGka6jEx0kXQeGWXn_IOTZcyltM6c5UqA';
+// Service role key — bypassa RLS completamente (vem de variável de ambiente)
 const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const RESEND_KEY = process.env.RESEND_API_KEY;
 const BASE_DATAJUD = 'https://api-publica.datajud.cnj.jus.br';
@@ -78,11 +81,12 @@ function getTribunalUrl(numero) {
 
 // ── Supabase REST helper ──────────────────────────────────────────
 async function sb(path, options = {}) {
+  if (!SB_KEY) throw new Error('SUPABASE_SERVICE_ROLE_KEY não configurada no Vercel');
   const r = await fetch(`${SB_URL}/rest/v1/${path}`, {
     ...options,
     headers: {
-      'apikey': SB_KEY,
-      'Authorization': `Bearer ${SB_KEY}`,
+      'apikey': SB_ANON,          // identifica o projeto (chave pública)
+      'Authorization': `Bearer ${SB_KEY}`,  // service role bypassa RLS
       'Content-Type': 'application/json',
       ...(options.headers || {}),
     },

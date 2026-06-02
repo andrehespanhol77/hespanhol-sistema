@@ -210,7 +210,10 @@ tr:hover td{background:var(--sf);}
   <div class="page" id="page-cases">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
       <div style="font-size:13px;color:var(--tx3)" id="cases-count">Carregando...</div>
-      <button class="btn bp hide-cliente" onclick="openModalCaso()">+ Novo Caso</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn bg hide-admin" id="btn-monitor-datajud" onclick="executarMonitorDataJud()" style="font-size:11px">⚡ Monitor DataJud</button>
+        <button class="btn bp hide-cliente" onclick="openModalCaso()">+ Novo Caso</button>
+      </div>
     </div>
     <table><thead><tr><th>Nº CNJ</th><th>Cliente</th><th>Natureza / Tipo</th><th>Tribunal</th><th>Fase</th><th>Status</th><th class="hide-escritorio">Valor</th><th>Ações</th></tr></thead>
     <tbody id="cases-tbody"><tr><td colspan="8" class="loading">🔄 Carregando do banco...</td></tr></tbody></table>
@@ -1915,6 +1918,28 @@ function buscarDataJud(casoId,numeroCnj){
   });
 }
 function djSelAll(v){var i=0;while(document.getElementById('djm'+i)){document.getElementById('djm'+i).checked=v;i++;}}
+function executarMonitorDataJud(){
+  if(!_podeApagar)return;
+  var btn=document.getElementById('btn-monitor-datajud');
+  btn.textContent='⏳ Verificando...'; btn.disabled=true;
+  fetch('/api/monitor-processos',{method:'POST'})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      btn.disabled=false;
+      if(d.error){btn.textContent='⚡ Monitor DataJud';alert('Erro: '+d.error);return;}
+      var msg='✅ Verificação concluída!\n\n'
+        +'• Casos verificados: '+d.casos_verificados+'\n'
+        +'• Casos com novidade: '+d.casos_com_novidade+'\n'
+        +'• Novos andamentos salvos: '+d.total_novos_andamentos+'\n';
+      if(d.erros>0) msg+='\n⚠ Erros: '+d.erros+' (ver logs do servidor)';
+      if(d.casos_com_novidade>0) msg+='\n\nRelatório enviado por e-mail.';
+      else msg+='\n\nNenhuma novidade encontrada. Sem e-mail enviado.';
+      alert(msg);
+      btn.textContent='⚡ Monitor DataJud';
+      if(d.casos_com_novidade>0) loadCases();
+    })
+    .catch(function(err){btn.textContent='⚡ Monitor DataJud';btn.disabled=false;alert('Erro: '+err.message);});
+}
 function getTribunalUrl(numero){
   if(!numero)return null;
   var clean=numero.replace(/\s/g,'');

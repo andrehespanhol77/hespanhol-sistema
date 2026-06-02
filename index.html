@@ -211,7 +211,7 @@ tr:hover td{background:var(--sf);}
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
       <div style="font-size:13px;color:var(--tx3)" id="cases-count">Carregando...</div>
       <div style="display:flex;gap:8px">
-        <button class="btn bg" id="btn-monitor-datajud" onclick="executarMonitorDataJud()" style="font-size:11px;display:none">⚡ Monitor DataJud</button>
+        <button class="btn bg" id="btn-monitor-datajud" onclick="executarMonitorDataJud()" style="font-size:11px">⚡ Monitor DataJud</button>
         <button class="btn bp hide-cliente" onclick="openModalCaso()">+ Novo Caso</button>
       </div>
     </div>
@@ -506,8 +506,6 @@ function aplicarPerfil(perfil){
   document.querySelectorAll('.hide-admin').forEach(function(el){
     el.style.display=(perfil==='admin')?'':'none';
   });
-  var btnMon=document.getElementById('btn-monitor-datajud');
-  if(btnMon)btnMon.style.display=(perfil==='admin')?'inline-block':'none';
 
   var labels={admin:'Administrador',autorizado:'Autorizado',escritorio:'Escritório',cliente:'Cliente'};
   var classes={admin:'ra',autorizado:'ra',escritorio:'rv',cliente:'rc'};

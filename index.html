@@ -1751,6 +1751,7 @@ function openDetalhesCaso(id){
       h+='<div style="font-size:12px;color:var(--tx3);margin-top:2px">'+safeText(c.tribunal)+(c.fase?' · '+c.fase:'')+'</div></div>';
       h+='<span class="badge '+(c.status==='ativo'?'ba':'bw')+'">'+safeText(c.status)+'</span>';
       if(c.pasta_url)h+='<a href="'+c.pasta_url+'" target="_blank" class="btn bg" style="font-size:11px;text-decoration:none">📁 Drive</a>';
+      if(c.numero_cnj){var _turl=getTribunalUrl(c.numero_cnj);if(_turl)h+='<a href="'+_turl+'" target="_blank" class="btn bg" style="font-size:11px;text-decoration:none">🔗 Tribunal</a>';}
       h+='<button class="btn bg" style="font-size:11px" onclick="closeModal();setTimeout(function(){openEditCaso(\''+id+'\')},50)">✏️ Editar</button></div>';
       h+='<div class="g2" style="margin-bottom:14px"><div>';
       h+='<div style="font-size:11px;color:var(--tx3);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Dados</div>';
@@ -1914,6 +1915,30 @@ function buscarDataJud(casoId,numeroCnj){
   });
 }
 function djSelAll(v){var i=0;while(document.getElementById('djm'+i)){document.getElementById('djm'+i).checked=v;i++;}}
+function getTribunalUrl(numero){
+  if(!numero)return null;
+  var clean=numero.replace(/\s/g,'');
+  var m=clean.match(/^\d{7}-\d{2}\.\d{4}\.(\d)\.(\d{2})\.\d{4}$/);
+  var digits=clean.replace(/\D/g,'');
+  var enc=encodeURIComponent(clean);
+  if(!m)return 'https://www.google.com/search?q=%22'+enc+'%22';
+  var key=m[1]+'.'+m[2];
+  var map={
+    '1.00':'https://portal.stf.jus.br/processos/listarPartes.asp?termo='+enc,
+    '3.00':'https://processo.stj.jus.br/processo/pesquisa/?tipoPesquisa=tipoPesquisaNumeroUnico&termo='+enc,
+    '4.01':'https://processual.trf1.jus.br/consultaProcessual/processo.php?proc='+digits,
+    '4.02':'https://consultas.trf2.jus.br/consultas/processo/consultaprocesso.php?NuProcesso='+digits,
+    '4.03':'https://web.trf3.jus.br/base/sicr/cartorios/certidao.aspx?proc='+digits,
+    '4.04':'https://eproc.trf4.jus.br/eproc2trf4/controlador.php?acao=processo_selecionar&num_processo='+digits,
+    '4.05':'https://creta.trf5.jus.br/consultaProcessual/consultarProcesso.do?numero='+enc,
+    '5.00':'https://consultaprocessual.tst.jus.br/consultaProcessual/consultaTst.do?consulta=consultar&numeroInt='+digits,
+    '8.02':'https://www2.tjal.jus.br/cpopg/show.do?processo.numero='+enc,
+    '8.13':'https://www5.tjmg.jus.br/jurisprudencia/pesquisaNumeroCNJEspelhoAcordao.do?numeroRegistro=1&totalLinhas=1&palavras='+enc,
+    '8.19':'https://www4.tjrj.jus.br/consultaProcessoWebV2/consultaMov.do?v=2&FLAGNOME=&back=1&tipoConsulta=publica&numProcesso='+enc,
+    '8.26':'https://esaj.tjsp.jus.br/cpopg/search.do?cbPesquisa=NUMPROC&numeroDigitoAnoUnificado='+enc+'&foroNumeroUnificado=0000&dadosConsulta.valorConsultaNuUnificado='+digits,
+  };
+  return map[key]||'https://www.google.com/search?q=%22'+enc+'%22+site:jus.br';
+}
 function importarAndamentosDataJud(){
   var movimentos=window._djMov||[],casoId=window._djCasoId;
   var sel=[];

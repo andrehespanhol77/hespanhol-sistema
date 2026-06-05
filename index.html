@@ -438,7 +438,9 @@ tr:hover td{background:var(--sf);}
     <div class="aimsg bot">Olá, Dr. André! Posso criar casos, cadastrar clientes, registrar andamentos e agendar compromissos. Basta me dizer.</div>
   </div>
   <div class="air">
-    <input class="aii" id="aii" placeholder="Ex: HC no STJ para José Arnildo..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAI();}">
+    <input type="file" id="ai-file" accept=".pdf,image/*" style="display:none" onchange="sendAIFile(this)">
+    <button onclick="document.getElementById('ai-file').click()" style="background:none;border:none;color:var(--tx3);cursor:pointer;font-size:16px;padding:0 6px" title="Enviar documento (PDF ou imagem)">📎</button>
+    <input class="aii" id="aii" placeholder="Mensagem ou envie um documento com 📎..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAI();}">
     <button class="ais" onclick="sendAI()">➤</button>
   </div>
 </div>
@@ -1988,6 +1990,33 @@ function sendAI(){
     typing.remove();
     appendAIMsg('bot','Erro: '+e.message);
   });
+}
+
+function sendAIFile(input){
+  var file=input&&input.files&&input.files[0];
+  if(!file)return;
+  input.value='';
+  var isPDF=file.type==='application/pdf';
+  var isImage=file.type.startsWith('image/');
+  if(!isPDF&&!isImage){appendAIMsg('bot','Formato não suportado. Envie um PDF ou imagem.');return;}
+  appendAIMsg('usr','📎 '+file.name);
+  var typing=showTyping();
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var b64=e.target.result.split(',')[1];
+    var mediaType=file.type;
+    var content=[];
+    if(isPDF){
+      content.push({type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}});
+    } else {
+      content.push({type:'image',source:{type:'base64',media_type:mediaType,data:b64}});
+    }
+    content.push({type:'text',text:'Analise este documento e cadastre na plataforma: cliente, processo(s) e honorários conforme as instruções do sistema.'});
+    _aiMessages.push({role:'user',content:content});
+    agentLoop(typing).catch(function(e){typing.remove();appendAIMsg('bot','Erro: '+e.message);});
+  };
+  reader.onerror=function(){typing.remove();appendAIMsg('bot','Erro ao ler o arquivo.');};
+  reader.readAsDataURL(file);
 }
 
 // ── GESTÃO DE ACESSOS POR USUÁRIO ─────────────────────────────

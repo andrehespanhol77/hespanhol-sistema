@@ -1372,7 +1372,8 @@ var FERRAMENTAS_BASE=[
 var FERRAMENTAS_ADMIN=[
   {name:'deletar_caso',description:'Apaga permanentemente um caso. APENAS ADMIN.',input_schema:{type:'object',properties:{caso_id:{type:'string'}},required:['caso_id']}},
   {name:'deletar_cliente',description:'Apaga permanentemente um cliente. APENAS ADMIN.',input_schema:{type:'object',properties:{cliente_id:{type:'string'}},required:['cliente_id']}},
-  {name:'deletar_compromisso',description:'Remove um compromisso da agenda. APENAS ADMIN.',input_schema:{type:'object',properties:{compromisso_id:{type:'string'}},required:['compromisso_id']}}
+  {name:'deletar_compromisso',description:'Remove um compromisso da agenda. APENAS ADMIN.',input_schema:{type:'object',properties:{compromisso_id:{type:'string'}},required:['compromisso_id']}},
+  {name:'convidar_usuario',description:'Cadastra um novo usuário no sistema e envia e-mail de convite para ele criar sua senha. APENAS ADMIN e AUTORIZADO.',input_schema:{type:'object',properties:{nome:{type:'string',description:'Nome completo do usuário'},email:{type:'string',description:'E-mail do usuário'},perfil:{type:'string',enum:['escritorio','autorizado','cliente'],description:'Perfil de acesso: escritorio (padrão), autorizado ou cliente'}},required:['nome','email']}}
 ];
 var FERRAMENTAS=FERRAMENTAS_BASE;
 
@@ -1542,6 +1543,19 @@ function executarFerramenta(nome, input){
           loadAgenda();resolve({sucesso:true});
         });
         break;
+      case 'convidar_usuario':
+        if(!_podeApagar&&_perfil!=='autorizado'){resolve({erro:'Sem permissão. Apenas admin ou autorizado pode convidar usuários.'});return;}
+        var perfil_conv=input.perfil||'escritorio';
+        db.from('usuarios').upsert({nome:input.nome,email:input.email,perfil:perfil_conv,ativo:true},{onConflict:'email'}).then(function(r){
+          if(r.error){resolve({erro:r.error.message});return;}
+          fetch('/api/invite-user',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:input.email,nome:input.nome,perfil:perfil_conv})}).then(function(fr){return fr.json();}).then(function(fd){
+            if(fd.error){resolve({aviso:'Usuário cadastrado, mas falha no envio do e-mail: '+fd.error});return;}
+            logAuditoria('INSERT','usuarios',_userName+' (agente) convidou usuário: '+input.nome+' ('+input.email+')');
+            loadUsers();
+            resolve({sucesso:true,mensagem:'Usuário cadastrado e convite enviado para '+input.email});
+          }).catch(function(e){resolve({aviso:'Usuário cadastrado, mas erro no envio: '+e.message});});
+        });
+        break;
       default:
         resolve({erro:'Ferramenta desconhecida: '+nome});
     }
@@ -1549,7 +1563,7 @@ function executarFerramenta(nome, input){
 }
 
 function formatNomeFerramenta(nome){
-  var nomes={buscar_colaborador:'Buscando colaborador',buscar_cliente:'Buscando cliente',listar_clientes:'Listando clientes',criar_cliente:'Criando cliente',atualizar_cliente:'Atualizando cliente',buscar_casos:'Buscando casos',listar_casos:'Listando casos',criar_caso:'Criando caso',atualizar_caso:'Atualizando caso',adicionar_andamento:'Registrando andamento',buscar_andamentos:'Buscando andamentos',agendar_compromisso:'Agendando compromisso',buscar_agenda:'Consultando agenda',enviar_email:'Enviando e-mail',deletar_caso:'Apagando caso',deletar_cliente:'Apagando cliente',deletar_compromisso:'Removendo compromisso'};
+  var nomes={buscar_colaborador:'Buscando colaborador',buscar_cliente:'Buscando cliente',listar_clientes:'Listando clientes',criar_cliente:'Criando cliente',atualizar_cliente:'Atualizando cliente',buscar_casos:'Buscando casos',listar_casos:'Listando casos',criar_caso:'Criando caso',atualizar_caso:'Atualizando caso',adicionar_andamento:'Registrando andamento',buscar_andamentos:'Buscando andamentos',agendar_compromisso:'Agendando compromisso',buscar_agenda:'Consultando agenda',enviar_email:'Enviando e-mail',deletar_caso:'Apagando caso',deletar_cliente:'Apagando cliente',deletar_compromisso:'Removendo compromisso',convidar_usuario:'Convidando usuário'};
   return nomes[nome]||nome;
 }
 
@@ -2123,4 +2137,5 @@ function callClaude(payload,onSuccess,onError){
 </script>
 </body>
 </html>
+
 

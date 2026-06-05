@@ -117,7 +117,10 @@ async function consultarDataJud(numero_cnj) {
   });
 
   if (!resp.ok) return null;
-  const data = await resp.json();
+  const text = await resp.text();
+  if (!text || !text.trim()) return null;
+  let data;
+  try { data = JSON.parse(text); } catch(e) { return null; }
   const hits = data?.hits?.hits || [];
   if (!hits.length) return null;
 
@@ -338,3 +341,4 @@ async function enviarRelatorio(novidades, erros, totalCasos, totalNovos) {
 
   console.log('Relatório enviado para:', adminEmail);
 }
+

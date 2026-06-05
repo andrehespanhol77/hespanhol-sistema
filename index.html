@@ -2192,6 +2192,16 @@ function openDetalhesCaso(id){
         });
         h+='</div>';
       }
+      // Seção de honorários (admin e autorizado)
+      if(podeVerQualquerFinanceiro()){
+        h+='<div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--bd)">';
+        h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">';
+        h+='<div style="font-size:11px;color:var(--tx3);letter-spacing:1px;text-transform:uppercase">Honorários</div>';
+        h+='<button class="btn bg" style="font-size:11px" onclick="abrirNovoHonorarioParaCaso(\''+id+'\')">+ Adicionar</button>';
+        h+='</div>';
+        h+='<div id="hon-caso-'+id+'"><div class="loading" style="font-size:12px">🔄 Carregando...</div></div>';
+        h+='</div>';
+      }
       // Seção de acesso financeiro (admin)
       if(_podeApagar){
         h+='<div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--bd)">';
@@ -2203,7 +2213,79 @@ function openDetalhesCaso(id){
         h+='</div>';
       }
       document.getElementById('mob').innerHTML=h;
+      if(podeVerQualquerFinanceiro())carregarHonorariosCaso(id);
       if(_podeApagar)carregarAutorizacoesCaso(id);
+    });
+  });
+}
+
+function carregarHonorariosCaso(casoId){
+  var cont=document.getElementById('hon-caso-'+casoId);
+  if(!cont)return;
+  db.from('honorarios').select('*').eq('caso_id',casoId).order('created_at',{ascending:false}).then(function(res){
+    var hons=res.data||[];
+    if(!hons.length){cont.innerHTML='<div style="font-size:12px;color:var(--tx3)">Nenhum honorário cadastrado para este processo.</div>';return;}
+    var tipoLabel={prolabore:'Pró-labore',exito:'Êxito'};
+    var modLabel={avista:'À vista',parcelado:'Parcelado',entrada_parcelas:'Entrada + Parcelas'};
+    // Busca pagamentos para calcular recebido
+    db.from('pagamentos_honorarios').select('honorario_id,valor').in('honorario_id',hons.map(function(h){return h.id;})).then(function(pr){
+      var recPorHon={};
+      (pr.data||[]).forEach(function(p){recPorHon[p.honorario_id]=(recPorHon[p.honorario_id]||0)+Number(p.valor);});
+      cont.innerHTML=hons.map(function(h){
+        var rec=recPorHon[h.id]||0;
+        var vt=h.percentual_exito?null:Number(h.valor_total||0);
+        var saldo=vt!=null?vt-rec:null;
+        var valorInfo=h.percentual_exito?(h.percentual_exito+'% do êxito'):fmtMoeda(h.valor_total);
+        return '<div style="background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:10px;margin-bottom:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">'+
+          '<div style="flex:1;min-width:160px">'+
+            '<div style="font-size:12px;font-weight:600;color:var(--tx)">'+safeText(tipoLabel[h.tipo]||h.tipo)+' — '+safeText(modLabel[h.modalidade]||h.modalidade)+'</div>'+
+            '<div style="font-size:11px;color:var(--tx3);margin-top:2px">'+valorInfo+(h.num_parcelas?' · '+h.num_parcelas+'x '+fmtMoeda(h.valor_parcela_ref):'')+'</div>'+
+          '</div>'+
+          '<div style="text-align:right;font-size:12px">'+
+            '<div style="color:#2a7">Recebido: '+fmtMoeda(rec)+'</div>'+
+            (saldo!=null?'<div style="color:'+(saldo>0?'var(--er)':'#2a7')+'">Saldo: '+fmtMoeda(saldo)+'</div>':'')+
+          '</div>'+
+          '<button class="btn bg" style="font-size:10px;padding:4px 8px" onclick="abrirPagamentos(\''+h.id+'\')">💰 Pagamentos</button>'+
+        '</div>';
+      }).join('');
+      // Atualiza cache local
+      hons.forEach(function(h){if(!_honorariosData.find(function(x){return x.id===h.id;}))_honorariosData.push(h);});
+    });
+  });
+}
+
+function abrirNovoHonorarioParaCaso(casoId){
+  var html=
+    '<div class="fg"><label class="flb">Tipo *</label><select class="inp" id="nh-tipo" onchange="toggleHonFields()">'+
+      '<option value="prolabore">Pró-labore</option><option value="exito">Êxito</option></select></div>'+
+    '<div class="fg" id="nh-val-wrap"><label class="flb">Valor total (R$)</label><input class="inp" type="number" id="nh-valor" placeholder="0,00" step="0.01"></div>'+
+    '<div class="fg" id="nh-pct-wrap" style="display:none"><label class="flb">Percentual de êxito (%)</label><input class="inp" type="number" id="nh-pct" placeholder="Ex: 20" step="0.01"></div>'+
+    '<div class="fg"><label class="flb">Modalidade *</label><select class="inp" id="nh-mod" onchange="toggleHonFields()">'+
+      '<option value="avista">À vista</option><option value="parcelado">Parcelado</option><option value="entrada_parcelas">Entrada + Parcelas</option></select></div>'+
+    '<div id="nh-parcelas-wrap" style="display:none">'+
+      '<div class="fg"><label class="flb">Número de parcelas</label><input class="inp" type="number" id="nh-nparcelas" placeholder="Ex: 12" min="1"></div>'+
+      '<div class="fg"><label class="flb">Valor de referência por parcela (R$)</label><input class="inp" type="number" id="nh-vparcela" placeholder="0,00" step="0.01"></div>'+
+    '</div>'+
+    '<div id="nh-entrada-wrap" style="display:none">'+
+      '<div class="fg"><label class="flb">Valor de entrada (R$)</label><input class="inp" type="number" id="nh-entrada" placeholder="0,00" step="0.01"></div>'+
+    '</div>'+
+    '<div class="fg"><label class="flb">Observações</label><textarea class="inp" id="nh-obs" rows="2" placeholder="Condições especiais..."></textarea></div>';
+  openModal('Novo Honorário',html,function(){
+    var tipo=document.getElementById('nh-tipo').value;
+    var mod=document.getElementById('nh-mod').value;
+    var obj={caso_id:casoId,tipo:tipo,modalidade:mod,status:'ativo'};
+    if(tipo==='exito'&&document.getElementById('nh-pct').value)obj.percentual_exito=Number(document.getElementById('nh-pct').value);
+    if(document.getElementById('nh-valor')&&document.getElementById('nh-valor').value)obj.valor_total=Number(document.getElementById('nh-valor').value);
+    if(document.getElementById('nh-nparcelas')&&document.getElementById('nh-nparcelas').value)obj.num_parcelas=Number(document.getElementById('nh-nparcelas').value);
+    if(document.getElementById('nh-vparcela')&&document.getElementById('nh-vparcela').value)obj.valor_parcela_ref=Number(document.getElementById('nh-vparcela').value);
+    if(document.getElementById('nh-entrada')&&document.getElementById('nh-entrada').value)obj.valor_entrada=Number(document.getElementById('nh-entrada').value);
+    if(document.getElementById('nh-obs').value)obj.observacoes=document.getElementById('nh-obs').value.trim();
+    var btn=document.getElementById('modal-save-btn');btn.textContent='Salvando...';btn.disabled=true;
+    db.from('honorarios').insert(obj).then(function(r){
+      if(r.error){showModalStatus('❌ Erro: '+r.error.message,'er');btn.textContent='Salvar';btn.disabled=false;return;}
+      logAuditoria('INSERT','honorarios',_userName+' cadastrou honorário ('+tipo+') para caso '+casoId);
+      closeModal();
+      setTimeout(function(){openDetalhesCaso(casoId);},50);
     });
   });
 }

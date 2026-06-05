@@ -2005,15 +2005,23 @@ function sendAIFile(input){
   reader.onload=function(e){
     var b64=e.target.result.split(',')[1];
     var mediaType=file.type;
-    var content=[];
-    if(isPDF){
-      content.push({type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}});
-    } else {
-      content.push({type:'image',source:{type:'base64',media_type:mediaType,data:b64}});
-    }
-    content.push({type:'text',text:'Analise este documento e cadastre na plataforma: cliente, processo(s) e honorários conforme as instruções do sistema.'});
-    _aiMessages.push({role:'user',content:content});
-    agentLoop(typing).catch(function(e){typing.remove();appendAIMsg('bot','Erro: '+e.message);});
+    var docBlock=isPDF
+      ?{type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}}
+      :{type:'image',source:{type:'base64',media_type:mediaType,data:b64}};
+    // Passo 1: extrai dados estruturados do documento (chamada leve, sem ferramentas)
+    fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      model:'claude-haiku-4-5-20251001',
+      max_tokens:1024,
+      system:'Extraia dados de um contrato/procuração jurídica. Responda APENAS com JSON no formato: {"cliente":{"nome":"","cpf_cnpj":"","email":"","telefone":"","endereco":""},"processos":[{"natureza":"","numero_cnj":"","tribunal":"","tipo_acao":""}],"honorarios":[{"tipo":"prolabore|exito","modalidade":"avista|parcelado|entrada_parcelas","valor_total":null,"percentual_exito":null,"valor_entrada":null,"num_parcelas":null,"valor_parcela_ref":null,"observacoes":""}]}. Use null para campos ausentes. tipo deve ser "prolabore" ou "exito". Se não houver honorários, retorne array vazio.',
+      messages:[{role:'user',content:[docBlock,{type:'text',text:'Extraia os dados deste documento.'}]}]
+    })}).then(function(r){return r.json();}).then(function(data){
+      var texto=data&&data.content&&data.content[0]?data.content[0].text:'';
+      var json=texto.match(/\{[\s\S]*\}/);
+      if(!json){typing.remove();appendAIMsg('bot','Não consegui extrair dados do documento. Tente um arquivo mais legível.');return;}
+      var resumo='Extraí os seguintes dados do documento:\n'+json[0]+'\n\nAgora cadastre tudo na plataforma: cliente, processo(s) e honorários.';
+      _aiMessages.push({role:'user',content:resumo});
+      agentLoop(typing).catch(function(e){typing.remove();appendAIMsg('bot','Erro: '+e.message);});
+    }).catch(function(e){typing.remove();appendAIMsg('bot','Erro ao processar documento: '+e.message);});
   };
   reader.onerror=function(){typing.remove();appendAIMsg('bot','Erro ao ler o arquivo.');};
   reader.readAsDataURL(file);

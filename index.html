@@ -2079,7 +2079,60 @@ function openPerfilCliente(id){
           h+='</div>';
         });
       }else{h+='<div class="loading">Nenhum processo cadastrado para este cliente.</div>';}
+      // Seção financeira — só admin e autorizado
+      if(podeVerQualquerFinanceiro()&&casos.length>0){
+        h+='<div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--bd)">';
+        h+='<div style="font-size:11px;color:var(--tx3);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">Honorários</div>';
+        h+='<div id="hon-cliente-'+id+'"><div class="loading" style="font-size:12px">🔄 Carregando...</div></div>';
+        h+='</div>';
+      }
       document.getElementById('mob').innerHTML=h;
+      if(podeVerQualquerFinanceiro()&&casos.length>0)carregarHonorariosCliente(id,casos);
+    });
+  });
+}
+
+function carregarHonorariosCliente(clienteId,casos){
+  var cont=document.getElementById('hon-cliente-'+clienteId);
+  if(!cont)return;
+  var casoIds=casos.map(function(c){return c.id;});
+  db.from('honorarios').select('*').in('caso_id',casoIds).order('created_at',{ascending:false}).then(function(res){
+    var hons=res.data||[];
+    if(!hons.length){cont.innerHTML='<div style="font-size:12px;color:var(--tx3)">Nenhum honorário cadastrado.</div>';return;}
+    db.from('pagamentos_honorarios').select('honorario_id,valor').in('honorario_id',hons.map(function(h){return h.id;})).then(function(pr){
+      var recPorHon={};
+      (pr.data||[]).forEach(function(p){recPorHon[p.honorario_id]=(recPorHon[p.honorario_id]||0)+Number(p.valor);});
+      var totalContratado=0,totalRecebido=0;
+      var tipoLabel={prolabore:'Pró-labore',exito:'Êxito'};
+      var rows=hons.map(function(h){
+        var rec=recPorHon[h.id]||0;
+        var vt=h.percentual_exito?null:Number(h.valor_total||0);
+        var saldo=vt!=null?vt-rec:null;
+        if(vt!=null)totalContratado+=vt;
+        totalRecebido+=rec;
+        var caso=casos.find(function(c){return c.id===h.caso_id;});
+        var casoLabel=caso?(caso.natureza||caso.tipo_acao||'Processo'):'—';
+        return '<tr style="border-bottom:1px solid var(--bd)">'+
+          '<td style="padding:7px 6px;font-size:12px">'+safeText(casoLabel)+'</td>'+
+          '<td style="padding:7px 6px;font-size:11px;color:var(--tx3)">'+safeText(tipoLabel[h.tipo]||h.tipo)+'</td>'+
+          '<td style="padding:7px 6px;font-size:12px;text-align:right">'+(h.percentual_exito?h.percentual_exito+'%':fmtMoeda(h.valor_total))+'</td>'+
+          '<td style="padding:7px 6px;font-size:12px;text-align:right;color:#2a7">'+fmtMoeda(rec)+'</td>'+
+          '<td style="padding:7px 6px;font-size:12px;text-align:right;color:'+(saldo==null?'var(--tx3)':saldo>0?'var(--er)':'#2a7')+'">'+( saldo!=null?fmtMoeda(saldo):'—')+'</td>'+
+        '</tr>';
+      }).join('');
+      var saldoTotal=totalContratado-totalRecebido;
+      cont.innerHTML=
+        '<table style="width:100%;border-collapse:collapse;font-size:11px">'+
+        '<tr style="border-bottom:2px solid var(--bd);color:var(--tx3)"><th style="text-align:left;padding:5px 6px">Processo</th><th style="text-align:left;padding:5px 6px">Tipo</th><th style="text-align:right;padding:5px 6px">Contratado</th><th style="text-align:right;padding:5px 6px">Recebido</th><th style="text-align:right;padding:5px 6px">Saldo</th></tr>'+
+        rows+
+        '<tr style="border-top:2px solid var(--bd);font-weight:700">'+
+          '<td colspan="2" style="padding:7px 6px;font-size:12px">Total</td>'+
+          '<td style="padding:7px 6px;text-align:right;font-size:12px">'+fmtMoeda(totalContratado)+'</td>'+
+          '<td style="padding:7px 6px;text-align:right;font-size:12px;color:#2a7">'+fmtMoeda(totalRecebido)+'</td>'+
+          '<td style="padding:7px 6px;text-align:right;font-size:12px;color:'+(saldoTotal>0?'var(--er)':'#2a7')+'">'+fmtMoeda(saldoTotal)+'</td>'+
+        '</tr>'+
+        '</table>';
+      hons.forEach(function(h){if(!_honorariosData.find(function(x){return x.id===h.id;}))_honorariosData.push(h);});
     });
   });
 }

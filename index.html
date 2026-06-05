@@ -149,6 +149,23 @@ tr:hover td{background:var(--sf);}
   </div>
 </div>
 
+<!-- Tela de criação de senha (convite) -->
+<div class="login-wrap" id="invite-wrap" style="display:none">
+  <div class="login-box">
+    <div style="text-align:center;margin-bottom:28px">
+      <div class="lt" style="font-size:20px;text-align:center">HESPANHOL</div>
+      <div class="ls" style="text-align:center;font-size:10px">ADVOGADOS</div>
+      <div style="font-size:12px;color:var(--tx3);margin-top:10px">Sistema de Gestão Jurídica</div>
+    </div>
+    <div class="login-title">Bem-vindo(a)!</div>
+    <div class="login-sub">Você foi convidado(a). Crie sua senha de acesso.</div>
+    <div class="fg"><label class="flb">Nova senha</label><input class="inp" type="password" id="invite-pwd" placeholder="Mínimo 6 caracteres"></div>
+    <div class="fg"><label class="flb">Confirmar senha</label><input class="inp" type="password" id="invite-pwd2" placeholder="Repita a senha" onkeydown="if(event.key==='Enter')definirSenhaConvite()"></div>
+    <button class="login-btn" onclick="definirSenhaConvite()" id="invite-btn">Criar senha e entrar</button>
+    <div class="login-err" id="invite-err"></div>
+  </div>
+</div>
+
 <aside class="sidebar">
   <div class="slogo"><div class="lt">HESPANHOL</div><div class="ls">ADVOGADOS</div></div>
   <nav class="nav">
@@ -568,6 +585,37 @@ function fazerLogout(){
     document.getElementById('login-btn').textContent='Entrar';
     document.getElementById('login-btn').disabled=false;
     _perfil='escritorio';_clienteId=null;_userId=null;_userEmail='';_aiMessages=[];_autorizacoesCasos=[];
+  });
+}
+
+// Detecta token de convite na URL (#access_token=...&type=invite)
+(function(){
+  var hash = window.location.hash.substring(1);
+  var params = {};
+  hash.split('&').forEach(function(p){ var kv=p.split('='); if(kv[0]) params[kv[0]]=decodeURIComponent(kv[1]||''); });
+  if(params.type==='invite' && params.access_token){
+    // Seta a sessão com o token do convite para permitir updateUser
+    db.auth.setSession({ access_token: params.access_token, refresh_token: params.refresh_token||'' }).then(function(){
+      document.getElementById('login-wrap').style.display='none';
+      document.getElementById('invite-wrap').style.display='flex';
+      history.replaceState(null,'',window.location.pathname);
+    });
+  }
+})();
+
+function definirSenhaConvite(){
+  var pwd=document.getElementById('invite-pwd').value;
+  var pwd2=document.getElementById('invite-pwd2').value;
+  var btn=document.getElementById('invite-btn');
+  var err=document.getElementById('invite-err');
+  err.style.display='none';
+  if(!pwd||pwd.length<6){err.style.display='block';err.textContent='A senha deve ter pelo menos 6 caracteres.';return;}
+  if(pwd!==pwd2){err.style.display='block';err.textContent='As senhas não coincidem.';return;}
+  btn.textContent='Salvando...';btn.disabled=true;
+  db.auth.updateUser({password:pwd}).then(function(res){
+    if(res.error){err.style.display='block';err.textContent='Erro: '+res.error.message;btn.textContent='Criar senha e entrar';btn.disabled=false;return;}
+    document.getElementById('invite-wrap').style.display='none';
+    mostrarSistema(res.data.session||res.data);
   });
 }
 
@@ -2058,3 +2106,4 @@ function callClaude(payload,onSuccess,onError){
 </script>
 </body>
 </html>
+

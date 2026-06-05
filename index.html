@@ -780,9 +780,26 @@ function loadUsers(){
       var div=document.createElement('div');
       div.style.cssText='display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd)';
       var authBadge=u.perfil==='escritorio'?'<button class="btn bg" style="font-size:10px;padding:3px 8px" onclick="verAutorizacoesUsuario(\''+u.id+'\',\''+nome+'\')">🔑 Acessos</button>':'';
-      div.innerHTML='<div class="av">'+iniciais+'</div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--tx)">'+nome+'</div><div style="font-size:11px;color:var(--tx3)">'+safeText(u.email)+'</div><div id="auths-'+u.id+'" style="margin-top:4px"></div></div><span class="rb ra">'+safeText(labels[u.perfil]||u.perfil)+'</span>'+authBadge;
+      var delBtn=(_podeApagar&&u.email!==_userEmail)?'<button class="btn bg" style="font-size:10px;padding:3px 8px;color:var(--er)" onclick="apagarUsuario(\''+u.id+'\',\''+u.email+'\',\''+nome+'\')">🗑</button>':'';
+      div.innerHTML='<div class="av">'+iniciais+'</div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--tx)">'+nome+'</div><div style="font-size:11px;color:var(--tx3)">'+safeText(u.email)+'</div><div id="auths-'+u.id+'" style="margin-top:4px"></div></div><span class="rb ra">'+safeText(labels[u.perfil]||u.perfil)+'</span>'+authBadge+delBtn;
       lista.appendChild(div);
     });
+  });
+}
+
+function apagarUsuario(id, email, nome){
+  if(!confirm('Excluir o usuário "'+nome+'" ('+email+')? Esta ação não pode ser desfeita.'))return;
+  // Remove da tabela usuarios
+  db.from('usuarios').delete().eq('id',id).then(function(res){
+    if(res.error){alert('Erro: '+res.error.message);return;}
+    // Remove do Supabase Auth
+    fetch('/api/delete-user',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:id})})
+      .then(function(r){return r.json();})
+      .then(function(){
+        logAuditoria('DELETE','usuarios',_userName+' excluiu usuário: '+nome+' ('+email+')');
+        loadUsers();
+      })
+      .catch(function(e){alert('Usuário removido do sistema, mas erro no Auth: '+e.message);loadUsers();});
   });
 }
 

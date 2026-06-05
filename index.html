@@ -1140,7 +1140,7 @@ function salvarUsuario(){
   if(!nome||!email){showModalStatus('❌ Nome e e-mail obrigatórios.','er');return;}
   var btn=document.getElementById('modal-save-btn');
   btn.textContent='Salvando...';btn.disabled=true;
-  db.from('usuarios').insert({nome:nome,email:email,perfil:perfil,ativo:true}).then(function(res){
+  db.from('usuarios').upsert({nome:nome,email:email,perfil:perfil,ativo:true},{onConflict:'email'}).then(function(res){
     if(res.error){showModalStatus('❌ Erro: '+res.error.message,'er');btn.textContent='Salvar';btn.disabled=false;return;}
     logAuditoria('INSERT','usuarios',_userName+' criou usuário: '+nome+' ('+email+')');
     // Enviar convite automático

@@ -318,10 +318,31 @@ tr:hover td{background:var(--sf);}
 
   <div class="page" id="page-financial">
     <div id="fin-ok">
-      <div class="tabs"><div class="tab active" onclick="stab('hon',this)">Honorários</div><div class="tab" onclick="stab('nf',this)">Notas Fiscais</div><div class="tab" onclick="stab('rel',this)">Relatório</div></div>
-      <div class="tc active" id="tab-hon"><div class="card"><div class="loading">Nenhum lançamento ainda.</div></div></div>
-      <div class="tc" id="tab-nf"><div class="card"><div class="loading">Nenhuma NF emitida ainda.</div></div></div>
-      <div class="tc" id="tab-rel"><div class="card"><div class="loading">Relatório disponível após lançamentos.</div></div></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+        <div class="tabs" style="margin-bottom:0"><div class="tab active" onclick="stab('hon',this)">Honorários</div><div class="tab" onclick="stab('rel',this)">Relatório</div></div>
+        <button class="btn bg" onclick="abrirNovoHonorario()">+ Novo Honorário</button>
+      </div>
+      <div class="tc active" id="tab-hon">
+        <div class="card" style="margin-bottom:12px">
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <input class="inp" id="fin-busca" placeholder="Buscar por cliente ou caso..." style="flex:1;min-width:180px" oninput="filtrarHonorarios()">
+            <select class="inp" id="fin-tipo" style="width:160px" onchange="filtrarHonorarios()">
+              <option value="">Todos os tipos</option>
+              <option value="prolabore">Pró-labore</option>
+              <option value="exito">Êxito</option>
+            </select>
+            <select class="inp" id="fin-status" style="width:160px" onchange="filtrarHonorarios()">
+              <option value="ativo">Ativos</option>
+              <option value="quitado">Quitados</option>
+              <option value="">Todos</option>
+            </select>
+          </div>
+        </div>
+        <div id="hon-lista"></div>
+      </div>
+      <div class="tc" id="tab-rel">
+        <div id="fin-rel-content"><div class="card"><div class="loading">Carregando relatório...</div></div></div>
+      </div>
     </div>
     <div id="fin-no" class="adn" style="display:none"><div style="font-size:48px">🔒</div><h3 style="font-size:16px;color:var(--tx2);margin:16px 0 8px">Acesso Restrito</h3><p style="font-size:13px">Solicite acesso ao Administrador.</p></div>
   </div>
@@ -487,6 +508,7 @@ function go(id,el){
   if(id==='movements')loadMovements();
   if(id==='audit')loadAudit();
   if(id==='email')loadEmailClients();
+  if(id==='financial')loadFinanceiro();
 }
 
 function abrirNovoContextual(){
@@ -1559,6 +1581,297 @@ function executarFerramenta(nome, input){
       default:
         resolve({erro:'Ferramenta desconhecida: '+nome});
     }
+  });
+}
+
+// ── FINANCEIRO ────────────────────────────────────────────────────
+var _honorariosData=[];
+
+function fmtMoeda(v){
+  if(v==null||v===''||isNaN(v))return '—';
+  return 'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
+function loadFinanceiro(){
+  if(!podeVerQualquerFinanceiro()){
+    document.getElementById('fin-ok').style.display='none';
+    document.getElementById('fin-no').style.display='flex';
+    return;
+  }
+  document.getElementById('fin-ok').style.display='block';
+  document.getElementById('fin-no').style.display='none';
+  var lista=document.getElementById('hon-lista');
+  lista.innerHTML='<div class="loading">🔄 Carregando honorários...</div>';
+  db.from('honorarios').select('*, casos(id,natureza,tipo_acao,numero_cnj,clientes(nome))').order('created_at',{ascending:false}).then(function(res){
+    if(res.error){lista.innerHTML='<div style="color:var(--er);padding:16px">Erro: '+res.error.message+'</div>';return;}
+    _honorariosData=res.data||[];
+    renderHonorarios(_honorariosData);
+    renderRelatorioFinanceiro(_honorariosData);
+  });
+}
+
+function filtrarHonorarios(){
+  var busca=(document.getElementById('fin-busca').value||'').toLowerCase();
+  var tipo=document.getElementById('fin-tipo').value;
+  var status=document.getElementById('fin-status').value;
+  var filtrado=_honorariosData.filter(function(h){
+    var cliente=(h.casos&&h.casos.clientes?h.casos.clientes.nome:'').toLowerCase();
+    var caso=(h.casos?(h.casos.natureza||h.casos.tipo_acao||''):'').toLowerCase();
+    var cnj=(h.casos?h.casos.numero_cnj||'':'').toLowerCase();
+    var matchBusca=!busca||(cliente.includes(busca)||caso.includes(busca)||cnj.includes(busca));
+    var matchTipo=!tipo||h.tipo===tipo;
+    var matchStatus=!status||h.status===status;
+    return matchBusca&&matchTipo&&matchStatus;
+  });
+  renderHonorarios(filtrado);
+}
+
+function renderHonorarios(data){
+  var lista=document.getElementById('hon-lista');
+  if(!data.length){lista.innerHTML='<div class="card"><div class="loading">Nenhum honorário encontrado.</div></div>';return;}
+  var tipoLabel={prolabore:'Pró-labore',exito:'Êxito'};
+  var modLabel={avista:'À vista',parcelado:'Parcelado',entrada_parcelas:'Entrada + Parcelas'};
+  var statusStyle={ativo:'color:#2a7',quitado:'color:var(--ac)',cancelado:'color:var(--er)'};
+  lista.innerHTML='';
+  data.forEach(function(h){
+    var cliente=h.casos&&h.casos.clientes?h.casos.clientes.nome:'—';
+    var caso=h.casos?(h.casos.natureza||h.casos.tipo_acao||'Processo'):'—';
+    var cnj=h.casos&&h.casos.numero_cnj?'<span style="font-size:10px;color:var(--tx3);font-family:monospace"> · '+h.casos.numero_cnj+'</span>':'';
+    var valorInfo=h.percentual_exito?'<span style="color:var(--ac)">'+h.percentual_exito+'% do êxito</span>':(h.valor_total?fmtMoeda(h.valor_total):'—');
+    var div=document.createElement('div');
+    div.className='card';
+    div.style.marginBottom='10px';
+    div.innerHTML=
+      '<div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap">'+
+        '<div style="flex:1;min-width:200px">'+
+          '<div style="font-size:13px;font-weight:700;color:var(--tx)">'+safeText(cliente)+'</div>'+
+          '<div style="font-size:12px;color:var(--tx2);margin:2px 0">'+safeText(caso)+cnj+'</div>'+
+          '<div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">'+
+            '<span class="rb ra" style="font-size:10px">'+safeText(tipoLabel[h.tipo]||h.tipo)+'</span>'+
+            '<span class="rb" style="font-size:10px;background:var(--sf)">'+safeText(modLabel[h.modalidade]||h.modalidade)+'</span>'+
+            '<span style="font-size:10px;'+statusStyle[h.status]+'">● '+h.status+'</span>'+
+          '</div>'+
+        '</div>'+
+        '<div style="text-align:right;min-width:120px">'+
+          '<div style="font-size:15px;font-weight:700;color:var(--tx)">'+valorInfo+'</div>'+
+          (h.valor_entrada?'<div style="font-size:11px;color:var(--tx3)">Entrada: '+fmtMoeda(h.valor_entrada)+'</div>':'')+
+          (h.num_parcelas?'<div style="font-size:11px;color:var(--tx3)">'+h.num_parcelas+'x '+fmtMoeda(h.valor_parcela_ref)+'</div>':'')+
+        '</div>'+
+        '<div style="display:flex;flex-direction:column;gap:6px">'+
+          '<button class="btn bg" style="font-size:10px;padding:4px 10px" onclick="abrirPagamentos(\''+h.id+'\')">💰 Pagamentos</button>'+
+          (_podeApagar?'<button class="btn bg" style="font-size:10px;padding:4px 10px;color:var(--er)" onclick="apagarHonorario(\''+h.id+'\')">🗑</button>':'')+
+        '</div>'+
+      '</div>'+
+      (h.observacoes?'<div style="font-size:11px;color:var(--tx3);margin-top:8px;border-top:1px solid var(--bd);padding-top:6px">'+safeText(h.observacoes)+'</div>':'')+
+    '';
+    lista.appendChild(div);
+  });
+}
+
+function renderRelatorioFinanceiro(data){
+  var el=document.getElementById('fin-rel-content');
+  if(!el)return;
+  var totalContratado=0,totalRecebido=0;
+  var porCaso={};
+  data.forEach(function(h){
+    if(h.status==='cancelado')return;
+    var vt=h.percentual_exito?0:(Number(h.valor_total)||0);
+    totalContratado+=vt;
+    var casoId=h.caso_id;
+    if(!porCaso[casoId])porCaso[casoId]={caso:h.casos,contratado:0,recebido:0,honorarios:[]};
+    porCaso[casoId].contratado+=vt;
+    porCaso[casoId].honorarios.push(h.id);
+  });
+  // Busca pagamentos para calcular recebido
+  db.from('pagamentos_honorarios').select('honorario_id,valor').then(function(pr){
+    var pags=pr.data||[];
+    var recPorHon={};
+    pags.forEach(function(p){recPorHon[p.honorario_id]=(recPorHon[p.honorario_id]||0)+Number(p.valor);});
+    data.forEach(function(h){
+      if(h.status==='cancelado')return;
+      var rec=recPorHon[h.id]||0;
+      totalRecebido+=rec;
+      if(porCaso[h.caso_id])porCaso[h.caso_id].recebido+=rec;
+    });
+    var saldo=totalContratado-totalRecebido;
+    var html=
+      '<div class="g2" style="margin-bottom:16px">'+
+        '<div class="card" style="text-align:center">'+
+          '<div style="font-size:12px;color:var(--tx3);margin-bottom:4px">Total Contratado</div>'+
+          '<div style="font-size:20px;font-weight:700;color:var(--tx)">'+fmtMoeda(totalContratado)+'</div>'+
+        '</div>'+
+        '<div class="card" style="text-align:center">'+
+          '<div style="font-size:12px;color:var(--tx3);margin-bottom:4px">Total Recebido</div>'+
+          '<div style="font-size:20px;font-weight:700;color:#2a7">'+fmtMoeda(totalRecebido)+'</div>'+
+        '</div>'+
+        '<div class="card" style="text-align:center">'+
+          '<div style="font-size:12px;color:var(--tx3);margin-bottom:4px">Saldo em Aberto</div>'+
+          '<div style="font-size:20px;font-weight:700;color:'+(saldo>0?'var(--er)':'#2a7')+'">'+fmtMoeda(saldo)+'</div>'+
+        '</div>'+
+      '</div>'+
+      '<div class="card"><div class="ct" style="margin-bottom:12px">Por Processo</div><table style="width:100%;border-collapse:collapse;font-size:12px">'+
+      '<tr style="border-bottom:2px solid var(--bd)"><th style="text-align:left;padding:6px">Processo</th><th style="text-align:left;padding:6px">Cliente</th><th style="text-align:right;padding:6px">Contratado</th><th style="text-align:right;padding:6px">Recebido</th><th style="text-align:right;padding:6px">Saldo</th></tr>';
+    Object.values(porCaso).forEach(function(c){
+      var s=c.contratado-c.recebido;
+      html+='<tr style="border-bottom:1px solid var(--bd)">'+
+        '<td style="padding:7px 6px">'+safeText(c.caso?(c.caso.natureza||c.caso.tipo_acao||'Processo'):'—')+'</td>'+
+        '<td style="padding:7px 6px;color:var(--tx2)">'+safeText(c.caso&&c.caso.clientes?c.caso.clientes.nome:'—')+'</td>'+
+        '<td style="padding:7px 6px;text-align:right">'+fmtMoeda(c.contratado)+'</td>'+
+        '<td style="padding:7px 6px;text-align:right;color:#2a7">'+fmtMoeda(c.recebido)+'</td>'+
+        '<td style="padding:7px 6px;text-align:right;color:'+(s>0?'var(--er)':'#2a7')+'">'+fmtMoeda(s)+'</td>'+
+      '</tr>';
+    });
+    html+='</table></div>';
+    el.innerHTML=html;
+  });
+}
+
+function abrirNovoHonorario(){
+  // Carrega casos para o select
+  db.from('casos').select('id,natureza,tipo_acao,clientes(nome)').eq('status','ativo').order('created_at',{ascending:false}).then(function(res){
+    var opts='<option value="">Selecione o processo...</option>';
+    (res.data||[]).forEach(function(c){
+      var label=(c.clientes?c.clientes.nome+' — ':'')+( c.natureza||c.tipo_acao||'Processo');
+      opts+='<option value="'+c.id+'">'+safeText(label)+'</option>';
+    });
+    var html=
+      '<div class="fg"><label class="flb">Processo *</label><select class="inp" id="nh-caso">'+opts+'</select></div>'+
+      '<div class="fg"><label class="flb">Tipo *</label><select class="inp" id="nh-tipo" onchange="toggleHonFields()">'+
+        '<option value="prolabore">Pró-labore</option><option value="exito">Êxito</option></select></div>'+
+      '<div class="fg" id="nh-val-wrap"><label class="flb">Valor total (R$)</label><input class="inp" type="number" id="nh-valor" placeholder="0,00" step="0.01"></div>'+
+      '<div class="fg" id="nh-pct-wrap" style="display:none"><label class="flb">Percentual de êxito (%)</label><input class="inp" type="number" id="nh-pct" placeholder="Ex: 20" step="0.01"></div>'+
+      '<div class="fg"><label class="flb">Modalidade de pagamento *</label><select class="inp" id="nh-mod" onchange="toggleHonFields()">'+
+        '<option value="avista">À vista</option><option value="parcelado">Parcelado</option><option value="entrada_parcelas">Entrada + Parcelas</option></select></div>'+
+      '<div id="nh-parcelas-wrap" style="display:none">'+
+        '<div class="fg"><label class="flb">Número de parcelas</label><input class="inp" type="number" id="nh-nparcelas" placeholder="Ex: 12" min="1"></div>'+
+        '<div class="fg"><label class="flb">Valor de referência por parcela (R$)</label><input class="inp" type="number" id="nh-vparcela" placeholder="0,00" step="0.01"></div>'+
+      '</div>'+
+      '<div id="nh-entrada-wrap" style="display:none">'+
+        '<div class="fg"><label class="flb">Valor de entrada (R$)</label><input class="inp" type="number" id="nh-entrada" placeholder="0,00" step="0.01"></div>'+
+      '</div>'+
+      '<div class="fg"><label class="flb">Observações</label><textarea class="inp" id="nh-obs" rows="2" placeholder="Condições especiais, notas..."></textarea></div>';
+    openModal('Novo Honorário',html,salvarNovoHonorario,true);
+  });
+}
+
+function toggleHonFields(){
+  var tipo=document.getElementById('nh-tipo')&&document.getElementById('nh-tipo').value;
+  var mod=document.getElementById('nh-mod')&&document.getElementById('nh-mod').value;
+  var isPct=tipo==='exito';
+  if(document.getElementById('nh-val-wrap'))document.getElementById('nh-val-wrap').style.display=isPct?'none':'block';
+  if(document.getElementById('nh-pct-wrap'))document.getElementById('nh-pct-wrap').style.display=isPct?'block':'none';
+  if(document.getElementById('nh-parcelas-wrap'))document.getElementById('nh-parcelas-wrap').style.display=(mod==='parcelado'||mod==='entrada_parcelas')?'block':'none';
+  if(document.getElementById('nh-entrada-wrap'))document.getElementById('nh-entrada-wrap').style.display=mod==='entrada_parcelas'?'block':'none';
+}
+
+function salvarNovoHonorario(){
+  var casoId=document.getElementById('nh-caso').value;
+  var tipo=document.getElementById('nh-tipo').value;
+  var mod=document.getElementById('nh-mod').value;
+  if(!casoId){showModalStatus('❌ Selecione o processo.','er');return;}
+  var obj={caso_id:casoId,tipo:tipo,modalidade:mod,status:'ativo'};
+  if(tipo==='exito'&&document.getElementById('nh-pct').value)obj.percentual_exito=Number(document.getElementById('nh-pct').value);
+  if(document.getElementById('nh-valor')&&document.getElementById('nh-valor').value)obj.valor_total=Number(document.getElementById('nh-valor').value);
+  if(document.getElementById('nh-nparcelas')&&document.getElementById('nh-nparcelas').value)obj.num_parcelas=Number(document.getElementById('nh-nparcelas').value);
+  if(document.getElementById('nh-vparcela')&&document.getElementById('nh-vparcela').value)obj.valor_parcela_ref=Number(document.getElementById('nh-vparcela').value);
+  if(document.getElementById('nh-entrada')&&document.getElementById('nh-entrada').value)obj.valor_entrada=Number(document.getElementById('nh-entrada').value);
+  if(document.getElementById('nh-obs').value)obj.observacoes=document.getElementById('nh-obs').value.trim();
+  var btn=document.getElementById('modal-save-btn');
+  btn.textContent='Salvando...';btn.disabled=true;
+  db.from('honorarios').insert(obj).then(function(r){
+    if(r.error){showModalStatus('❌ Erro: '+r.error.message,'er');btn.textContent='Salvar';btn.disabled=false;return;}
+    logAuditoria('INSERT','honorarios',_userName+' cadastrou honorário ('+tipo+') para caso '+casoId);
+    closeModal();loadFinanceiro();
+  });
+}
+
+function abrirPagamentos(honId){
+  var hon=_honorariosData.find(function(h){return h.id===honId;});
+  if(!hon)return;
+  var cliente=hon.casos&&hon.casos.clientes?hon.casos.clientes.nome:'—';
+  var caso=hon.casos?(hon.casos.natureza||hon.casos.tipo_acao||'Processo'):'—';
+  var tipoLabel={prolabore:'Pró-labore',exito:'Êxito'};
+  var container=document.getElementById('mob');
+  openModal('Pagamentos — '+tipoLabel[hon.tipo]+' · '+cliente,
+    '<div style="font-size:12px;color:var(--tx3);margin-bottom:16px">'+safeText(caso)+'</div>'+
+    '<div id="pag-lista">🔄 Carregando...</div>'+
+    '<hr style="margin:16px 0;border-color:var(--bd)">'+
+    '<div style="font-size:13px;font-weight:600;color:var(--tx);margin-bottom:10px">Registrar pagamento</div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+
+      '<div class="fg"><label class="flb">Valor (R$) *</label><input class="inp" type="number" id="pag-valor" placeholder="0,00" step="0.01"></div>'+
+      '<div class="fg"><label class="flb">Data *</label><input class="inp" type="date" id="pag-data" value="'+new Date().toISOString().split('T')[0]+'"></div>'+
+    '</div>'+
+    '<div class="fg"><label class="flb">Referência</label><input class="inp" id="pag-ref" placeholder="Ex: Parcela 1/10, Entrada, Quitação..."></div>'+
+    '<div class="fg"><label class="flb">Observação</label><input class="inp" id="pag-obs" placeholder="Opcional"></div>',
+    function(){salvarPagamento(honId);},true);
+  carregarPagamentos(honId,hon);
+}
+
+function carregarPagamentos(honId,hon){
+  db.from('pagamentos_honorarios').select('*').eq('honorario_id',honId).order('data_pagamento',{ascending:false}).then(function(res){
+    var pags=res.data||[];
+    var total=pags.reduce(function(s,p){return s+Number(p.valor);},0);
+    var vt=hon.percentual_exito?null:(Number(hon.valor_total)||0);
+    var saldo=vt!=null?vt-total:null;
+    var el=document.getElementById('pag-lista');
+    if(!el)return;
+    var resumo='<div style="display:flex;gap:16px;margin-bottom:12px;flex-wrap:wrap">'+
+      '<div style="font-size:12px"><span style="color:var(--tx3)">Recebido: </span><strong style="color:#2a7">'+fmtMoeda(total)+'</strong></div>'+
+      (vt!=null?'<div style="font-size:12px"><span style="color:var(--tx3)">Saldo: </span><strong style="color:'+(saldo>0?'var(--er)':'#2a7')+'">'+fmtMoeda(saldo)+'</strong></div>':'')+
+    '</div>';
+    if(!pags.length){el.innerHTML=resumo+'<div style="font-size:12px;color:var(--tx3)">Nenhum pagamento registrado.</div>';return;}
+    var rows=pags.map(function(p){
+      var dt=p.data_pagamento?new Date(p.data_pagamento+'T12:00:00').toLocaleDateString('pt-BR'):'—';
+      return '<tr style="border-bottom:1px solid var(--bd)">'+
+        '<td style="padding:6px;font-size:12px">'+dt+'</td>'+
+        '<td style="padding:6px;font-size:12px;font-weight:600;color:#2a7">'+fmtMoeda(p.valor)+'</td>'+
+        '<td style="padding:6px;font-size:11px;color:var(--tx2)">'+safeText(p.referencia||'')+'</td>'+
+        '<td style="padding:6px;font-size:11px;color:var(--tx3)">'+safeText(p.observacoes||'')+'</td>'+
+        (_podeApagar?'<td style="padding:6px"><button class="btn bg" style="font-size:10px;color:var(--er);padding:2px 6px" onclick="apagarPagamento(\''+p.id+'\',\''+honId+'\')">🗑</button></td>':'')+
+      '</tr>';
+    }).join('');
+    el.innerHTML=resumo+'<table style="width:100%;border-collapse:collapse"><tr style="border-bottom:2px solid var(--bd);font-size:11px;color:var(--tx3)"><th style="text-align:left;padding:6px">Data</th><th style="text-align:left;padding:6px">Valor</th><th style="text-align:left;padding:6px">Referência</th><th style="text-align:left;padding:6px">Obs</th>'+(_podeApagar?'<th></th>':'')+'</tr>'+rows+'</table>';
+  });
+}
+
+function salvarPagamento(honId){
+  var valor=document.getElementById('pag-valor').value;
+  var data=document.getElementById('pag-data').value;
+  var ref=document.getElementById('pag-ref').value.trim();
+  var obs=document.getElementById('pag-obs').value.trim();
+  if(!valor||!data){showModalStatus('❌ Valor e data são obrigatórios.','er');return;}
+  var btn=document.getElementById('modal-save-btn');
+  btn.textContent='Salvando...';btn.disabled=true;
+  db.from('pagamentos_honorarios').insert({honorario_id:honId,valor:Number(valor),data_pagamento:data,referencia:ref||null,observacoes:obs||null}).then(function(r){
+    if(r.error){showModalStatus('❌ Erro: '+r.error.message,'er');btn.textContent='Registrar';btn.disabled=false;return;}
+    logAuditoria('INSERT','pagamentos_honorarios',_userName+' registrou pagamento de '+fmtMoeda(valor));
+    document.getElementById('pag-valor').value='';
+    document.getElementById('pag-ref').value='';
+    document.getElementById('pag-obs').value='';
+    btn.textContent='Registrar';btn.disabled=false;
+    showModalStatus('✅ Pagamento registrado!','ok');
+    var hon=_honorariosData.find(function(h){return h.id===honId;});
+    carregarPagamentos(honId,hon);
+    loadFinanceiro();
+  });
+}
+
+function apagarPagamento(pagId,honId){
+  if(!confirm('Excluir este pagamento?'))return;
+  db.from('pagamentos_honorarios').delete().eq('id',pagId).then(function(r){
+    if(r.error){alert('Erro: '+r.error.message);return;}
+    var hon=_honorariosData.find(function(h){return h.id===honId;});
+    carregarPagamentos(honId,hon);
+    loadFinanceiro();
+  });
+}
+
+function apagarHonorario(honId){
+  if(!confirm('Excluir este honorário e todos os seus pagamentos? Esta ação não pode ser desfeita.'))return;
+  db.from('honorarios').delete().eq('id',honId).then(function(r){
+    if(r.error){alert('Erro: '+r.error.message);return;}
+    logAuditoria('DELETE','honorarios',_userName+' excluiu honorário ID: '+honId);
+    loadFinanceiro();
   });
 }
 

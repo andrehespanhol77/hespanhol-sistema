@@ -580,7 +580,22 @@ function podeVerQualquerFinanceiro(){
   return _podeVerValor||_autorizacoesCasos.length>0;
 }
 
-function safeText(v){return (v===null||v===undefined||v==='')?'—':String(v);}
+function safeText(v){
+  if(v===null||v===undefined||v==='')return '—';
+  return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+// Token de sessão para APIs autenticadas
+async function getAuthToken(){
+  var s=await db.auth.getSession();
+  return s&&s.data&&s.data.session?s.data.session.access_token:null;
+}
+async function authFetch(url,opts){
+  var token=await getAuthToken();
+  opts=opts||{};
+  opts.headers=Object.assign({},opts.headers||{},{'Content-Type':'application/json'});
+  if(token)opts.headers['Authorization']='Bearer '+token;
+  return fetch(url,opts);
+}
 
 // ── AUDITORIA ──────────────────────────────────────────────────
 var _sessaoLoginId=null;
@@ -657,6 +672,17 @@ function go(id,el){
   if(id==='settings')carregarConfigAutomacoes();
 }
 window.addEventListener('beforeunload',function(){registrarLogout();});
+// Timeout de inatividade: logout automático após 30 minutos
+var _ultimaAtividade=Date.now();
+['mousemove','keydown','click','scroll','touchstart'].forEach(function(ev){
+  document.addEventListener(ev,function(){_ultimaAtividade=Date.now();},{passive:true});
+});
+setInterval(function(){
+  if(_userId&&Date.now()-_ultimaAtividade>30*60*1000){
+    alert('Sua sessão expirou por inatividade. Faça login novamente.');
+    fazerLogout();
+  }
+},60000);
 
 function abrirNovoContextual(){
   var pagina=document.querySelector('.page.active');
@@ -1424,7 +1450,7 @@ function apagarUsuario(id, email, nome){
   db.from('usuarios').delete().eq('id',id).then(function(res){
     if(res.error){alert('Erro: '+res.error.message);return;}
     // Remove do Supabase Auth
-    fetch('/api/delete-user',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:id})})
+    authFetch('/api/delete-user',{method:'DELETE',body:JSON.stringify({user_id:id})})
       .then(function(r){return r.json();})
       .then(function(){
         logAuditoria('DELETE','usuarios',_userName+' excluiu usuário: '+nome+' ('+email+')');
@@ -1703,7 +1729,7 @@ function traduzirAndamento(andId, btn){
         if(!email){st.style.display='block';st.style.color='var(--er)';st.textContent='❌ Informe o e-mail do destinatário.';return;}
         var btn2=document.getElementById('modal-save-btn');
         btn2.textContent='Enviando...';btn2.disabled=true;
-        fetch('/api/send-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:email,subject:assunto,text:'Prezado(a) '+nomeCliente+',\n\n'+texto})}).then(function(re){return re.json();}).then(function(rd){
+        authFetch('/api/send-email',{method:'POST',body:JSON.stringify({to:email,subject:assunto,text:'Prezado(a) '+nomeCliente+',\n\n'+texto})}).then(function(re){return re.json();}).then(function(rd){
           if(rd.success){
             logAuditoria('EMAIL','andamentos','Andamento traduzido e enviado para '+email);
             adicionarEmailEnviado(email,assunto);
@@ -1809,7 +1835,7 @@ function toggleResumoSemanal(ativo){
 function testarResumoSemanal(){
   var st=document.getElementById('resumo-test-status');
   st.textContent='Enviando...';st.style.color='var(--tx3)';
-  fetch('/api/resumo-semanal?force=true',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({force:true})}).then(function(r){return r.json();}).then(function(d){
+  authFetch('/api/resumo-semanal?force=true',{method:'POST',body:JSON.stringify({force:true})}).then(function(r){return r.json();}).then(function(d){
     if(d.ok){st.textContent='✅ Enviado! '+d.enviados+' e-mail(s) disparado(s).';st.style.color='var(--ok)';}
     else{st.textContent='❌ '+(d.error||'Erro desconhecido');st.style.color='var(--er)';}
   }).catch(function(e){st.textContent='❌ '+e.message;st.style.color='var(--er)';});
@@ -2109,7 +2135,7 @@ function salvarUsuario(){
     logAuditoria('INSERT','usuarios',_userName+' criou usuário: '+nome+' ('+email+')');
     // Enviar convite automático
     btn.textContent='Enviando convite...';
-    fetch('/api/invite-user',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,nome:nome,perfil:perfil})}).then(async function(r){
+    authFetch('/api/invite-user',{method:'POST',body:JSON.stringify({email:email,nome:nome,perfil:perfil})}).then(async function(r){
       var d=await r.json();
       if(!r.ok){
         showModalStatus('✅ Usuário salvo, mas falha no convite: '+(d.error||r.status)+'. Convide manualmente pelo Supabase.','er');
@@ -2251,7 +2277,7 @@ function enviarEmail(){
   if(!assunto){status.style.display='block';status.style.color='var(--er)';status.textContent='❌ Informe o assunto.';return;}
   if(!corpo){status.style.display='block';status.style.color='var(--er)';status.textContent='❌ Escreva o corpo do e-mail.';return;}
   status.style.display='block';status.style.color='var(--tx3)';status.textContent='⏳ Enviando...';
-  fetch('/api/send-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:dest,subject:assunto,text:corpo})}).then(async function(r){
+  authFetch('/api/send-email',{method:'POST',body:JSON.stringify({to:dest,subject:assunto,text:corpo})}).then(async function(r){
     var d=await r.json();
     if(!r.ok){status.style.color='var(--er)';status.textContent='❌ Erro: '+(d.error||r.status);return;}
     status.style.color='var(--ok)';status.textContent='✅ E-mail enviado com sucesso!';
@@ -2472,7 +2498,7 @@ function executarFerramenta(nome, input){
         });
         break;
       case 'enviar_email':
-        fetch('/api/send-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:input.destinatario,subject:input.assunto,text:input.corpo})}).then(async function(r){
+        authFetch('/api/send-email',{method:'POST',body:JSON.stringify({to:input.destinatario,subject:input.assunto,text:input.corpo})}).then(async function(r){
           var d=await r.json();
           if(!r.ok){resolve({erro:d.error||'Erro ao enviar'});return;}
           logAuditoria('EMAIL','email','Agente enviou e-mail para '+input.destinatario+': '+input.assunto);
@@ -2628,7 +2654,7 @@ function executarFerramenta(nome, input){
         var perfil_conv=input.perfil||'escritorio';
         db.from('usuarios').upsert({nome:input.nome,email:input.email,perfil:perfil_conv,ativo:true},{onConflict:'email'}).then(function(r){
           if(r.error){resolve({erro:r.error.message});return;}
-          fetch('/api/invite-user',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:input.email,nome:input.nome,perfil:perfil_conv})}).then(function(fr){return fr.json();}).then(function(fd){
+          authFetch('/api/invite-user',{method:'POST',body:JSON.stringify({email:input.email,nome:input.nome,perfil:perfil_conv})}).then(function(fr){return fr.json();}).then(function(fd){
             if(fd.error){resolve({aviso:'Usuário cadastrado, mas falha no envio do e-mail: '+fd.error});return;}
             logAuditoria('INSERT','usuarios',_userName+' (agente) convidou usuário: '+input.nome+' ('+input.email+')');
             loadUsers();

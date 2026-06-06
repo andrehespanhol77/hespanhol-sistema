@@ -1884,6 +1884,8 @@ var FERRAMENTAS_ADMIN=[
   {name:'deletar_cliente',description:'Apaga permanentemente um cliente. APENAS ADMIN.',input_schema:{type:'object',properties:{cliente_id:{type:'string'}},required:['cliente_id']}},
   {name:'deletar_compromisso',description:'Remove um compromisso da agenda. APENAS ADMIN.',input_schema:{type:'object',properties:{compromisso_id:{type:'string'}},required:['compromisso_id']}},
   {name:'convidar_usuario',description:'Cadastra um novo usuário no sistema e envia e-mail de convite para ele criar sua senha. APENAS ADMIN e AUTORIZADO.',input_schema:{type:'object',properties:{nome:{type:'string',description:'Nome completo do usuário'},email:{type:'string',description:'E-mail do usuário'},perfil:{type:'string',enum:['escritorio','autorizado','cliente'],description:'Perfil de acesso: escritorio (padrão), autorizado ou cliente'}},required:['nome','email']}},
+  {name:'buscar_honorarios',description:'Busca honorários vinculados a um caso. Retorna lista com id, tipo, valor, modalidade, status.',input_schema:{type:'object',properties:{caso_id:{type:'string',description:'UUID do caso'}},required:['caso_id']}},
+  {name:'atualizar_honorario',description:'Atualiza campos de um honorário existente. Use buscar_honorarios primeiro para obter o id. Só informe os campos que devem ser alterados.',input_schema:{type:'object',properties:{honorario_id:{type:'string',description:'UUID do honorário'},tipo:{type:'string',enum:['prolabore','exito']},valor:{type:'number'},percentual_exito:{type:'number'},modalidade:{type:'string',enum:['avista','parcelado','entrada_parcelas']},num_parcelas:{type:'integer'},valor_parcela:{type:'number'},valor_entrada:{type:'number'},status:{type:'string',enum:['ativo','quitado','cancelado']},observacoes:{type:'string'}},required:['honorario_id']}},
   {name:'cadastrar_honorario',description:'Cadastra honorários (pró-labore ou êxito) vinculados a um caso. APENAS ADMIN e AUTORIZADO. Use após criar o caso. Pode ser chamado mais de uma vez se houver pró-labore E êxito separados.',input_schema:{type:'object',properties:{caso_id:{type:'string',description:'UUID do caso'},tipo:{type:'string',enum:['prolabore','exito'],description:'Tipo do honorário'},modalidade:{type:'string',enum:['avista','parcelado','entrada_parcelas'],description:'Modalidade de pagamento'},valor:{type:'number',description:'Valor total em reais (omitir se for percentual de êxito)'},percentual_exito:{type:'number',description:'Percentual de êxito (ex: 20 para 20%). Apenas para tipo=exito quando não há valor fixo.'},valor_entrada:{type:'number',description:'Valor de entrada, quando modalidade=entrada_parcelas'},num_parcelas:{type:'integer',description:'Número de parcelas'},valor_parcela:{type:'number',description:'Valor de referência por parcela'},observacoes:{type:'string',description:'Condições especiais, notas do contrato'}},required:['caso_id','tipo','modalidade']}}
 ];
 var FERRAMENTAS=FERRAMENTAS_BASE;
@@ -2127,6 +2129,32 @@ function executarFerramenta(nome, input){
           logAuditoria('DELETE','agenda','Admin (agente) removeu compromisso ID: '+input.compromisso_id);
           loadAgenda();resolve({sucesso:true});
         });
+        break;
+      case 'buscar_honorarios':
+        db.from('honorarios').select('*').eq('caso_id',input.caso_id).then(function(r){
+          if(r.error){resolve({erro:r.error.message});return;}
+          resolve({honorarios:(r.data||[]).map(function(h){return{id:h.id,tipo:h.tipo,valor:h.valor,percentual_exito:h.percentual_exito,modalidade:h.modalidade,num_parcelas:h.num_parcelas,valor_parcela:h.valor_parcela,status:h.status,observacoes:h.observacoes};})});
+        });
+        break;
+      case 'atualizar_honorario':
+        (function(){
+          var obj={};
+          if(input.tipo!==undefined)obj.tipo=input.tipo;
+          if(input.valor!==undefined)obj.valor=Number(input.valor);
+          if(input.percentual_exito!==undefined)obj.percentual_exito=Number(input.percentual_exito);
+          if(input.modalidade!==undefined)obj.modalidade=input.modalidade;
+          if(input.num_parcelas!==undefined)obj.num_parcelas=Number(input.num_parcelas);
+          if(input.valor_parcela!==undefined)obj.valor_parcela=Number(input.valor_parcela);
+          if(input.valor_entrada!==undefined)obj.valor_entrada=Number(input.valor_entrada);
+          if(input.status!==undefined)obj.status=input.status;
+          if(input.observacoes!==undefined)obj.observacoes=input.observacoes;
+          if(!Object.keys(obj).length){resolve({erro:'Nenhum campo para atualizar.'});return;}
+          db.from('honorarios').update(obj).eq('id',input.honorario_id).then(function(r){
+            if(r.error){resolve({erro:r.error.message});return;}
+            logAuditoria('UPDATE','honorarios','Honorário '+input.honorario_id+' atualizado pelo agente');
+            resolve({sucesso:true,mensagem:'Honorário atualizado com sucesso.',campos_alterados:Object.keys(obj)});
+          });
+        })();
         break;
       case 'cadastrar_honorario':
         if(!podeVerQualquerFinanceiro()){resolve({erro:'Sem permissão. Apenas admin ou autorizado pode cadastrar honorários.'});return;}

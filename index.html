@@ -1020,7 +1020,8 @@ function salvarCliente(){
 
 function openModalCaso(){
   openModal('Novo Processo',
-    '<div class="fg"><label class="flb">Cliente *</label><select class="inp" id="fca-cliente"><option value="">Carregando...</option></select></div>'+
+    '<div class="fg"><label class="flb">Cliente Principal *</label><select class="inp" id="fca-cliente"><option value="">Carregando...</option></select></div>'+
+    '<div class="fg"><label class="flb">Co-cliente (opcional)</label><select class="inp" id="fca-cocliente"><option value="">Nenhum</option></select></div>'+
     '<div class="fg"><label class="flb">Natureza *</label><select class="inp" id="fca-natureza"><option value="">Selecione a natureza...</option><option>Ação Penal</option><option>Habeas Corpus</option><option>Inquérito Policial</option><option>Apelação</option><option>Recurso Especial</option><option>Recurso Ordinário</option><option>Mandado de Segurança</option><option>Mandado de Injunção</option><option>Revisão Criminal</option><option>Execução Penal</option><option>Agravo</option><option>Cautelar</option><option>Ação Cível</option><option>Ação Trabalhista</option><option>Ação Tributária</option><option>Outro</option></select></div>'+
     '<div class="fg"><label class="flb">Tipo de Ação / Descrição</label><input class="inp" id="fca-tipo" placeholder="Ex: HC impetrado em razão de AP nº..."></div>'+
     '<div class="fg"><label class="flb">Processo Principal (se for desdobramento)</label><select class="inp" id="fca-pai"><option value="">Processo independente</option></select></div>'+
@@ -1032,11 +1033,10 @@ function openModalCaso(){
     '<div id="modal-status" style="font-size:12px;margin-top:4px;display:none"></div>',
     salvarCaso);
   db.from('clientes').select('id,nome').order('nome').then(function(res){
-    var sel=document.getElementById('fca-cliente');
-    if(!sel)return;
     var data=res.data||[];
-    if(data.length===0){sel.innerHTML='<option value="">Nenhum cliente cadastrado ainda</option>';return;}
-    sel.innerHTML='<option value="">Selecione o cliente...</option>'+data.map(function(c){return '<option value="'+c.id+'">'+c.nome+'</option>';}).join('');
+    var opts=data.length===0?'<option value="">Nenhum cliente cadastrado ainda</option>':'<option value="">Selecione...</option>'+data.map(function(c){return '<option value="'+c.id+'">'+c.nome+'</option>';}).join('');
+    var sel=document.getElementById('fca-cliente'); if(sel)sel.innerHTML=opts;
+    var co=document.getElementById('fca-cocliente'); if(co)co.innerHTML='<option value="">Nenhum</option>'+data.map(function(c){return '<option value="'+c.id+'">'+c.nome+'</option>';}).join('');
   });
   db.from('casos').select('id,numero_cnj,natureza,tipo_acao,clientes(nome)').order('created_at',{ascending:false}).then(function(res){
     var sel=document.getElementById('fca-pai');
@@ -1066,6 +1066,7 @@ function salvarCaso(){
     drivePromise.then(function(driveData){
       db.from('casos').insert({
         cliente_id:clienteId,
+        co_cliente_id:document.getElementById('fca-cocliente').value||null,
         numero_cnj:cnj||null,
         natureza:natureza||null,
         tribunal:document.getElementById('fca-trib').value.trim()||null,
@@ -1384,7 +1385,7 @@ var FERRAMENTAS_BASE=[
   {name:'atualizar_cliente',description:'Atualiza dados de um cliente existente',input_schema:{type:'object',properties:{cliente_id:{type:'string'},nome:{type:'string'},cpf_cnpj:{type:'string'},email:{type:'string'},telefone:{type:'string'},endereco:{type:'string'}},required:['cliente_id']}},
   {name:'buscar_casos',description:'Busca casos por número CNJ ou nome do cliente',input_schema:{type:'object',properties:{termo:{type:'string',description:'Número CNJ ou nome do cliente'}},required:['termo']}},
   {name:'listar_casos',description:'Lista todos os casos cadastrados, com dados do cliente',input_schema:{type:'object',properties:{status:{type:'string',enum:['ativo','arquivado','todos'],description:'Filtrar por status (padrão: ativo)'}}}},
-  {name:'criar_caso',description:'Cria novo processo vinculado a um cliente. Use natureza para classificar (Habeas Corpus, Ação Penal, Apelação, etc.). Use caso_pai_id para vincular a um processo principal quando for um desdobramento.',input_schema:{type:'object',properties:{cliente_id:{type:'string',description:'UUID do cliente'},natureza:{type:'string',description:'Natureza do processo: Ação Penal, Habeas Corpus, Inquérito Policial, Apelação, Recurso Especial, Recurso Ordinário, Mandado de Segurança, Revisão Criminal, Execução Penal, Agravo, Cautelar, Ação Cível, etc.'},numero_cnj:{type:'string'},tribunal:{type:'string'},tipo_acao:{type:'string',description:'Descrição adicional ou tipo específico'},area:{type:'string',enum:['civel','penal','tributario','trabalhista','outro']},fase:{type:'string'},caso_pai_id:{type:'string',description:'UUID do processo principal, se este for um desdobramento (ex: HC derivado de Ação Penal)'}},required:['cliente_id','natureza']}},
+  {name:'criar_caso',description:'Cria novo processo vinculado a um cliente. Use natureza para classificar (Habeas Corpus, Ação Penal, Apelação, etc.). Use caso_pai_id para vincular a um processo principal quando for um desdobramento. Use co_cliente_id quando houver dois clientes no mesmo processo.',input_schema:{type:'object',properties:{cliente_id:{type:'string',description:'UUID do cliente principal'},co_cliente_id:{type:'string',description:'UUID do co-cliente (segundo contratante), quando dois clientes compartilham o mesmo processo e contrato'},natureza:{type:'string',description:'Natureza do processo: Ação Penal, Habeas Corpus, Inquérito Policial, Apelação, Recurso Especial, Recurso Ordinário, Mandado de Segurança, Revisão Criminal, Execução Penal, Agravo, Cautelar, Ação Cível, etc.'},numero_cnj:{type:'string'},tribunal:{type:'string'},tipo_acao:{type:'string',description:'Descrição adicional ou tipo específico'},area:{type:'string',enum:['civel','penal','tributario','trabalhista','outro']},fase:{type:'string'},caso_pai_id:{type:'string',description:'UUID do processo principal, se este for um desdobramento (ex: HC derivado de Ação Penal)'}},required:['cliente_id','natureza']}},
   {name:'atualizar_caso',description:'Atualiza dados de um processo existente (fase, status, natureza, vinculação, etc.)',input_schema:{type:'object',properties:{caso_id:{type:'string'},natureza:{type:'string'},numero_cnj:{type:'string'},tribunal:{type:'string'},tipo_acao:{type:'string'},fase:{type:'string'},status:{type:'string',enum:['ativo','arquivado']},caso_pai_id:{type:'string',description:'UUID do processo principal para vincular hierarquia'}},required:['caso_id']}},
   {name:'adicionar_andamento',description:'Registra um andamento processual em um caso',input_schema:{type:'object',properties:{caso_id:{type:'string'},descricao:{type:'string'},data_andamento:{type:'string',description:'Data no formato YYYY-MM-DD'}},required:['caso_id','descricao']}},
   {name:'buscar_andamentos',description:'Lista os andamentos de um caso específico',input_schema:{type:'object',properties:{caso_id:{type:'string',description:'UUID do caso'}},required:['caso_id']}},
@@ -1427,7 +1428,7 @@ function executarFerramenta(nome, input){
         });
         break;
       case 'criar_caso':
-        db.from('casos').insert({cliente_id:input.cliente_id,natureza:input.natureza||null,numero_cnj:input.numero_cnj||null,tribunal:input.tribunal||null,tipo_acao:input.tipo_acao||null,area:input.area||null,fase:input.fase||null,caso_pai_id:input.caso_pai_id||null,status:'ativo'}).select().then(function(r){
+        db.from('casos').insert({cliente_id:input.cliente_id,co_cliente_id:input.co_cliente_id||null,natureza:input.natureza||null,numero_cnj:input.numero_cnj||null,tribunal:input.tribunal||null,tipo_acao:input.tipo_acao||null,area:input.area||null,fase:input.fase||null,caso_pai_id:input.caso_pai_id||null,status:'ativo'}).select().then(function(r){
           if(r.error){resolve({erro:r.error.message});return;}
           var caso=r.data[0];
           logAuditoria('INSERT','casos','Agente criou processo: '+(input.natureza||'')+(input.numero_cnj?' '+input.numero_cnj:''));
@@ -1928,7 +1929,8 @@ function buildPayload(){
   return {
     model:'claude-sonnet-4-6',
     max_tokens:4096,
-    system:'Você é o Agente Hespanhol, secretário digital do escritório Hespanhol Advogados (Dr. André Luiz Hespanhol Tavares, Formosa/GO). DATA E HORA ATUAL: '+agora+'.\n\n'+userInfo+'\n\nVOCÊ É UM SECRETÁRIO INTERNO COMPLETO. SUAS FERRAMENTAS:\n- buscar_cliente, listar_clientes, criar_cliente, atualizar_cliente: gerenciar clientes\n- buscar_casos, listar_casos, criar_caso, atualizar_caso: gerenciar processos\n- adicionar_andamento, buscar_andamentos: andamentos processuais\n- agendar_compromisso, buscar_agenda: agenda interna do escritório\n- enviar_email: ENVIA E-MAIL REAL para clientes via sistema do escritório'+deleteInfo+'\n- cadastrar_honorario: cadastra honorários (pró-labore ou êxito) vinculados a um caso — APENAS admin/autorizado\n- convidar_usuario: convida novo usuário e envia e-mail de acesso — APENAS admin/autorizado\n\nREGRAS ABSOLUTAS:\n1. NUNCA diga que não pode fazer algo que suas ferramentas permitem. Execute diretamente.\n2. Para agendar, use SEMPRE agendar_compromisso. Para lembretes recorrentes, use o campo recorrencia.\n3. Para enviar e-mail, busque primeiro o e-mail do cliente se necessário, depois use enviar_email.\n4. Busque o cliente antes de criar caso.\n5. Execute as ferramentas SEM pedir confirmação — aja e confirme o resultado.\n6. Responda em português conciso confirmando o que foi feito.\n7. Quando listar dados, apresente de forma organizada e legível.\n8. HIERARQUIA PROCESSUAL: processos podem ser desdobramentos de um processo principal (ex: HC derivado de Ação Penal). Ao criar um processo derivado, use caso_pai_id para vinculá-lo ao processo principal. Sempre pergunte se é processo independente ou desdobramento de outro.\n9. NATUREZA obrigatória: sempre classifique o processo com a natureza correta (Habeas Corpus, Ação Penal, Apelação, Recurso Especial, Inquérito Policial, etc.).\n10. GOOGLE DRIVE: ao criar cliente ou processo, a pasta no Drive é criada automaticamente pelo sistema. Informe ao usuário o link da pasta quando disponível (campo pasta_url no retorno).\n11. LEITURA DE CONTRATO: quando o usuário enviar um contrato (PDF ou imagem), extraia automaticamente: (a) dados do cliente/contratante, (b) dados do processo (natureza, tribunal, número CNJ se houver), (c) condições financeiras — honorários pró-labore e/ou êxito, modalidade de pagamento, valores, parcelas, percentual de êxito. Em seguida cadastre tudo na plataforma na sequência: criar_cliente → criar_caso → cadastrar_honorario (uma chamada por tipo de honorário). Informe ao usuário tudo que foi cadastrado. Se algum dado estiver ilegível ou ausente no contrato, informe e prossiga com o que foi possível extrair.',
+    system:'Você é o Agente Hespanhol, secretário digital do escritório Hespanhol Advogados (Dr. André Luiz Hespanhol Tavares, Formosa/GO). DATA E HORA ATUAL: '+agora+'.\n\n'+userInfo+'\n\nVOCÊ É UM SECRETÁRIO INTERNO COMPLETO. SUAS FERRAMENTAS:\n- buscar_cliente, listar_clientes, criar_cliente, atualizar_cliente: gerenciar clientes\n- buscar_casos, listar_casos, criar_caso, atualizar_caso: gerenciar processos\n- adicionar_andamento, buscar_andamentos: andamentos processuais\n- agendar_compromisso, buscar_agenda: agenda interna do escritório\n- enviar_email: ENVIA E-MAIL REAL para clientes via sistema do escritório'+deleteInfo+'\n- cadastrar_honorario: cadastra honorários (pró-labore ou êxito) vinculados a um caso — APENAS admin/autorizado\n- convidar_usuario: convida novo usuário e envia e-mail de acesso — APENAS admin/autorizado\n\nREGRAS ABSOLUTAS:\n1. NUNCA diga que não pode fazer algo que suas ferramentas permitem. Execute diretamente.\n2. Para agendar, use SEMPRE agendar_compromisso. Para lembretes recorrentes, use o campo recorrencia.\n3. Para enviar e-mail, busque primeiro o e-mail do cliente se necessário, depois use enviar_email.\n4. Busque o cliente antes de criar caso.\n5. Execute as ferramentas SEM pedir confirmação — aja e confirme o resultado.\n6. Responda em português conciso confirmando o que foi feito.\n7. Quando listar dados, apresente de forma organizada e legível.\n8. HIERARQUIA PROCESSUAL: processos podem ser desdobramentos de um processo principal (ex: HC derivado de Ação Penal). Ao criar um processo derivado, use caso_pai_id para vinculá-lo ao processo principal. Sempre pergunte se é processo independente ou desdobramento de outro.
+12. CO-CLIENTE: quando dois clientes compartilham o mesmo processo e contrato (ex: sócios, cônjuges, corréus), crie o caso com cliente_id=cliente principal e co_cliente_id=segundo cliente. Ambos devem estar previamente cadastrados. Os honorários são vinculados ao caso e valem para ambos.\n9. NATUREZA obrigatória: sempre classifique o processo com a natureza correta (Habeas Corpus, Ação Penal, Apelação, Recurso Especial, Inquérito Policial, etc.).\n10. GOOGLE DRIVE: ao criar cliente ou processo, a pasta no Drive é criada automaticamente pelo sistema. Informe ao usuário o link da pasta quando disponível (campo pasta_url no retorno).\n11. LEITURA DE CONTRATO: quando o usuário enviar um contrato (PDF ou imagem), extraia automaticamente: (a) dados do cliente/contratante, (b) dados do processo (natureza, tribunal, número CNJ se houver), (c) condições financeiras — honorários pró-labore e/ou êxito, modalidade de pagamento, valores, parcelas, percentual de êxito. Em seguida cadastre tudo na plataforma na sequência: criar_cliente → criar_caso → cadastrar_honorario (uma chamada por tipo de honorário). Informe ao usuário tudo que foi cadastrado. Se algum dado estiver ilegível ou ausente no contrato, informe e prossiga com o que foi possível extrair.',
     tools:ferramentas,
     messages:_aiMessages
   };
@@ -2097,8 +2099,15 @@ function openPerfilCliente(id){
   openModal('Perfil do Cliente','<div class="loading">🔄 Carregando perfil...</div>',null,true);
   db.from('clientes').select('*').eq('id',id).single().then(function(res){
     var c=res.data; if(!c){document.getElementById('mob').innerHTML='<div style="color:var(--er)">Não encontrado.</div>';return;}
-    db.from('casos').select('*,andamentos(descricao,data_andamento)').eq('cliente_id',id).order('created_at',{ascending:false}).then(function(cr){
-      var casos=cr.data||[];
+    Promise.all([
+      db.from('casos').select('*,andamentos(descricao,data_andamento)').eq('cliente_id',id).order('created_at',{ascending:false}),
+      db.from('casos').select('*,andamentos(descricao,data_andamento),clientes(nome)').eq('co_cliente_id',id).order('created_at',{ascending:false})
+    ]).then(function(rs){
+      var casosPrincipal=rs[0].data||[];
+      var casosCoCliente=rs[1].data||[];
+      // Marca os casos onde é co-cliente para diferenciar na exibição
+      casosCoCliente.forEach(function(c){c._is_cocliente=true;});
+      var casos=casosPrincipal.concat(casosCoCliente.filter(function(c){return !casosPrincipal.find(function(p){return p.id===c.id;});}));
       var ini=c.nome.split(' ').slice(0,2).map(function(p){return p[0]||'';}).join('').toUpperCase();
       var h='<div style="display:flex;align-items:center;gap:14px;padding-bottom:16px;border-bottom:1px solid var(--bd);margin-bottom:16px">';
       h+='<div class="av" style="width:48px;height:48px;font-size:18px;flex-shrink:0;background:rgba(74,159,212,.3);color:var(--ac)">'+ini+'</div>';
@@ -2126,7 +2135,7 @@ function openPerfilCliente(id){
           h+='<div style="background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:12px;margin-bottom:8px;cursor:pointer" onclick="closeModal();setTimeout(function(){openDetalhesCaso(\''+cs.id+'\')},50)">';
           h+='<div style="display:flex;justify-content:space-between;margin-bottom:4px">';
           h+='<span style="font-size:12px;font-weight:600;color:var(--tx)">'+(cs.natureza||cs.tipo_acao||'Processo')+'</span>';
-          h+='<span class="badge '+(cs.status==='ativo'?'ba':'bw')+'">'+safeText(cs.status)+'</span>';
+          h+='<div style="display:flex;gap:4px;align-items:center">'+(cs._is_cocliente?'<span style="font-size:9px;background:rgba(74,159,212,.15);color:var(--ac);padding:1px 6px;border-radius:8px">co-cliente</span>':'')+' <span class="badge '+(cs.status==='ativo'?'ba':'bw')+'">'+safeText(cs.status)+'</span></div>';
           h+='</div>';
           if(cs.numero_cnj)h+='<div style="font-size:11px;color:var(--ac);margin-bottom:2px">'+cs.numero_cnj+'</div>';
           h+='<div style="font-size:11px;color:var(--tx3)">'+safeText(cs.tribunal)+(cs.fase?' · '+cs.fase:'')+'</div>';
@@ -2146,6 +2155,7 @@ function openPerfilCliente(id){
     });
   });
 }
+
 
 function carregarHonorariosCliente(clienteId,casos){
   var cont=document.getElementById('hon-cliente-'+clienteId);
@@ -2204,10 +2214,17 @@ function openEditCaso(id){
       '<div class="fg"><label class="flb">Tribunal</label><input class="inp" id="fce-trib" value="'+(c.tribunal||'')+'"></div>'+
       '<div class="fg"><label class="flb">Fase</label><input class="inp" id="fce-fase" value="'+(c.fase||'')+'"></div>'+
       '<div class="fg"><label class="flb">Status</label><select class="inp" id="fce-status"><option value="ativo"'+(c.status==='ativo'?' selected':'')+'>Ativo</option><option value="arquivado"'+(c.status==='arquivado'?' selected':'')+'>Arquivado</option></select></div>'+
+      '<div class="fg"><label class="flb">Co-cliente (opcional)</label><select class="inp" id="fce-cocliente"><option value="">Nenhum</option></select></div>'+
       '<div class="fg"><label class="flb">Processo Principal (vinculação)</label><select class="inp" id="fce-pai"><option value="">Nenhum (independente)</option></select></div>'+
       (_podeVerValor?'<div class="fg"><label class="flb">Valor da Causa (R$)</label><input class="inp" id="fce-valor" type="number" value="'+(c.valor_causa||'')+'"></div>':'')+
       '<div id="modal-status" style="font-size:12px;margin-top:4px;display:none"></div>',
       function(){salvarEditCaso(id,c.caso_pai_id);});
+    db.from('clientes').select('id,nome').order('nome').then(function(r){
+      var co=document.getElementById('fce-cocliente'); if(!co)return;
+      co.innerHTML='<option value="">Nenhum</option>'+(r.data||[]).map(function(cl){
+        return '<option value="'+cl.id+'"'+(c.co_cliente_id===cl.id?' selected':'')+'>'+cl.nome+'</option>';
+      }).join('');
+    });
     db.from('casos').select('id,numero_cnj,natureza,tipo_acao,clientes(nome)').neq('id',id).order('created_at',{ascending:false}).then(function(r){
       var sel=document.getElementById('fce-pai'); if(!sel)return;
       sel.innerHTML='<option value="">Nenhum (independente)</option>'+(r.data||[]).map(function(cs){
@@ -2220,6 +2237,7 @@ function openEditCaso(id){
 function salvarEditCaso(id){
   var btn=document.getElementById('modal-save-btn');btn.textContent='Salvando...';btn.disabled=true;
   var paiId=document.getElementById('fce-pai').value;
+  var coClienteEl=document.getElementById('fce-cocliente');
   var valorEl=document.getElementById('fce-valor');
   db.from('casos').update({
     natureza:document.getElementById('fce-nat').value||null,
@@ -2229,6 +2247,7 @@ function salvarEditCaso(id){
     fase:document.getElementById('fce-fase').value.trim()||null,
     status:document.getElementById('fce-status').value,
     caso_pai_id:paiId||null,
+    co_cliente_id:coClienteEl?coClienteEl.value||null:undefined,
     valor_causa:valorEl?valorEl.value||null:undefined
   }).eq('id',id).then(function(r){
     if(r.error){showModalStatus('❌ Erro: '+r.error.message,'er');btn.textContent='Salvar';btn.disabled=false;return;}
@@ -2240,7 +2259,7 @@ function salvarEditCaso(id){
 // ── DETALHES DO PROCESSO ────────────────────────────────────────
 function openDetalhesCaso(id){
   openModal('Detalhes do Processo','<div class="loading">🔄 Carregando processo...</div>',null,true);
-  db.from('casos').select('*,clientes(id,nome,email,telefone)').eq('id',id).single().then(function(res){
+  db.from('casos').select('*,clientes(id,nome,email,telefone),co_cliente:co_cliente_id(id,nome,email,telefone)').eq('id',id).single().then(function(res){
     var c=res.data; if(!c){document.getElementById('mob').innerHTML='<div style="color:var(--er)">Não encontrado.</div>';return;}
     Promise.all([
       c.caso_pai_id?db.from('casos').select('id,numero_cnj,natureza,tipo_acao').eq('id',c.caso_pai_id).single().then(function(r){return r.data;}):Promise.resolve(null),
@@ -2259,6 +2278,7 @@ function openDetalhesCaso(id){
       h+='<div class="g2" style="margin-bottom:14px"><div>';
       h+='<div style="font-size:11px;color:var(--tx3);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Dados</div>';
       if(c.clientes)h+='<div class="fi"><span class="fl">Cliente</span><span class="fv clickable" onclick="closeModal();setTimeout(function(){openPerfilCliente(\''+c.clientes.id+'\')},50)">'+c.clientes.nome+'</span></div>';
+      if(c.co_cliente)h+='<div class="fi"><span class="fl">Co-cliente</span><span class="fv clickable" onclick="closeModal();setTimeout(function(){openPerfilCliente(\''+c.co_cliente.id+'\')},50)">'+c.co_cliente.nome+'</span></div>';
       if(c.natureza)h+='<div class="fi"><span class="fl">Natureza</span><span class="fv">'+c.natureza+'</span></div>';
       if(c.tipo_acao)h+='<div class="fi"><span class="fl">Tipo</span><span class="fv">'+c.tipo_acao+'</span></div>';
       if(c.area)h+='<div class="fi"><span class="fl">Área</span><span class="fv">'+c.area+'</span></div>';

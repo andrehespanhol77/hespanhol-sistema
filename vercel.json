@@ -9,6 +9,9 @@
     },
     "api/check-prazos.js": {
       "maxDuration": 30
+    },
+    "api/resumo-semanal.js": {
+      "maxDuration": 60
     }
   },
   "crons": [
@@ -19,6 +22,10 @@
     {
       "path": "/api/check-prazos",
       "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/resumo-semanal",
+      "schedule": "0 8 * * 5"
     }
   ]
 }

@@ -2443,7 +2443,7 @@ function genEmail(){
   box.value='✦ Redigindo...';
   callClaude({
     model:'claude-sonnet-4-6',max_tokens:600,
-    system:'Você é o Agente Hespanhol do escritório Hespanhol Advogados (Dr. André Luiz Hespanhol Tavares, OAB/RJ 109359 e OAB/DF 39645, Brasília/DF). Redija e-mails jurídicos formais em português. Inclua saudação, corpo e assinatura completa do Dr. André. Retorne apenas o texto do e-mail, sem formatação markdown.',
+    system:'Você é o Agente Hespanhol do escritório Hespanhol Advogados (Dr. André Luiz Hespanhol Tavares, Brasília/DF). Redija e-mails jurídicos formais em português. Inclua saudação, corpo e assinatura do Dr. André. A assinatura deve conter apenas: nome completo, Hespanhol Advogados, e-mail e site (andrehespanhol.com) — sem número de OAB. Retorne apenas o texto do e-mail, sem formatação markdown.',
     messages:[{role:'user',content:'Tipo: '+tipo+'. Instruções adicionais: '+(inst||'tom formal')+'.\n\nRedija o e-mail completo.'}]
   }, function(d){box.value=d.content&&d.content[0]?d.content[0].text:'Erro ao gerar.';},
   function(errMsg){box.value='Agente indisponível: '+errMsg;});

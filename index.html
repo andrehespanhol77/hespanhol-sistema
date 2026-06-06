@@ -1731,6 +1731,7 @@ function openModalAgenda(){
     '<div class="fg"><label class="flb">Caso vinculado</label><select class="inp" id="fa-caso"><option value="">Selecione o caso...</option></select></div>'+
     '<div class="fg"><label class="flb">Data e Hora *</label><input class="inp" id="fa-data" type="datetime-local"></div>'+
     '<div class="fg"><label class="flb">Recorrência</label><select class="inp" id="fa-recorr"><option value="nenhuma">Sem recorrência</option><option value="diaria">🔁 Diária</option><option value="semanal">🔁 Semanal</option><option value="mensal">🔁 Mensal</option></select></div>'+
+    '<div class="fg"><label class="flb">⏰ Alertar por e-mail</label><select class="inp" id="fa-alerta"><option value="">Sem alerta</option><option value="1">1 dia antes</option><option value="2">2 dias antes</option><option value="3">3 dias antes</option><option value="5">5 dias antes</option><option value="7" selected>7 dias antes</option><option value="10">10 dias antes</option><option value="15">15 dias antes</option><option value="30">30 dias antes</option></select></div>'+
     '<div class="fg"><label class="flb">Local / Sala</label><input class="inp" id="fa-local" placeholder="Vara, Sala, Link..."></div>'+
     '<div class="fg"><label class="flb">Observações</label><textarea class="inp" id="fa-obs" rows="2" placeholder="Detalhes adicionais..."></textarea></div>'+
     '<div id="modal-status" style="font-size:12px;margin-top:4px;display:none"></div>',
@@ -1752,6 +1753,7 @@ function salvarAgenda(){
   btn.textContent='Salvando...';btn.disabled=true;
   var tipo=document.getElementById('fa-tipo').value;
   var recorr=document.getElementById('fa-recorr').value;
+  var alertaDias=document.getElementById('fa-alerta').value;
   var baseEvento={
     titulo:document.getElementById('fa-titulo').value.trim()||null,
     tipo:tipo,
@@ -1759,7 +1761,9 @@ function salvarAgenda(){
     data_hora:dataVal,
     recorrencia:recorr||'nenhuma',
     local:document.getElementById('fa-local').value.trim()||null,
-    observacoes:document.getElementById('fa-obs').value.trim()||null
+    observacoes:document.getElementById('fa-obs').value.trim()||null,
+    alertar_dias_antes:alertaDias?Number(alertaDias):null,
+    criado_por_email:_userEmail||null
   };
   db.from('agenda').insert(baseEvento).then(function(res){
     if(res.error){showModalStatus('❌ Erro: '+res.error.message,'er');btn.textContent='Salvar';btn.disabled=false;return;}
@@ -3775,6 +3779,7 @@ function openEditAgenda(id){
       '<div class="fg"><label class="flb">Tipo *</label><select class="inp" id="faga-tipo"><option value="audiencia"'+(a.tipo==='audiencia'?' selected':'')+'>🏛️ Audiência</option><option value="prazo"'+(a.tipo==='prazo'?' selected':'')+'>⏰ Prazo</option><option value="julgamento"'+(a.tipo==='julgamento'?' selected':'')+'>⚖️ Julgamento</option><option value="reuniao"'+(a.tipo==='reuniao'?' selected':'')+'>🤝 Reunião</option><option value="lembrete"'+(a.tipo==='lembrete'?' selected':'')+'>🔔 Lembrete</option></select></div>'+
       '<div class="fg"><label class="flb">Data e Hora *</label><input class="inp" id="faga-data" type="datetime-local" value="'+dt+'"></div>'+
       '<div class="fg"><label class="flb">Recorrência</label><select class="inp" id="faga-recorr"><option value="nenhuma"'+(a.recorrencia==='nenhuma'||!a.recorrencia?' selected':'')+'>Sem recorrência</option><option value="diaria"'+(a.recorrencia==='diaria'?' selected':'')+'>🔁 Diária</option><option value="semanal"'+(a.recorrencia==='semanal'?' selected':'')+'>🔁 Semanal</option><option value="mensal"'+(a.recorrencia==='mensal'?' selected':'')+'>🔁 Mensal</option></select></div>'+
+      '<div class="fg"><label class="flb">⏰ Alertar por e-mail</label><select class="inp" id="faga-alerta"><option value="">Sem alerta</option><option value="1"'+(a.alertar_dias_antes===1?' selected':'')+'>1 dia antes</option><option value="2"'+(a.alertar_dias_antes===2?' selected':'')+'>2 dias antes</option><option value="3"'+(a.alertar_dias_antes===3?' selected':'')+'>3 dias antes</option><option value="5"'+(a.alertar_dias_antes===5?' selected':'')+'>5 dias antes</option><option value="7"'+(a.alertar_dias_antes===7||!a.alertar_dias_antes?' selected':'')+'>7 dias antes</option><option value="10"'+(a.alertar_dias_antes===10?' selected':'')+'>10 dias antes</option><option value="15"'+(a.alertar_dias_antes===15?' selected':'')+'>15 dias antes</option><option value="30"'+(a.alertar_dias_antes===30?' selected':'')+'>30 dias antes</option></select></div>'+
       '<div class="fg"><label class="flb">Local</label><input class="inp" id="faga-local" value="'+(a.local||'')+'"></div>'+
       '<div class="fg"><label class="flb">Observações</label><textarea class="inp" id="faga-obs" rows="2">'+(a.observacoes||'')+'</textarea></div>'+
       '<div id="modal-status" style="font-size:12px;margin-top:4px;display:none"></div>',
@@ -3785,13 +3790,15 @@ function salvarEditAgenda(id){
   var data=document.getElementById('faga-data').value;
   if(!data){showModalStatus('❌ Data obrigatória.','er');return;}
   var btn=document.getElementById('modal-save-btn');btn.textContent='Salvando...';btn.disabled=true;
+  var agAlerta=document.getElementById('faga-alerta').value;
   db.from('agenda').update({
     titulo:document.getElementById('faga-titulo').value.trim()||null,
     tipo:document.getElementById('faga-tipo').value,
     data_hora:data,
     recorrencia:document.getElementById('faga-recorr').value,
     local:document.getElementById('faga-local').value.trim()||null,
-    observacoes:document.getElementById('faga-obs').value.trim()||null
+    observacoes:document.getElementById('faga-obs').value.trim()||null,
+    alertar_dias_antes:agAlerta?Number(agAlerta):null
   }).eq('id',id).then(function(r){
     if(r.error){showModalStatus('❌ Erro: '+r.error.message,'er');btn.textContent='Salvar';btn.disabled=false;return;}
     logAuditoria('UPDATE','agenda',_userName+' editou compromisso ID: '+id);

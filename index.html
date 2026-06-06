@@ -363,11 +363,22 @@ tr:hover td{background:var(--sf);}
 
   <div class="page" id="page-financial">
     <div id="fin-ok">
+      <!-- Cards de resumo -->
+      <div class="g3" id="fin-cards" style="margin-bottom:16px"></div>
+      <!-- Alertas de atraso -->
+      <div id="fin-alertas" style="margin-bottom:12px"></div>
+      <!-- Abas -->
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
-        <div class="tabs" style="margin-bottom:0"><div class="tab active" onclick="stab('hon',this)">Honorários</div><div class="tab" onclick="stab('rel',this)">Relatório</div></div>
-        <button class="btn bg" onclick="abrirNovoHonorario()">+ Novo Honorário</button>
+        <div class="tabs" style="margin-bottom:0">
+          <div class="tab active" onclick="stab('hon',this)">Honorários</div>
+          <div class="tab" onclick="stab('desp-esc',this)">Despesas</div>
+          <div class="tab" onclick="stab('imp',this)">Impostos</div>
+          <div class="tab" onclick="stab('rel',this)">Relatório</div>
+        </div>
+        <div id="fin-aba-btn"></div>
       </div>
       <div class="tc active" id="tab-hon">
+        <div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button class="btn bg" onclick="abrirNovoHonorario()">+ Novo Honorário</button></div>
         <div class="card" style="margin-bottom:12px">
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <input class="inp" id="fin-busca" placeholder="Buscar por cliente ou caso..." style="flex:1;min-width:180px" oninput="filtrarHonorarios()">
@@ -384,6 +395,14 @@ tr:hover td{background:var(--sf);}
           </div>
         </div>
         <div id="hon-lista"></div>
+      </div>
+      <div class="tc" id="tab-desp-esc">
+        <div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button class="btn bg" onclick="abrirNovaDespesaEsc()">+ Nova Despesa</button></div>
+        <div id="desp-esc-lista"><div class="loading">Carregando...</div></div>
+      </div>
+      <div class="tc" id="tab-imp">
+        <div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button class="btn bg" onclick="abrirNovoImposto()">+ Novo Imposto</button></div>
+        <div id="imp-lista"><div class="loading">Carregando...</div></div>
       </div>
       <div class="tc" id="tab-rel">
         <div id="fin-rel-content"><div class="card"><div class="loading">Carregando relatório...</div></div></div>
@@ -2311,11 +2330,274 @@ function loadFinanceiro(){
   document.getElementById('fin-no').style.display='none';
   var lista=document.getElementById('hon-lista');
   lista.innerHTML='<div class="loading">🔄 Carregando honorários...</div>';
-  db.from('honorarios').select('*, casos(id,natureza,tipo_acao,numero_cnj,cliente:cliente_id(nome))').order('created_at',{ascending:false}).then(function(res){
-    if(res.error){lista.innerHTML='<div style="color:var(--er);padding:16px">Erro: '+res.error.message+'</div>';return;}
-    _honorariosData=res.data||[];
+  Promise.all([
+    db.from('honorarios').select('*, casos(id,natureza,tipo_acao,numero_cnj,cliente:cliente_id(nome))').order('created_at',{ascending:false}),
+    db.from('pagamentos_honorarios').select('honorario_id,valor'),
+    db.from('despesas_escritorio').select('*').order('data_vencimento',{ascending:false}),
+    db.from('impostos').select('*').order('data_vencimento',{ascending:false})
+  ]).then(function(rs){
+    _honorariosData=rs[0].data||[];
+    var pags=rs[1].data||[];
+    var desps=rs[2].data||[];
+    var imps=rs[3].data||[];
     renderHonorarios(_honorariosData);
     renderRelatorioFinanceiro(_honorariosData);
+    renderDespesasEsc(desps);
+    renderImpostos(imps);
+    renderCardsFinanceiros(_honorariosData,pags,desps,imps);
+    renderAlertasFinanceiros(_honorariosData,pags,desps,imps);
+  });
+}
+
+function renderCardsFinanceiros(hons,pags,desps,imps){
+  var hoje=new Date(); hoje.setHours(0,0,0,0);
+  var mesIni=new Date(hoje.getFullYear(),hoje.getMonth(),1);
+  var mesFim=new Date(hoje.getFullYear(),hoje.getMonth()+1,0);
+  // Receitas
+  var recPorHon={};
+  pags.forEach(function(p){recPorHon[p.honorario_id]=(recPorHon[p.honorario_id]||0)+Number(p.valor);});
+  var totalRecebido=0,totalAReceber=0,totalAtrasado=0;
+  hons.forEach(function(h){
+    if(h.status==='cancelado')return;
+    var rec=recPorHon[h.id]||0;
+    var val=Number(h.valor)||0;
+    totalRecebido+=rec;
+    var saldo=val-rec;
+    if(saldo>0){
+      // verifica se tem parcelas vencidas — simplificado: status ativo com saldo
+      totalAReceber+=saldo;
+    }
+  });
+  // Honorários atrasados: pagamentos em atraso via pagamentos_honorarios? Simplificado: busca honorários com parcelas não pagas
+  // Despesas do mês
+  var despMes=desps.filter(function(d){var dt=new Date(d.data_vencimento);return dt>=mesIni&&dt<=mesFim;});
+  var totalDespMes=despMes.reduce(function(s,d){return s+Number(d.valor||0);},0);
+  var despPagas=despMes.filter(function(d){return d.status==='pago';}).reduce(function(s,d){return s+Number(d.valor||0);},0);
+  // Impostos do mês
+  var impMes=imps.filter(function(i){var dt=new Date(i.data_vencimento);return dt>=mesIni&&dt<=mesFim;});
+  var totalImpMes=impMes.reduce(function(s,i){return s+Number(i.valor||0);},0);
+  // Resultado
+  var resultado=totalRecebido-despPagas-imps.filter(function(i){return i.status==='pago';}).reduce(function(s,i){return s+Number(i.valor||0);},0);
+  var mesLabel=hoje.toLocaleString('pt-BR',{month:'long',year:'numeric'});
+  document.getElementById('fin-cards').innerHTML=
+    card3('💰','Receita Recebida',fmtMoeda(totalRecebido),'#2a7')+
+    card3('⏳','A Receber',fmtMoeda(totalAReceber),'var(--ac)')+
+    card3('🏢','Despesas — '+mesLabel,fmtMoeda(totalDespMes),'var(--tx2)')+
+    card3('🧾','Impostos — '+mesLabel,fmtMoeda(totalImpMes),'var(--tx2)')+
+    card3('📊','Resultado Acumulado',fmtMoeda(resultado),resultado>=0?'#2a7':'var(--er)');
+}
+
+function card3(ico,label,val,cor){
+  return '<div class="card" style="text-align:center"><div style="font-size:20px;margin-bottom:6px">'+ico+'</div><div style="font-size:11px;color:var(--tx3);margin-bottom:4px">'+label+'</div><div style="font-size:18px;font-weight:700;color:'+cor+'">'+val+'</div></div>';
+}
+
+function renderAlertasFinanceiros(hons,pags,desps,imps){
+  var hoje=new Date(); hoje.setHours(0,0,0,0);
+  var em7=new Date(hoje.getTime()+7*86400000);
+  var alertas=[];
+  // Despesas vencidas ou a vencer em 7 dias
+  desps.forEach(function(d){
+    if(d.status==='pago')return;
+    var dt=new Date(d.data_vencimento);
+    if(dt<hoje)alertas.push({tipo:'er',msg:'🏢 Despesa vencida: '+safeText(d.descricao||d.categoria)+' — '+fmtMoeda(d.valor)+' ('+fmtData(d.data_vencimento)+')'});
+    else if(dt<=em7)alertas.push({tipo:'warn',msg:'⚠️ Despesa a vencer: '+safeText(d.descricao||d.categoria)+' — '+fmtMoeda(d.valor)+' ('+fmtData(d.data_vencimento)+')'});
+  });
+  // Impostos vencidos ou a vencer
+  imps.forEach(function(i){
+    if(i.status==='pago')return;
+    var dt=new Date(i.data_vencimento);
+    if(dt<hoje)alertas.push({tipo:'er',msg:'🧾 Imposto vencido: '+safeText(i.tipo)+' — '+fmtMoeda(i.valor)+' ('+fmtData(i.data_vencimento)+')'});
+    else if(dt<=em7)alertas.push({tipo:'warn',msg:'⚠️ Imposto a vencer: '+safeText(i.tipo)+' — '+fmtMoeda(i.valor)+' ('+fmtData(i.data_vencimento)+')'});
+  });
+  var el=document.getElementById('fin-alertas');
+  if(!alertas.length){el.innerHTML='';return;}
+  el.innerHTML=alertas.map(function(a){
+    return '<div style="padding:10px 14px;margin-bottom:6px;border-radius:8px;font-size:13px;background:'+(a.tipo==='er'?'rgba(220,50,50,.1)':'rgba(220,150,0,.1)')+';color:'+(a.tipo==='er'?'var(--er)':'#a07000')+'">'+a.msg+'</div>';
+  }).join('');
+}
+
+function renderDespesasEsc(data){
+  var el=document.getElementById('desp-esc-lista');
+  if(!el)return;
+  if(!data.length){el.innerHTML='<div class="card"><div class="loading">Nenhuma despesa lançada.</div></div>';return;}
+  var hoje=new Date(); hoje.setHours(0,0,0,0);
+  var statusStyle={pendente:'color:var(--ac)',pago:'color:#2a7',cancelado:'color:var(--tx3)'};
+  var catLabel={aluguel:'Aluguel',salario:'Salário',agua:'Água',luz:'Luz/Energia',internet:'Internet',material:'Material de Escritório',contabilidade:'Contabilidade',outros:'Outros'};
+  el.innerHTML='<table style="width:100%;border-collapse:collapse;font-size:13px">'+
+    '<tr style="border-bottom:2px solid var(--bd);font-size:11px;color:var(--tx3)"><th style="text-align:left;padding:7px">Descrição</th><th style="text-align:left;padding:7px">Categoria</th><th style="text-align:right;padding:7px">Valor</th><th style="text-align:center;padding:7px">Vencimento</th><th style="text-align:center;padding:7px">Status</th><th style="padding:7px"></th></tr>'+
+    data.map(function(d){
+      var venc=new Date(d.data_vencimento); var atrasado=d.status!=='pago'&&venc<hoje;
+      return '<tr style="border-bottom:1px solid var(--bd)'+(atrasado?';background:rgba(220,50,50,.04)':'')+'">' +
+        '<td style="padding:8px 7px;font-weight:600'+(atrasado?';color:var(--er)':'')+'">'+safeText(d.descricao||'—')+(d.recorrente?'<span style="font-size:10px;color:var(--ac);margin-left:6px">🔁</span>':'')+'</td>'+
+        '<td style="padding:8px 7px;color:var(--tx3)">'+safeText(catLabel[d.categoria]||d.categoria)+'</td>'+
+        '<td style="padding:8px 7px;text-align:right;font-weight:600">'+fmtMoeda(d.valor)+'</td>'+
+        '<td style="padding:8px 7px;text-align:center;color:'+(atrasado?'var(--er)':'var(--tx2)')+'">'+fmtData(d.data_vencimento)+'</td>'+
+        '<td style="padding:8px 7px;text-align:center"><span style="'+statusStyle[d.status||'pendente']+'">●</span> '+safeText(d.status||'pendente')+'</td>'+
+        '<td style="padding:8px 7px;display:flex;gap:6px">'+
+          '<button class="btn bg" style="font-size:10px;padding:3px 8px" onclick="editarDespesaEsc(\''+d.id+'\')">✏️</button>'+
+          (d.status!=='pago'?'<button class="btn bg" style="font-size:10px;padding:3px 8px;color:#2a7" onclick="marcarDespesaEscPaga(\''+d.id+'\')">✓ Pago</button>':'')+
+          (_podeApagar?'<button class="btn bg" style="font-size:10px;padding:3px 8px;color:var(--er)" onclick="apagarDespesaEsc(\''+d.id+'\')">🗑</button>':'')+
+        '</td></tr>';
+    }).join('')+
+  '</table>';
+}
+
+function renderImpostos(data){
+  var el=document.getElementById('imp-lista');
+  if(!el)return;
+  if(!data.length){el.innerHTML='<div class="card"><div class="loading">Nenhum imposto lançado.</div></div>';return;}
+  var hoje=new Date(); hoje.setHours(0,0,0,0);
+  var statusStyle={pendente:'color:var(--ac)',pago:'color:#2a7',cancelado:'color:var(--tx3)'};
+  el.innerHTML='<table style="width:100%;border-collapse:collapse;font-size:13px">'+
+    '<tr style="border-bottom:2px solid var(--bd);font-size:11px;color:var(--tx3)"><th style="text-align:left;padding:7px">Tipo</th><th style="text-align:left;padding:7px">Competência</th><th style="text-align:right;padding:7px">Valor</th><th style="text-align:center;padding:7px">Vencimento</th><th style="text-align:center;padding:7px">Status</th><th style="padding:7px"></th></tr>'+
+    data.map(function(i){
+      var venc=new Date(i.data_vencimento); var atrasado=i.status!=='pago'&&venc<hoje;
+      return '<tr style="border-bottom:1px solid var(--bd)'+(atrasado?';background:rgba(220,50,50,.04)':'')+'">'+
+        '<td style="padding:8px 7px;font-weight:600'+(atrasado?';color:var(--er)':'')+'">'+safeText(i.tipo)+'</td>'+
+        '<td style="padding:8px 7px;color:var(--tx3)">'+safeText(i.competencia||'—')+'</td>'+
+        '<td style="padding:8px 7px;text-align:right;font-weight:600">'+fmtMoeda(i.valor)+'</td>'+
+        '<td style="padding:8px 7px;text-align:center;color:'+(atrasado?'var(--er)':'var(--tx2)')+'">'+fmtData(i.data_vencimento)+'</td>'+
+        '<td style="padding:8px 7px;text-align:center"><span style="'+statusStyle[i.status||'pendente']+'">●</span> '+safeText(i.status||'pendente')+'</td>'+
+        '<td style="padding:8px 7px;display:flex;gap:6px">'+
+          '<button class="btn bg" style="font-size:10px;padding:3px 8px" onclick="editarImposto(\''+i.id+'\')">✏️</button>'+
+          (i.status!=='pago'?'<button class="btn bg" style="font-size:10px;padding:3px 8px;color:#2a7" onclick="marcarImpostoPago(\''+i.id+'\')">✓ Pago</button>':'')+
+          (_podeApagar?'<button class="btn bg" style="font-size:10px;padding:3px 8px;color:var(--er)" onclick="apagarImposto(\''+i.id+'\')">🗑</button>':'')+
+        '</td></tr>';
+    }).join('')+
+  '</table>';
+}
+
+function abrirNovaDespesaEsc(){
+  var html=
+    '<div class="fg"><label class="flb">Categoria *</label><select class="inp" id="nde-cat">'+
+      '<option value="aluguel">Aluguel</option><option value="salario">Salário</option><option value="agua">Água</option>'+
+      '<option value="luz">Luz/Energia</option><option value="internet">Internet</option>'+
+      '<option value="material">Material de Escritório</option><option value="contabilidade">Contabilidade</option><option value="outros">Outros</option>'+
+    '</select></div>'+
+    '<div class="fg"><label class="flb">Descrição</label><input class="inp" id="nde-desc" placeholder="Ex: Aluguel sala comercial"></div>'+
+    '<div class="fg"><label class="flb">Valor (R$) *</label><input class="inp" type="number" id="nde-valor" step="0.01" placeholder="0,00"></div>'+
+    '<div class="fg"><label class="flb">Vencimento *</label><input class="inp" type="date" id="nde-venc"></div>'+
+    '<div class="fg"><label class="flb">Recorrente?</label><select class="inp" id="nde-rec"><option value="false">Não</option><option value="true">Sim (mensal)</option></select></div>'+
+    '<div class="fg"><label class="flb">Observações</label><textarea class="inp" id="nde-obs" rows="2"></textarea></div>';
+  openModal('Nova Despesa do Escritório', html, function(){
+    var obj={categoria:document.getElementById('nde-cat').value,descricao:document.getElementById('nde-desc').value||null,valor:Number(document.getElementById('nde-valor').value),data_vencimento:document.getElementById('nde-venc').value,recorrente:document.getElementById('nde-rec').value==='true',status:'pendente',observacoes:document.getElementById('nde-obs').value||null};
+    if(!obj.valor||!obj.data_vencimento){showModalStatus('❌ Preencha valor e vencimento','er');return;}
+    db.from('despesas_escritorio').insert(obj).then(function(r){
+      if(r.error){showModalStatus('❌ '+r.error.message,'er');return;}
+      logAuditoria('INSERT','despesas_escritorio','Despesa '+obj.categoria+' R$'+obj.valor+' lançada');
+      closeModal();loadFinanceiro();
+    });
+  });
+}
+
+function editarDespesaEsc(id){
+  db.from('despesas_escritorio').select('*').eq('id',id).single().then(function(r){
+    if(r.error||!r.data)return;
+    var d=r.data;
+    var html=
+      '<div class="fg"><label class="flb">Categoria</label><select class="inp" id="ede-cat">'+
+        ['aluguel','salario','agua','luz','internet','material','contabilidade','outros'].map(function(c){return '<option value="'+c+'"'+(d.categoria===c?' selected':'')+'>'+c+'</option>';}).join('')+
+      '</select></div>'+
+      '<div class="fg"><label class="flb">Descrição</label><input class="inp" id="ede-desc" value="'+safeText(d.descricao||'')+'"></div>'+
+      '<div class="fg"><label class="flb">Valor (R$)</label><input class="inp" type="number" id="ede-valor" value="'+d.valor+'" step="0.01"></div>'+
+      '<div class="fg"><label class="flb">Vencimento</label><input class="inp" type="date" id="ede-venc" value="'+(d.data_vencimento||'')+'"></div>'+
+      '<div class="fg"><label class="flb">Status</label><select class="inp" id="ede-status"><option value="pendente"'+(d.status==='pendente'?' selected':'')+'>Pendente</option><option value="pago"'+(d.status==='pago'?' selected':'')+'>Pago</option><option value="cancelado"'+(d.status==='cancelado'?' selected':'')+'>Cancelado</option></select></div>'+
+      '<div class="fg"><label class="flb">Recorrente?</label><select class="inp" id="ede-rec"><option value="false"'+(d.recorrente?'':' selected')+'>Não</option><option value="true"'+(d.recorrente?' selected':'')+'>Sim</option></select></div>'+
+      '<div class="fg"><label class="flb">Observações</label><textarea class="inp" id="ede-obs" rows="2">'+safeText(d.observacoes||'')+'</textarea></div>'+
+      (_podeApagar?'<div style="margin-top:8px"><button class="btn bg" style="color:var(--er);width:100%" onclick="apagarDespesaEsc(\''+id+'\');closeModal()">🗑 Excluir</button></div>':'');
+    openModal('Editar Despesa', html, function(){
+      var obj={categoria:document.getElementById('ede-cat').value,descricao:document.getElementById('ede-desc').value||null,valor:Number(document.getElementById('ede-valor').value),data_vencimento:document.getElementById('ede-venc').value,status:document.getElementById('ede-status').value,recorrente:document.getElementById('ede-rec').value==='true',observacoes:document.getElementById('ede-obs').value||null};
+      db.from('despesas_escritorio').update(obj).eq('id',id).then(function(r){
+        if(r.error){showModalStatus('❌ '+r.error.message,'er');return;}
+        logAuditoria('UPDATE','despesas_escritorio','Despesa '+id+' atualizada');
+        closeModal();loadFinanceiro();
+      });
+    });
+  });
+}
+
+function marcarDespesaEscPaga(id){
+  var hoje=new Date().toISOString().slice(0,10);
+  db.from('despesas_escritorio').update({status:'pago',data_pagamento:hoje}).eq('id',id).then(function(r){
+    if(r.error){alert('Erro: '+r.error.message);return;}
+    logAuditoria('UPDATE','despesas_escritorio','Despesa '+id+' marcada como paga');
+    loadFinanceiro();
+  });
+}
+
+function apagarDespesaEsc(id){
+  if(!_podeApagar)return;
+  if(!confirm('Excluir esta despesa?'))return;
+  db.from('despesas_escritorio').delete().eq('id',id).then(function(r){
+    if(r.error){alert('Erro: '+r.error.message);return;}
+    logAuditoria('DELETE','despesas_escritorio','Despesa '+id+' excluída');
+    loadFinanceiro();
+  });
+}
+
+function abrirNovoImposto(){
+  var html=
+    '<div class="fg"><label class="flb">Tipo *</label><select class="inp" id="ni-tipo">'+
+      '<option value="ISS">ISS</option><option value="IRPJ">IRPJ</option><option value="CSLL">CSLL</option>'+
+      '<option value="PIS">PIS</option><option value="COFINS">COFINS</option><option value="INSS">INSS</option><option value="Simples Nacional">Simples Nacional</option><option value="Outros">Outros</option>'+
+    '</select></div>'+
+    '<div class="fg"><label class="flb">Competência</label><input class="inp" id="ni-comp" placeholder="Ex: 06/2026"></div>'+
+    '<div class="fg"><label class="flb">Valor (R$) *</label><input class="inp" type="number" id="ni-valor" step="0.01" placeholder="0,00"></div>'+
+    '<div class="fg"><label class="flb">Vencimento *</label><input class="inp" type="date" id="ni-venc"></div>'+
+    '<div class="fg"><label class="flb">Observações</label><textarea class="inp" id="ni-obs" rows="2"></textarea></div>';
+  openModal('Novo Imposto', html, function(){
+    var obj={tipo:document.getElementById('ni-tipo').value,competencia:document.getElementById('ni-comp').value||null,valor:Number(document.getElementById('ni-valor').value),data_vencimento:document.getElementById('ni-venc').value,status:'pendente',observacoes:document.getElementById('ni-obs').value||null};
+    if(!obj.valor||!obj.data_vencimento){showModalStatus('❌ Preencha valor e vencimento','er');return;}
+    db.from('impostos').insert(obj).then(function(r){
+      if(r.error){showModalStatus('❌ '+r.error.message,'er');return;}
+      logAuditoria('INSERT','impostos','Imposto '+obj.tipo+' R$'+obj.valor+' lançado');
+      closeModal();loadFinanceiro();
+    });
+  });
+}
+
+function editarImposto(id){
+  db.from('impostos').select('*').eq('id',id).single().then(function(r){
+    if(r.error||!r.data)return;
+    var i=r.data;
+    var tipos=['ISS','IRPJ','CSLL','PIS','COFINS','INSS','Simples Nacional','Outros'];
+    var html=
+      '<div class="fg"><label class="flb">Tipo</label><select class="inp" id="ei-tipo">'+
+        tipos.map(function(t){return '<option value="'+t+'"'+(i.tipo===t?' selected':'')+'>'+t+'</option>';}).join('')+
+      '</select></div>'+
+      '<div class="fg"><label class="flb">Competência</label><input class="inp" id="ei-comp" value="'+safeText(i.competencia||'')+'"></div>'+
+      '<div class="fg"><label class="flb">Valor (R$)</label><input class="inp" type="number" id="ei-valor" value="'+i.valor+'" step="0.01"></div>'+
+      '<div class="fg"><label class="flb">Vencimento</label><input class="inp" type="date" id="ei-venc" value="'+(i.data_vencimento||'')+'"></div>'+
+      '<div class="fg"><label class="flb">Status</label><select class="inp" id="ei-status"><option value="pendente"'+(i.status==='pendente'?' selected':'')+'>Pendente</option><option value="pago"'+(i.status==='pago'?' selected':'')+'>Pago</option><option value="cancelado"'+(i.status==='cancelado'?' selected':'')+'>Cancelado</option></select></div>'+
+      '<div class="fg"><label class="flb">Observações</label><textarea class="inp" id="ei-obs" rows="2">'+safeText(i.observacoes||'')+'</textarea></div>'+
+      (_podeApagar?'<div style="margin-top:8px"><button class="btn bg" style="color:var(--er);width:100%" onclick="apagarImposto(\''+id+'\');closeModal()">🗑 Excluir</button></div>':'');
+    openModal('Editar Imposto', html, function(){
+      var obj={tipo:document.getElementById('ei-tipo').value,competencia:document.getElementById('ei-comp').value||null,valor:Number(document.getElementById('ei-valor').value),data_vencimento:document.getElementById('ei-venc').value,status:document.getElementById('ei-status').value,observacoes:document.getElementById('ei-obs').value||null};
+      db.from('impostos').update(obj).eq('id',id).then(function(r){
+        if(r.error){showModalStatus('❌ '+r.error.message,'er');return;}
+        logAuditoria('UPDATE','impostos','Imposto '+id+' atualizado');
+        closeModal();loadFinanceiro();
+      });
+    });
+  });
+}
+
+function marcarImpostoPago(id){
+  var hoje=new Date().toISOString().slice(0,10);
+  db.from('impostos').update({status:'pago',data_pagamento:hoje}).eq('id',id).then(function(r){
+    if(r.error){alert('Erro: '+r.error.message);return;}
+    logAuditoria('UPDATE','impostos','Imposto '+id+' marcado como pago');
+    loadFinanceiro();
+  });
+}
+
+function apagarImposto(id){
+  if(!_podeApagar)return;
+  if(!confirm('Excluir este imposto?'))return;
+  db.from('impostos').delete().eq('id',id).then(function(r){
+    if(r.error){alert('Erro: '+r.error.message);return;}
+    logAuditoria('DELETE','impostos','Imposto '+id+' excluído');
+    loadFinanceiro();
   });
 }
 

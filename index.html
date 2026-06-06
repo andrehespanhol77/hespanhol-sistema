@@ -2758,7 +2758,7 @@ function renderCardsFinanceiros(hons,pags,desps,imps){
   // Receitas
   var recPorHon={};
   pags.forEach(function(p){recPorHon[p.honorario_id]=(recPorHon[p.honorario_id]||0)+Number(p.valor);});
-  var totalRecebido=0,totalAReceber=0,totalAtrasado=0;
+  var totalRecebido=0,totalAReceberProlabore=0,totalAReceberExito=0,totalAtrasado=0;
   hons.forEach(function(h){
     if(h.status==='cancelado')return;
     var rec=recPorHon[h.id]||0;
@@ -2766,8 +2766,8 @@ function renderCardsFinanceiros(hons,pags,desps,imps){
     totalRecebido+=rec;
     var saldo=val-rec;
     if(saldo>0){
-      // verifica se tem parcelas vencidas — simplificado: status ativo com saldo
-      totalAReceber+=saldo;
+      if(h.tipo==='exito')totalAReceberExito+=saldo;
+      else totalAReceberProlabore+=saldo;
     }
   });
   // Honorários atrasados: pagamentos em atraso via pagamentos_honorarios? Simplificado: busca honorários com parcelas não pagas
@@ -2783,7 +2783,8 @@ function renderCardsFinanceiros(hons,pags,desps,imps){
   var mesLabel=hoje.toLocaleString('pt-BR',{month:'long',year:'numeric'});
   document.getElementById('fin-cards').innerHTML=
     card3('💰','Receita Recebida',fmtMoeda(totalRecebido),'#2a7')+
-    card3('⏳','A Receber',fmtMoeda(totalAReceber),'var(--ac)')+
+    card3('⏳','A Receber — Pró-labore',fmtMoeda(totalAReceberProlabore),'var(--ac)')+
+    card3('🎯','A Receber — Êxito',fmtMoeda(totalAReceberExito),'#8a6')+
     card3('🏢','Despesas — '+mesLabel,fmtMoeda(totalDespMes),'var(--tx2)')+
     card3('🧾','Impostos — '+mesLabel,fmtMoeda(totalImpMes),'var(--tx2)')+
     card3('📊','Resultado Acumulado',fmtMoeda(resultado),resultado>=0?'#2a7':'var(--er)');

@@ -1918,7 +1918,8 @@ function editarHonorario(honId){
       '<option value="quitado"'+(h.status==='quitado'?' selected':'')+'>Quitado</option>'+
       '<option value="cancelado"'+(h.status==='cancelado'?' selected':'')+'>Cancelado</option>'+
     '</select></div>'+
-    '<div class="fg"><label class="flb">Observações</label><textarea class="inp" id="he-obs" rows="2">'+(h.observacoes||'')+'</textarea></div>';
+    '<div class="fg"><label class="flb">Observações</label><textarea class="inp" id="he-obs" rows="2">'+(h.observacoes||'')+'</textarea></div>'+
+    (_podeApagar?'<div style="margin-top:8px;padding-top:12px;border-top:1px solid var(--bd)"><button class="btn bg" style="color:var(--er);width:100%" onclick="apagarHonorario(\''+honId+'\');closeModal()">🗑 Excluir este honorário</button></div>':'');
   openModal('Editar Honorário',html,function(){
     var obj={
       tipo:document.getElementById('he-tipo').value,
@@ -2445,6 +2446,7 @@ function carregarHonorariosCaso(casoId){
             (saldo!=null?'<div style="color:'+(saldo>0?'var(--er)':'#2a7')+'">Saldo: '+fmtMoeda(saldo)+'</div>':'')+
           '</div>'+
           '<button class="btn bg" style="font-size:10px;padding:4px 8px" onclick="editarHonorario(\''+h.id+'\')">✏️ Editar</button>'+
+          (_podeApagar?'<button class="btn bg" style="font-size:10px;padding:4px 8px;color:var(--er)" onclick="apagarHonorario(\''+h.id+'\')">🗑</button>':'')+
           '<button class="btn bg" style="font-size:10px;padding:4px 8px" onclick="abrirPagamentos(\''+h.id+'\')">💰 Pagamentos</button>'+
         '</div>';
       }).join('');

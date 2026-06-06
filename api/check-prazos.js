@@ -2,9 +2,18 @@ const SB_URL = 'https://rdmlxfgwlbroigsisjph.supabase.co';
 const ADMIN_EMAIL = 'andrehespanhol@andrehespanhol.com';
 
 export default async function handler(req, res) {
-  // Aceita GET (cron) ou POST (chamada manual)
   if (req.method !== 'GET' && req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // Proteção: apenas Vercel Cron (header automático) ou chamada com CRON_SECRET
+  const cronSecret = process.env.CRON_SECRET;
+  const authHeader = req.headers['authorization'] || '';
+  const providedSecret = req.query?.secret || (req.body?.secret);
+  const isCronRequest = authHeader === `Bearer ${cronSecret}`;
+  const isManualWithSecret = cronSecret && providedSecret === cronSecret;
+  if (cronSecret && !isCronRequest && !isManualWithSecret) {
+    return res.status(401).json({ error: 'Não autorizado.' });
   }
 
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;

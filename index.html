@@ -1681,6 +1681,7 @@ function renderHonorarios(data){
           (h.num_parcelas?'<div style="font-size:11px;color:var(--tx3)">'+h.num_parcelas+'x '+fmtMoeda(h.valor_parcela)+'</div>':'')+
         '</div>'+
         '<div style="display:flex;flex-direction:column;gap:6px">'+
+          '<button class="btn bg" style="font-size:10px;padding:4px 10px" onclick="editarHonorario(\''+h.id+'\')">✏️ Editar</button>'+
           '<button class="btn bg" style="font-size:10px;padding:4px 10px" onclick="abrirPagamentos(\''+h.id+'\')">💰 Pagamentos</button>'+
           (_podeApagar?'<button class="btn bg" style="font-size:10px;padding:4px 10px;color:var(--er)" onclick="apagarHonorario(\''+h.id+'\')">🗑</button>':'')+
         '</div>'+
@@ -1887,6 +1888,66 @@ function apagarPagamento(pagId,honId){
     carregarPagamentos(honId,hon);
     loadFinanceiro();
   });
+}
+
+
+function editarHonorario(honId){
+  var h=_honorariosData&&_honorariosData.find(function(x){return x.id===honId;});
+  if(!h){alert('Honorário não encontrado no cache. Recarregue a página.');return;}
+  var html=
+    '<div class="fg"><label class="flb">Tipo *</label><select class="inp" id="he-tipo">'+
+      '<option value="prolabore"'+(h.tipo==='prolabore'?' selected':'')+'>Pró-labore</option>'+
+      '<option value="exito"'+(h.tipo==='exito'?' selected':'')+'>Êxito</option>'+
+    '</select></div>'+
+    '<div class="fg" id="he-val-wrap"><label class="flb">Valor total (R$)</label><input class="inp" type="number" id="he-valor" value="'+(h.valor||'')+'" placeholder="Ex: 5000"></div>'+
+    '<div class="fg" id="he-pct-wrap"><label class="flb">Percentual de êxito (%)</label><input class="inp" type="number" id="he-pct" value="'+(h.percentual_exito||'')+'" placeholder="Ex: 20"></div>'+
+    '<div class="fg"><label class="flb">Modalidade *</label><select class="inp" id="he-mod" onchange="toggleHeMod()">'+
+      '<option value="avista"'+(h.modalidade==='avista'?' selected':'')+'>À vista</option>'+
+      '<option value="parcelado"'+(h.modalidade==='parcelado'?' selected':'')+'>Parcelado</option>'+
+      '<option value="entrada_parcelas"'+(h.modalidade==='entrada_parcelas'?' selected':'')+'>Entrada + Parcelas</option>'+
+    '</select></div>'+
+    '<div id="he-parcelas-wrap">'+
+      '<div class="fg"><label class="flb">Número de parcelas</label><input class="inp" type="number" id="he-nparcelas" value="'+(h.num_parcelas||'')+'"></div>'+
+      '<div class="fg"><label class="flb">Valor por parcela (R$)</label><input class="inp" type="number" id="he-vparcela" value="'+(h.valor_parcela||'')+'"></div>'+
+    '</div>'+
+    '<div id="he-entrada-wrap">'+
+      '<div class="fg"><label class="flb">Valor de entrada (R$)</label><input class="inp" type="number" id="he-entrada" value="'+(h.valor_entrada||'')+'"></div>'+
+    '</div>'+
+    '<div class="fg"><label class="flb">Status</label><select class="inp" id="he-status">'+
+      '<option value="ativo"'+(h.status==='ativo'?' selected':'')+'>Ativo</option>'+
+      '<option value="quitado"'+(h.status==='quitado'?' selected':'')+'>Quitado</option>'+
+      '<option value="cancelado"'+(h.status==='cancelado'?' selected':'')+'>Cancelado</option>'+
+    '</select></div>'+
+    '<div class="fg"><label class="flb">Observações</label><textarea class="inp" id="he-obs" rows="2">'+(h.observacoes||'')+'</textarea></div>';
+  openModal('Editar Honorário',html,function(){
+    var obj={
+      tipo:document.getElementById('he-tipo').value,
+      modalidade:document.getElementById('he-mod').value,
+      status:document.getElementById('he-status').value,
+      observacoes:document.getElementById('he-obs').value.trim()||null
+    };
+    var vEl=document.getElementById('he-valor'); if(vEl&&vEl.value)obj.valor=Number(vEl.value);
+    var pEl=document.getElementById('he-pct'); if(pEl&&pEl.value)obj.percentual_exito=Number(pEl.value);
+    var npEl=document.getElementById('he-nparcelas'); if(npEl&&npEl.value)obj.num_parcelas=Number(npEl.value);
+    var vpEl=document.getElementById('he-vparcela'); if(vpEl&&vpEl.value)obj.valor_parcela=Number(vpEl.value);
+    var entEl=document.getElementById('he-entrada'); if(entEl&&entEl.value)obj.valor_entrada=Number(entEl.value);
+    db.from('honorarios').update(obj).eq('id',honId).then(function(r){
+      if(r.error){alert('Erro: '+r.error.message);return;}
+      logAuditoria('UPDATE','honorarios','Honorário atualizado: '+honId);
+      closeModal();
+      loadFinanceiro();
+    });
+  });
+  toggleHeMod();
+}
+function toggleHeMod(){
+  var mod=document.getElementById('he-mod');
+  if(!mod)return;
+  var v=mod.value;
+  var pw=document.getElementById('he-parcelas-wrap');
+  var ew=document.getElementById('he-entrada-wrap');
+  if(pw)pw.style.display=(v==='parcelado'||v==='entrada_parcelas')?'':'none';
+  if(ew)ew.style.display=(v==='entrada_parcelas')?'':'none';
 }
 
 function apagarHonorario(honId){
@@ -2383,6 +2444,7 @@ function carregarHonorariosCaso(casoId){
             '<div style="color:#2a7">Recebido: '+fmtMoeda(rec)+'</div>'+
             (saldo!=null?'<div style="color:'+(saldo>0?'var(--er)':'#2a7')+'">Saldo: '+fmtMoeda(saldo)+'</div>':'')+
           '</div>'+
+          '<button class="btn bg" style="font-size:10px;padding:4px 8px" onclick="editarHonorario(\''+h.id+'\')">✏️ Editar</button>'+
           '<button class="btn bg" style="font-size:10px;padding:4px 8px" onclick="abrirPagamentos(\''+h.id+'\')">💰 Pagamentos</button>'+
         '</div>';
       }).join('');

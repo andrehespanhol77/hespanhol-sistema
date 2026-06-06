@@ -6,12 +6,19 @@
     },
     "api/monitor-processos.js": {
       "maxDuration": 60
+    },
+    "api/check-prazos.js": {
+      "maxDuration": 30
     }
   },
   "crons": [
     {
       "path": "/api/monitor-processos",
       "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/check-prazos",
+      "schedule": "0 8 * * *"
     }
   ]
 }

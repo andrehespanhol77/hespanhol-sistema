@@ -154,6 +154,27 @@ tr:hover td{background:var(--sf);}
   </div>
 </div>
 
+<!-- Tela de aceite de termos -->
+<div class="login-wrap" id="termos-wrap" style="display:none">
+  <div class="login-box" style="max-width:640px;width:96vw;max-height:90vh;display:flex;flex-direction:column">
+    <div style="text-align:center;margin-bottom:16px">
+      <div class="lt" style="font-size:20px;text-align:center">HESPANHOL</div>
+      <div class="ls" style="text-align:center;font-size:10px">ADVOGADOS</div>
+    </div>
+    <div class="login-title" style="font-size:16px">Política de Privacidade e Termo de Sigilo</div>
+    <div class="login-sub">Leia com atenção antes de acessar o sistema.</div>
+    <div id="termos-texto" style="flex:1;overflow-y:auto;background:var(--bg2);border:1px solid var(--bd);border-radius:8px;padding:16px;margin:12px 0;font-size:12px;color:var(--tx2);line-height:1.7;max-height:50vh"></div>
+    <div style="margin:8px 0 16px">
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--tx)">
+        <input type="checkbox" id="termos-check" style="width:16px;height:16px;cursor:pointer">
+        Li e concordo com a Política de Privacidade e o Termo de Compromisso de Sigilo e Confidencialidade do escritório Hespanhol Advogados.
+      </label>
+    </div>
+    <button class="login-btn" onclick="aceitarTermos()" id="termos-btn" disabled style="opacity:0.5">Acessar o sistema</button>
+    <div class="login-err" id="termos-err"></div>
+  </div>
+</div>
+
 <!-- Tela de criação de senha (convite) -->
 <div class="login-wrap" id="invite-wrap" style="display:none">
   <div class="login-box">
@@ -776,7 +797,6 @@ function mostrarSistema(session){
     document.getElementById('uname').textContent=nome;
     document.getElementById('av').textContent=iniciais;
     aplicarPerfil(perfil);
-    // Carregar autorizações de caso específicas
     if(_userId){
       db.from('autorizacoes_caso').select('caso_id').eq('usuario_id',_userId).then(function(r){
         _autorizacoesCasos=(r.data||[]).map(function(a){return a.caso_id;});
@@ -785,9 +805,18 @@ function mostrarSistema(session){
         });
       });
     }
-    loadDashboard();
-    registrarLoginSessao();
+    // Verifica aceite dos termos (não exige de clientes sem perfil cadastrado)
+    if(u && !u.termos_aceitos_em && perfil !== 'cliente'){
+      mostrarTermos(session, u.id, perfil);
+    } else {
+      continuarMostrarSistema(session, perfil);
+    }
   });
+}
+
+function continuarMostrarSistema(session, perfil){
+  loadDashboard();
+  registrarLoginSessao();
 }
 
 
@@ -1236,6 +1265,78 @@ function fazerLogin(){
   db.auth.signInWithPassword({email:email,password:pwd}).then(function(res){
     if(res.error){err.style.display='block';err.textContent='E-mail ou senha incorretos.';btn.textContent='Entrar';btn.disabled=false;return;}
     mostrarSistema(res.data.session);
+  });
+}
+
+var TERMOS_HTML = `
+<h3 style="color:var(--tx);margin:0 0 12px">POLÍTICA DE PRIVACIDADE E PROTEÇÃO DE DADOS</h3>
+<p style="color:var(--ac);font-size:11px;margin:0 0 12px">Hespanhol Advogados — Versão 1.0 — Junho de 2026</p>
+
+<b style="color:var(--tx)">1. Identificação do Controlador</b>
+<p>Hespanhol Advogados. Responsável: Dr. André Luiz Hespanhol Tavares — OAB/GO e OAB/DF. Contato: andrehespanhol@andrehespanhol.com. Plataforma: hespanhol-sistema.vercel.app</p>
+
+<b style="color:var(--tx)">2. Dados Coletados e Finalidade</b>
+<p>O sistema coleta e trata: nome completo, CPF/CNPJ, e-mail, telefone, endereço, dados processuais (número CNJ, tribunal, andamentos) e dados financeiros (honorários, pagamentos). Base legal: art. 7º, V da LGPD — execução de contrato do qual o titular é parte.</p>
+
+<b style="color:var(--tx)">3. Fornecedores de Tecnologia</b>
+<p>Todos os fornecedores abaixo operam no mercado brasileiro, estão sujeitos à LGPD (art. 3º, II e III) e podem ser responsabilizados no Brasil e em seus países de origem pelo descumprimento de seus compromissos.</p>
+<p><b>Supabase Inc.</b> (banco de dados) — SOC 2 Type II, criptografia AES-256 em repouso e TLS em trânsito, sem venda ou compartilhamento de dados com terceiros.</p>
+<p><b>Vercel Inc.</b> (hospedagem) — SOC 2 Type II, TLS 1.2+, não armazena dados de usuários finais, logs retidos por 30 dias.</p>
+<p><b>Resend Inc.</b> (envio de e-mails) — TLS em trânsito, infraestrutura AWS, dados não compartilhados para fins comerciais, usada exclusivamente para comunicações ao cliente.</p>
+<p><b>Anthropic PBC</b> (inteligência artificial) — SOC 2 Type II, uso intra-plataforma e de alcance limitado, restrito a dados de processos públicos; dados não usados para treinamento de modelos; retenção máxima de 30 dias; criptografia TLS.</p>
+
+<b style="color:var(--tx)">4. Casos de Segredo de Justiça</b>
+<p>Nos processos sob segredo de justiça, as funcionalidades de inteligência artificial não são acionadas e os dados não são processados por fornecedores externos.</p>
+
+<b style="color:var(--tx)">5. Segurança dos Dados</b>
+<p>Autenticação JWT, controle de acesso por perfil, Row Level Security no banco de dados, criptografia TLS, timeout de sessão por inatividade (30 min) e trilha de auditoria de todas as ações.</p>
+
+<b style="color:var(--tx)">6. Direitos dos Titulares</b>
+<p>O titular pode solicitar acesso, correção, anonimização, portabilidade ou eliminação dos dados pelo e-mail andrehespanhol@andrehespanhol.com. Prazo de resposta: até 15 dias úteis.</p>
+
+<b style="color:var(--tx)">7. Retenção dos Dados</b>
+<p>Dados mantidos pelo prazo contratual e prescricional aplicável, observadas as obrigações do Código de Ética da OAB (art. 40) e da legislação fiscal e processual.</p>
+
+<b style="color:var(--tx)">8. Foro</b>
+<p>Comarca de Brasília, Distrito Federal.</p>
+
+<hr style="border-color:var(--bd);margin:16px 0">
+
+<h3 style="color:var(--tx);margin:0 0 12px">TERMO DE COMPROMISSO DE SIGILO E CONFIDENCIALIDADE</h3>
+<p>Ao acessar o sistema, o usuário declara que:</p>
+<p><b>1.</b> Leu e compreendeu a Política de Privacidade do escritório.</p>
+<p><b>2.</b> Reconhece que todos os dados acessados são estritamente confidenciais e constituem segredo profissional (art. 34, VII, Estatuto da OAB).</p>
+<p><b>3.</b> Compromete-se a não divulgar, compartilhar ou transmitir a terceiros quaisquer informações do sistema, durante ou após o vínculo com o escritório.</p>
+<p><b>4.</b> Utilizará o sistema exclusivamente para fins profissionais do escritório Hespanhol Advogados.</p>
+<p><b>5.</b> Está ciente de que todas as ações são registradas em trilha de auditoria permanente.</p>
+<p><b>6.</b> Sabe que o descumprimento enseja responsabilização civil (indenização), criminal (arts. 153, 154 e 154-A do CP e LGPD) e disciplinar perante a OAB.</p>
+<p><b>7.</b> Concorda que o descumprimento autoriza revogação imediata do acesso, sem prejuízo das demais medidas cabíveis.</p>
+<p><b>8.</b> Declara que suas credenciais são pessoais e intransferíveis.</p>
+<p style="color:var(--tx3);font-style:italic;margin-top:12px">Hespanhol Advogados — Brasília/DF — Versão 1.0 — Junho de 2026</p>
+`;
+
+function mostrarTermos(session, usuarioId, perfil){
+  document.getElementById('termos-texto').innerHTML = TERMOS_HTML;
+  document.getElementById('termos-wrap').style.display = 'flex';
+  var check = document.getElementById('termos-check');
+  var btn = document.getElementById('termos-btn');
+  check.onchange = function(){ btn.disabled = !check.checked; btn.style.opacity = check.checked ? '1' : '0.5'; };
+  btn._session = session;
+  btn._usuarioId = usuarioId;
+  btn._perfil = perfil;
+}
+
+function aceitarTermos(){
+  var btn = document.getElementById('termos-btn');
+  var err = document.getElementById('termos-err');
+  if(!document.getElementById('termos-check').checked){ err.style.display='block'; err.textContent='Marque a caixa para confirmar a leitura.'; return; }
+  btn.disabled = true; btn.textContent = 'Registrando...';
+  var agora = new Date().toISOString();
+  db.from('usuarios').update({termos_aceitos_em: agora}).eq('id', btn._usuarioId).then(function(r){
+    if(r.error){ err.style.display='block'; err.textContent='Erro ao registrar aceite. Tente novamente.'; btn.disabled=false; btn.textContent='Acessar o sistema'; return; }
+    logAuditoria('ACEITE_TERMOS','usuarios','Usuário aceitou Política de Privacidade e Termo de Sigilo v1.0');
+    document.getElementById('termos-wrap').style.display = 'none';
+    continuarMostrarSistema(btn._session, btn._perfil);
   });
 }
 

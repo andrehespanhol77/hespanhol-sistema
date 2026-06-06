@@ -1269,50 +1269,100 @@ function fazerLogin(){
 }
 
 var TERMOS_HTML = `
-<h3 style="color:var(--tx);margin:0 0 12px">POLÍTICA DE PRIVACIDADE E PROTEÇÃO DE DADOS</h3>
-<p style="color:var(--ac);font-size:11px;margin:0 0 12px">Hespanhol Advogados — Versão 1.0 — Junho de 2026</p>
+<h3 style="color:var(--tx);margin:0 0 4px;font-size:14px;text-align:center;letter-spacing:1px">POLÍTICA DE PRIVACIDADE E PROTEÇÃO DE DADOS</h3>
+<p style="color:var(--ac);font-size:11px;margin:0 0 14px;text-align:center">Hespanhol Advogados — Versão 1.0 — Junho de 2026</p>
 
 <b style="color:var(--tx)">1. Identificação do Controlador</b>
 <p>Hespanhol Advogados. Responsável: Dr. André Luiz Hespanhol Tavares — OAB/RJ 109359 e OAB/DF 39645. Contato: andrehespanhol@andrehespanhol.com. Plataforma: hespanhol-sistema.vercel.app</p>
 
 <b style="color:var(--tx)">2. Dados Coletados e Finalidade</b>
-<p>O sistema coleta e trata: nome completo, CPF/CNPJ, e-mail, telefone, endereço, dados processuais (número CNJ, tribunal, andamentos) e dados financeiros (honorários, pagamentos). Base legal: art. 7º, V da LGPD — execução de contrato do qual o titular é parte.</p>
+<p>O sistema coleta e trata os seguintes dados pessoais:</p>
+<p>• <b>Nome completo</b> — identificação do cliente e dos processos<br>
+• <b>CPF/CNPJ</b> — identificação fiscal e processual<br>
+• <b>E-mail e telefone</b> — comunicação sobre andamentos e compromissos<br>
+• <b>Endereço</b> — dados cadastrais do contrato<br>
+• <b>Dados processuais</b> (número CNJ, tribunal, andamentos) — gestão e acompanhamento dos processos<br>
+• <b>Dados financeiros</b> (honorários, pagamentos) — execução do contrato de prestação de serviços</p>
+<p><b>Base legal:</b> art. 7º, V da Lei nº 13.709/2018 (LGPD) — execução de contrato do qual o titular é parte.</p>
 
-<b style="color:var(--tx)">3. Fornecedores de Tecnologia</b>
-<p>Todos os fornecedores abaixo operam no mercado brasileiro, estão sujeitos à LGPD (art. 3º, II e III) e podem ser responsabilizados no Brasil e em seus países de origem pelo descumprimento de seus compromissos.</p>
-<p><b>Supabase Inc.</b> (banco de dados) — SOC 2 Type II, criptografia AES-256 em repouso e TLS em trânsito, sem venda ou compartilhamento de dados com terceiros.</p>
-<p><b>Vercel Inc.</b> (hospedagem) — SOC 2 Type II, TLS 1.2+, não armazena dados de usuários finais, logs retidos por 30 dias.</p>
-<p><b>Resend Inc.</b> (envio de e-mails) — TLS em trânsito, infraestrutura AWS, dados não compartilhados para fins comerciais, usada exclusivamente para comunicações ao cliente.</p>
-<p><b>Anthropic PBC</b> (inteligência artificial) — SOC 2 Type II, uso intra-plataforma e de alcance limitado, restrito a dados de processos públicos; dados não usados para treinamento de modelos; retenção máxima de 30 dias; criptografia TLS.</p>
+<b style="color:var(--tx)">3. Compartilhamento de Dados com Fornecedores de Tecnologia</b>
+<p>O sistema utiliza os seguintes fornecedores de tecnologia de reputação internacional, cada qual com acesso restrito ao estritamente necessário para a prestação do serviço. Todos operam no mercado brasileiro, tratam dados de titulares localizados no Brasil e estão sujeitos à LGPD, nos termos do art. 3º, II e III da Lei nº 13.709/2018, podendo ser responsabilizados no Brasil e em seus países de origem pelo descumprimento de seus compromissos.</p>
 
-<b style="color:var(--tx)">4. Casos de Segredo de Justiça</b>
-<p>Nos processos sob segredo de justiça, as funcionalidades de inteligência artificial não são acionadas e os dados não são processados por fornecedores externos.</p>
+<p><b>Supabase Inc.</b> (banco de dados) — Empresa de reputação internacional, com milhões de usuários e clientes corporativos em todo o mundo. Responsável pelo armazenamento dos dados cadastrais, processuais e financeiros da plataforma. A Supabase garante contratualmente ao escritório que: os dados são criptografados em repouso (padrão AES-256) e em trânsito (TLS); a infraestrutura possui certificação de segurança SOC 2 Type II; o acesso interno aos dados é restrito a funcionários autorizados com autenticação multifator; os dados não são vendidos nem compartilhados com terceiros para qualquer finalidade; e backups automáticos são realizados com criptografia equivalente. Por operar no mercado brasileiro e tratar dados de titulares localizados no Brasil, a Supabase está sujeita à LGPD, podendo ser responsabilizada no Brasil e nos Estados Unidos da América pelo descumprimento desses compromissos.</p>
 
-<b style="color:var(--tx)">5. Segurança dos Dados</b>
-<p>Autenticação JWT, controle de acesso por perfil, Row Level Security no banco de dados, criptografia TLS, timeout de sessão por inatividade (30 min) e trilha de auditoria de todas as ações.</p>
+<p><b>Vercel Inc.</b> (hospedagem) — Empresa de reputação internacional, com milhões de usuários e presença global consolidada. Responsável pela hospedagem e disponibilização da plataforma. A Vercel garante contratualmente ao escritório que: toda a comunicação entre o usuário e a plataforma é criptografada em trânsito (TLS 1.2+); a infraestrutura possui certificação de segurança SOC 2 Type II; a Vercel não armazena dados de usuários finais da aplicação — sua função é exclusivamente servir a plataforma; logs de acesso são retidos por 30 dias para fins de segurança e então eliminados; e os controles de acesso interno são rigorosamente auditados. Por operar no mercado brasileiro e tratar dados de titulares localizados no Brasil, a Vercel está sujeita à LGPD, podendo ser responsabilizada no Brasil e nos Estados Unidos da América pelo descumprimento desses compromissos.</p>
 
-<b style="color:var(--tx)">6. Direitos dos Titulares</b>
-<p>O titular pode solicitar acesso, correção, anonimização, portabilidade ou eliminação dos dados pelo e-mail andrehespanhol@andrehespanhol.com. Prazo de resposta: até 15 dias úteis.</p>
+<p><b>Resend Inc.</b> (envio de e-mails) — Empresa de reputação internacional, especializada em infraestrutura de comunicação por e-mail, com ampla base de clientes corporativos globais. Utilizada exclusivamente para o envio de comunicações ao cliente — andamentos processuais, resumos semanais e alertas de prazo. A Resend garante contratualmente ao escritório que: os dados transmitidos (destinatário, assunto e conteúdo do e-mail) são criptografados em trânsito (TLS); a infraestrutura é hospedada na Amazon Web Services, com os padrões de segurança dela decorrentes; os dados não são compartilhados com terceiros para fins comerciais; e os registros de envio são retidos pelo prazo estritamente necessário à confirmação de entrega. Por operar no mercado brasileiro e tratar dados de titulares localizados no Brasil, a Resend está sujeita à LGPD, podendo ser responsabilizada no Brasil e nos Estados Unidos da América pelo descumprimento desses compromissos.</p>
 
-<b style="color:var(--tx)">7. Retenção dos Dados</b>
-<p>Dados mantidos pelo prazo contratual e prescricional aplicável, observadas as obrigações do Código de Ética da OAB (art. 40) e da legislação fiscal e processual.</p>
+<p><b>Anthropic PBC</b> (inteligência artificial) — Empresa de reputação internacional, referência global no desenvolvimento de inteligência artificial segura, com milhões de usuários e clientes corporativos em todo o mundo. Utilizada de forma intra-plataforma e de alcance limitado, exclusivamente para: (a) geração de resumos automáticos de andamentos processuais, e (b) assistência na gestão interna do escritório. O uso restringe-se ao tratamento de dados que já são objeto de processos judiciais públicos, cuja natureza pública decorre da legislação processual brasileira. A Anthropic garante contratualmente ao escritório que: os dados enviados via API não são utilizados para treinamento de modelos; os dados são processados exclusivamente para responder às requisições; há criptografia em trânsito (HTTPS/TLS); a plataforma possui certificação de segurança SOC 2 Type II; e os dados são retidos por até 30 dias para fins de segurança e prevenção de abuso, sendo então eliminados. Por operar no mercado brasileiro e tratar dados de titulares localizados no Brasil, a Anthropic está sujeita à LGPD, podendo ser responsabilizada no Brasil e nos Estados Unidos da América pelo descumprimento desses compromissos.</p>
 
-<b style="color:var(--tx)">8. Foro</b>
-<p>Comarca de Brasília, Distrito Federal.</p>
+<b style="color:var(--tx)">4. Transferência Internacional de Dados</b>
+<p>Os fornecedores listados na cláusula 3 estão sediados nos Estados Unidos da América. A transferência internacional de dados é realizada com amparo nas garantias contratuais oferecidas por cada fornecedor, nos padrões de segurança descritos nesta política e no legítimo interesse do titular (art. 7º, IX da LGPD), observando-se que todos os fornecedores estão igualmente sujeitos à LGPD em razão de sua atuação no mercado brasileiro, nos termos do art. 3º, II e III da Lei nº 13.709/2018.</p>
 
-<hr style="border-color:var(--bd);margin:16px 0">
+<b style="color:var(--tx)">5. Casos de Segredo de Justiça</b>
+<p>Nos processos que tramitam sob segredo de justiça, o escritório adota protocolo restritivo: as funcionalidades de inteligência artificial da plataforma não são acionadas para esses casos e os dados correspondentes não são objeto de processamento automatizado por fornecedores externos. O tratamento desses dados ocorre exclusivamente no âmbito interno do escritório, com acesso restrito ao profissional responsável pelo caso.</p>
 
-<h3 style="color:var(--tx);margin:0 0 12px">TERMO DE COMPROMISSO DE SIGILO E CONFIDENCIALIDADE</h3>
-<p>Ao acessar o sistema, o usuário declara que:</p>
-<p><b>1.</b> Leu e compreendeu a Política de Privacidade do escritório.</p>
-<p><b>2.</b> Reconhece que todos os dados acessados são estritamente confidenciais e constituem segredo profissional (art. 34, VII, Estatuto da OAB).</p>
-<p><b>3.</b> Compromete-se a não divulgar, compartilhar ou transmitir a terceiros quaisquer informações do sistema, durante ou após o vínculo com o escritório.</p>
-<p><b>4.</b> Utilizará o sistema exclusivamente para fins profissionais do escritório Hespanhol Advogados.</p>
-<p><b>5.</b> Está ciente de que todas as ações são registradas em trilha de auditoria permanente.</p>
-<p><b>6.</b> Sabe que o descumprimento enseja responsabilização civil (indenização), criminal (arts. 153, 154 e 154-A do CP e LGPD) e disciplinar perante a OAB.</p>
-<p><b>7.</b> Concorda que o descumprimento autoriza revogação imediata do acesso, sem prejuízo das demais medidas cabíveis.</p>
-<p><b>8.</b> Declara que suas credenciais são pessoais e intransferíveis.</p>
-<p style="color:var(--tx3);font-style:italic;margin-top:12px">Hespanhol Advogados — Brasília/DF — Versão 1.0 — Junho de 2026</p>
+<b style="color:var(--tx)">6. Segurança dos Dados</b>
+<p>O sistema adota as seguintes medidas técnicas e organizacionais de segurança:</p>
+<p>• Autenticação por token JWT com expiração automática<br>
+• Controle de acesso por perfil (administrador, colaborador, cliente)<br>
+• Restrição de acesso no nível do banco de dados (Row Level Security)<br>
+• Criptografia de dados em trânsito (HTTPS/TLS)<br>
+• Timeout automático de sessão por inatividade de 30 minutos<br>
+• Registro de auditoria de todas as ações realizadas no sistema<br>
+• Acesso de colaboradores condicionado à assinatura deste Termo de Compromisso de Sigilo e Confidencialidade</p>
+
+<b style="color:var(--tx)">7. Direitos dos Titulares</b>
+<p>O titular dos dados pode, a qualquer tempo, exercer os seguintes direitos previstos no art. 18 da LGPD, mediante solicitação pelo e-mail andrehespanhol@andrehespanhol.com:</p>
+<p>• Confirmação da existência de tratamento<br>
+• Acesso aos dados<br>
+• Correção de dados incompletos, inexatos ou desatualizados<br>
+• Anonimização, bloqueio ou eliminação de dados desnecessários<br>
+• Portabilidade dos dados<br>
+• Eliminação dos dados tratados com base no consentimento<br>
+• Informação sobre compartilhamento com terceiros<br>
+• Revogação do consentimento</p>
+<p>O prazo de resposta é de até 15 dias úteis, nos termos do art. 18, § 5º da LGPD.</p>
+
+<b style="color:var(--tx)">8. Retenção dos Dados</b>
+<p>Os dados são mantidos pelo prazo necessário à execução do contrato de prestação de serviços advocatícios e pelo prazo prescricional aplicável às obrigações dele decorrentes, observadas as obrigações legais de guarda de documentos impostas pelo Código de Ética e Disciplina da OAB (art. 40) e pela legislação processual e tributária aplicável. Após o encerramento do vínculo contratual e o transcurso dos prazos legais de guarda, os dados serão eliminados de forma segura ou anonimizados.</p>
+
+<b style="color:var(--tx)">9. Encarregado de Dados (DPO)</b>
+<p>Na forma do art. 41 da LGPD, o encarregado pelo tratamento de dados pessoais é o próprio titular do escritório: Dr. André Luiz Hespanhol Tavares — andrehespanhol@andrehespanhol.com</p>
+
+<b style="color:var(--tx)">10. Alterações desta Política</b>
+<p>Esta política pode ser atualizada a qualquer tempo, em razão de alterações legais, regulatórias ou operacionais. Os usuários do sistema serão notificados de alterações relevantes no próximo acesso à plataforma, sendo-lhes solicitada nova manifestação de ciência e concordância.</p>
+
+<b style="color:var(--tx)">11. Lei Aplicável e Foro</b>
+<p>Esta política é regida pela Lei nº 13.709/2018 (LGPD) e demais normas brasileiras aplicáveis à proteção de dados pessoais. Para dirimir quaisquer controvérsias dela decorrentes, fica eleito o foro da comarca de Brasília, Distrito Federal.</p>
+
+<hr style="border-color:var(--bd);margin:20px 0">
+
+<h3 style="color:var(--tx);margin:0 0 4px;font-size:14px;text-align:center;letter-spacing:1px">TERMO DE COMPROMISSO DE SIGILO E CONFIDENCIALIDADE</h3>
+<p style="color:var(--ac);font-size:11px;margin:0 0 14px;text-align:center">Hespanhol Advogados — Versão 1.0 — Junho de 2026</p>
+
+<p>Ao acessar o Sistema de Gestão do escritório Hespanhol Advogados, o usuário declara expressamente que:</p>
+
+<p><b>1.</b> Teve acesso integral à Política de Privacidade e Proteção de Dados do escritório Hespanhol Advogados, em sua versão vigente, e compreendeu plenamente seu conteúdo.</p>
+
+<p><b>2.</b> Reconhece que os dados de clientes, processos, andamentos, documentos e informações financeiras acessados por meio desta plataforma são <b>estritamente confidenciais</b>, constituindo segredo profissional nos termos do art. 34, VII do Estatuto da Advocacia e da OAB (Lei nº 8.906/1994) e do Código de Ética e Disciplina da OAB, sendo vedada sua divulgação a terceiros sob qualquer forma ou pretexto.</p>
+
+<p><b>3.</b> Compromete-se a <b>não divulgar, compartilhar, reproduzir, copiar ou transmitir</b> a terceiros, por qualquer meio — incluindo mensagens de texto, redes sociais, e-mail ou comunicação verbal — quaisquer informações acessadas por meio do sistema, durante ou após o período de vínculo profissional com o escritório.</p>
+
+<p><b>4.</b> Compromete-se a <b>utilizar o sistema exclusivamente para fins profissionais</b> vinculados às atividades do escritório Hespanhol Advogados, vedado o acesso para fins pessoais ou em benefício de terceiros.</p>
+
+<p><b>5.</b> Está ciente de que o sistema registra de forma automática e permanente todas as ações realizadas na plataforma (<b>trilha de auditoria</b>), incluindo acessos, consultas, inserções, alterações e exclusões de dados, e que tais registros poderão ser utilizados como meio de prova em eventual apuração de responsabilidade.</p>
+
+<p><b>6.</b> Está ciente de que o acesso indevido, o vazamento, a divulgação não autorizada ou o uso impróprio de informações obtidas por meio do sistema poderá ensejar:<br>
+• <b>Responsabilização civil</b>, com obrigação de indenizar os danos causados ao escritório e aos titulares dos dados;<br>
+• <b>Responsabilização criminal</b>, nos termos dos arts. 153, 154 e 154-A do Código Penal e da Lei nº 13.709/2018 (LGPD);<br>
+• <b>Responsabilização disciplinar perante a OAB</b>, nos casos aplicáveis.</p>
+
+<p><b>7.</b> Concorda que o descumprimento de qualquer disposição deste termo autoriza o escritório a <b>revogar imediatamente e sem aviso prévio o acesso</b> à plataforma, sem prejuízo das demais medidas administrativas, civis e criminais cabíveis.</p>
+
+<p><b>8.</b> Declara que as informações prestadas no momento do cadastro são verdadeiras e que o acesso à plataforma é <b>pessoal e intransferível</b>, sendo vedado o compartilhamento de credenciais de acesso com terceiros.</p>
+
+<p style="color:var(--tx3);font-style:italic;margin-top:16px;text-align:center">Hespanhol Advogados — Brasília/DF — Versão 1.0 — Junho de 2026</p>
 `;
 
 function mostrarTermos(session, usuarioId, perfil){

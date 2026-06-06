@@ -805,11 +805,8 @@ function mostrarSistema(session){
         });
       });
     }
-    // Verifica aceite dos termos via localStorage (independente de RLS)
-    var termoKey = 'termos_aceitos_' + _userEmail;
-    var termoLocal = localStorage.getItem(termoKey);
-    var termoDb = u && u.termos_aceitos_em;
-    if(perfil !== 'cliente' && !termoLocal && !termoDb){
+    // TESTE: mostra termos sempre para debug
+    if(perfil !== 'cliente'){
       mostrarTermos(session, u ? u.id : null, perfil);
     } else {
       continuarMostrarSistema(session, perfil);

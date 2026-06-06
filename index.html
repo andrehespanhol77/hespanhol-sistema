@@ -1660,7 +1660,7 @@ function renderHonorarios(data){
     var cliente=h.casos&&h.casos.cliente?h.casos.cliente.nome:'—';
     var caso=h.casos?(h.casos.natureza||h.casos.tipo_acao||'Processo'):'—';
     var cnj=h.casos&&h.casos.numero_cnj?'<span style="font-size:10px;color:var(--tx3);font-family:monospace"> · '+h.casos.numero_cnj+'</span>':'';
-    var valorInfo=h.percentual_exito?'<span style="color:var(--ac)">'+h.percentual_exito+'% do êxito</span>':(h.valor_total?fmtMoeda(h.valor_total):'—');
+    var valorInfo=h.percentual_exito?'<span style="color:var(--ac)">'+h.percentual_exito+'% do êxito</span>':(h.valor?fmtMoeda(h.valor):'—');
     var div=document.createElement('div');
     div.className='card';
     div.style.marginBottom='10px';
@@ -1698,7 +1698,7 @@ function renderRelatorioFinanceiro(data){
   var porCaso={};
   data.forEach(function(h){
     if(h.status==='cancelado')return;
-    var vt=h.percentual_exito?0:(Number(h.valor_total)||0);
+    var vt=h.percentual_exito?0:(Number(h.valor)||0);
     totalContratado+=vt;
     var casoId=h.caso_id;
     if(!porCaso[casoId])porCaso[casoId]={caso:h.casos,contratado:0,recebido:0,honorarios:[]};
@@ -1794,7 +1794,7 @@ function salvarNovoHonorario(){
   if(!casoId){showModalStatus('❌ Selecione o processo.','er');return;}
   var obj={caso_id:casoId,tipo:tipo,modalidade:mod,status:'ativo'};
   if(tipo==='exito'&&document.getElementById('nh-pct').value)obj.percentual_exito=Number(document.getElementById('nh-pct').value);
-  if(document.getElementById('nh-valor')&&document.getElementById('nh-valor').value)obj.valor_total=Number(document.getElementById('nh-valor').value);
+  if(document.getElementById('nh-valor')&&document.getElementById('nh-valor').value)obj.valor=Number(document.getElementById('nh-valor').value);
   if(document.getElementById('nh-nparcelas')&&document.getElementById('nh-nparcelas').value)obj.num_parcelas=Number(document.getElementById('nh-nparcelas').value);
   if(document.getElementById('nh-vparcela')&&document.getElementById('nh-vparcela').value)obj.valor_parcela=Number(document.getElementById('nh-vparcela').value);
   if(document.getElementById('nh-entrada')&&document.getElementById('nh-entrada').value)obj.valor_entrada=Number(document.getElementById('nh-entrada').value);
@@ -1834,7 +1834,7 @@ function carregarPagamentos(honId,hon){
   db.from('pagamentos_honorarios').select('*').eq('honorario_id',honId).order('data_pagamento',{ascending:false}).then(function(res){
     var pags=res.data||[];
     var total=pags.reduce(function(s,p){return s+Number(p.valor);},0);
-    var vt=hon.percentual_exito?null:(Number(hon.valor_total)||0);
+    var vt=hon.percentual_exito?null:(Number(hon.valor)||0);
     var saldo=vt!=null?vt-total:null;
     var el=document.getElementById('pag-lista');
     if(!el)return;
@@ -2024,7 +2024,7 @@ function sendAIFile(input){
     fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
       model:'claude-haiku-4-5-20251001',
       max_tokens:1024,
-      system:'Extraia dados de um contrato/procuração jurídica. Responda APENAS com JSON no formato: {"cliente":{"nome":"","cpf_cnpj":"","email":"","telefone":"","endereco":""},"processos":[{"natureza":"","numero_cnj":"","tribunal":"","tipo_acao":""}],"honorarios":[{"tipo":"prolabore|exito","modalidade":"avista|parcelado|entrada_parcelas","valor_total":null,"percentual_exito":null,"valor_entrada":null,"num_parcelas":null,"valor_parcela":null,"observacoes":""}]}. Use null para campos ausentes. tipo deve ser "prolabore" ou "exito". Se não houver honorários, retorne array vazio.',
+      system:'Extraia dados de um contrato/procuração jurídica. Responda APENAS com JSON no formato: {"cliente":{"nome":"","cpf_cnpj":"","email":"","telefone":"","endereco":""},"processos":[{"natureza":"","numero_cnj":"","tribunal":"","tipo_acao":""}],"honorarios":[{"tipo":"prolabore|exito","modalidade":"avista|parcelado|entrada_parcelas","valor":null,"percentual_exito":null,"valor_entrada":null,"num_parcelas":null,"valor_parcela":null,"observacoes":""}]}. Use null para campos ausentes. tipo deve ser "prolabore" ou "exito". Se não houver honorários, retorne array vazio.',
       messages:[{role:'user',content:[docBlock,{type:'text',text:'Extraia os dados deste documento.'}]}]
     })}).then(function(r){return r.json();}).then(function(data){
       var texto=data&&data.content&&data.content[0]?data.content[0].text:'';
@@ -2181,7 +2181,7 @@ function carregarHonorariosCliente(clienteId,casos){
       var tipoLabel={prolabore:'Pró-labore',exito:'Êxito'};
       var rows=hons.map(function(h){
         var rec=recPorHon[h.id]||0;
-        var vt=h.percentual_exito?null:Number(h.valor_total||0);
+        var vt=h.percentual_exito?null:Number(h.valor||0);
         var saldo=vt!=null?vt-rec:null;
         if(vt!=null)totalContratado+=vt;
         totalRecebido+=rec;
@@ -2190,7 +2190,7 @@ function carregarHonorariosCliente(clienteId,casos){
         return '<tr style="border-bottom:1px solid var(--bd)">'+
           '<td style="padding:7px 6px;font-size:12px">'+safeText(casoLabel)+'</td>'+
           '<td style="padding:7px 6px;font-size:11px;color:var(--tx3)">'+safeText(tipoLabel[h.tipo]||h.tipo)+'</td>'+
-          '<td style="padding:7px 6px;font-size:12px;text-align:right">'+(h.percentual_exito?h.percentual_exito+'%':fmtMoeda(h.valor_total))+'</td>'+
+          '<td style="padding:7px 6px;font-size:12px;text-align:right">'+(h.percentual_exito?h.percentual_exito+'%':fmtMoeda(h.valor))+'</td>'+
           '<td style="padding:7px 6px;font-size:12px;text-align:right;color:#2a7">'+fmtMoeda(rec)+'</td>'+
           '<td style="padding:7px 6px;font-size:12px;text-align:right;color:'+(saldo==null?'var(--tx3)':saldo>0?'var(--er)':'#2a7')+'">'+( saldo!=null?fmtMoeda(saldo):'—')+'</td>'+
         '</tr>';
@@ -2371,9 +2371,9 @@ function carregarHonorariosCaso(casoId){
       (pr.data||[]).forEach(function(p){recPorHon[p.honorario_id]=(recPorHon[p.honorario_id]||0)+Number(p.valor);});
       cont.innerHTML=hons.map(function(h){
         var rec=recPorHon[h.id]||0;
-        var vt=h.percentual_exito?null:Number(h.valor_total||0);
+        var vt=h.percentual_exito?null:Number(h.valor||0);
         var saldo=vt!=null?vt-rec:null;
-        var valorInfo=h.percentual_exito?(h.percentual_exito+'% do êxito'):fmtMoeda(h.valor_total);
+        var valorInfo=h.percentual_exito?(h.percentual_exito+'% do êxito'):fmtMoeda(h.valor);
         return '<div style="background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:10px;margin-bottom:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">'+
           '<div style="flex:1;min-width:160px">'+
             '<div style="font-size:12px;font-weight:600;color:var(--tx)">'+safeText(tipoLabel[h.tipo]||h.tipo)+' — '+safeText(modLabel[h.modalidade]||h.modalidade)+'</div>'+
@@ -2413,7 +2413,7 @@ function abrirNovoHonorarioParaCaso(casoId){
     var mod=document.getElementById('nh-mod').value;
     var obj={caso_id:casoId,tipo:tipo,modalidade:mod,status:'ativo'};
     if(tipo==='exito'&&document.getElementById('nh-pct').value)obj.percentual_exito=Number(document.getElementById('nh-pct').value);
-    if(document.getElementById('nh-valor')&&document.getElementById('nh-valor').value)obj.valor_total=Number(document.getElementById('nh-valor').value);
+    if(document.getElementById('nh-valor')&&document.getElementById('nh-valor').value)obj.valor=Number(document.getElementById('nh-valor').value);
     if(document.getElementById('nh-nparcelas')&&document.getElementById('nh-nparcelas').value)obj.num_parcelas=Number(document.getElementById('nh-nparcelas').value);
     if(document.getElementById('nh-vparcela')&&document.getElementById('nh-vparcela').value)obj.valor_parcela=Number(document.getElementById('nh-vparcela').value);
     if(document.getElementById('nh-entrada')&&document.getElementById('nh-entrada').value)obj.valor_entrada=Number(document.getElementById('nh-entrada').value);

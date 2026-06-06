@@ -500,6 +500,27 @@ tr:hover td{background:var(--sf);}
         </div>
       </div>
     </div>
+    <div class="card" style="margin-top:16px" id="card-automacoes">
+      <div class="ct" style="margin-bottom:14px">🤖 Automações</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--bd)">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--tx)">Resumo Semanal por Cliente</div>
+          <div style="font-size:12px;color:var(--tx3);margin-top:2px">Toda sexta às 8h — e-mail automático com andamentos da semana para cada cliente ativo</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span id="resumo-status-label" style="font-size:11px;color:var(--tx3)">Desativado</span>
+          <label style="position:relative;display:inline-block;width:42px;height:24px;cursor:pointer">
+            <input type="checkbox" id="toggle-resumo" style="opacity:0;width:0;height:0" onchange="toggleResumoSemanal(this.checked)">
+            <span id="toggle-resumo-track" style="position:absolute;top:0;left:0;right:0;bottom:0;background:var(--bd);border-radius:24px;transition:.3s"></span>
+            <span id="toggle-resumo-knob" style="position:absolute;top:2px;left:2px;width:20px;height:20px;background:#fff;border-radius:50%;transition:.3s;box-shadow:0 1px 4px rgba(0,0,0,.2)"></span>
+          </label>
+        </div>
+      </div>
+      <div style="padding-top:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <button class="btn bg" style="font-size:12px" onclick="testarResumoSemanal()">▶ Enviar agora (teste)</button>
+        <span id="resumo-test-status" style="font-size:12px;color:var(--tx3)"></span>
+      </div>
+    </div>
   </div>
 
 </div>
@@ -633,6 +654,7 @@ function go(id,el){
   if(id==='financial')loadFinanceiro();
   if(id==='expenses')loadDespesasGlobal();
   if(id==='saude')loadSaude();
+  if(id==='settings')carregarConfigAutomacoes();
 }
 window.addEventListener('beforeunload',function(){registrarLogout();});
 
@@ -1756,6 +1778,41 @@ function loadAcessos(){
     }
     el.innerHTML=html;
   });
+}
+
+function carregarConfigAutomacoes(){
+  db.from('configuracoes').select('*').eq('chave','resumo_semanal_ativo').single().then(function(r){
+    var ativo=r.data&&r.data.valor==='true';
+    var chk=document.getElementById('toggle-resumo');
+    var track=document.getElementById('toggle-resumo-track');
+    var knob=document.getElementById('toggle-resumo-knob');
+    var lbl=document.getElementById('resumo-status-label');
+    if(!chk)return;
+    chk.checked=ativo;
+    if(ativo){track.style.background='var(--ac)';knob.style.left='20px';lbl.textContent='Ativo';lbl.style.color='var(--ok)';}
+    else{track.style.background='var(--bd)';knob.style.left='2px';lbl.textContent='Desativado';lbl.style.color='var(--tx3)';}
+  });
+}
+
+function toggleResumoSemanal(ativo){
+  var track=document.getElementById('toggle-resumo-track');
+  var knob=document.getElementById('toggle-resumo-knob');
+  var lbl=document.getElementById('resumo-status-label');
+  if(ativo){track.style.background='var(--ac)';knob.style.left='20px';lbl.textContent='Ativo';lbl.style.color='var(--ok)';}
+  else{track.style.background='var(--bd)';knob.style.left='2px';lbl.textContent='Desativado';lbl.style.color='var(--tx3)';}
+  // Upsert na tabela configuracoes
+  db.from('configuracoes').upsert({chave:'resumo_semanal_ativo',valor:ativo?'true':'false'},{onConflict:'chave'}).then(function(r){
+    if(r.error)alert('Erro ao salvar configuração: '+r.error.message);
+  });
+}
+
+function testarResumoSemanal(){
+  var st=document.getElementById('resumo-test-status');
+  st.textContent='Enviando...';st.style.color='var(--tx3)';
+  fetch('/api/resumo-semanal?force=true',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({force:true})}).then(function(r){return r.json();}).then(function(d){
+    if(d.ok){st.textContent='✅ Enviado! '+d.enviados+' e-mail(s) disparado(s).';st.style.color='var(--ok)';}
+    else{st.textContent='❌ '+(d.error||'Erro desconhecido');st.style.color='var(--er)';}
+  }).catch(function(e){st.textContent='❌ '+e.message;st.style.color='var(--er)';});
 }
 
 function loadDashboard(){

@@ -805,9 +805,12 @@ function mostrarSistema(session){
         });
       });
     }
-    // Verifica aceite dos termos (não exige de clientes sem perfil cadastrado)
-    if(u && !u.termos_aceitos_em && perfil !== 'cliente'){
+    // Verifica aceite dos termos (não exige de clientes)
+    if(perfil !== 'cliente' && u && !u.termos_aceitos_em){
       mostrarTermos(session, u.id, perfil);
+    } else if(perfil !== 'cliente' && !u){
+      // Usuário autenticado mas sem registro em usuarios — carrega normalmente
+      continuarMostrarSistema(session, perfil);
     } else {
       continuarMostrarSistema(session, perfil);
     }

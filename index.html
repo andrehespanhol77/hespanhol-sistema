@@ -188,6 +188,8 @@ tr:hover td{background:var(--sf);}
     <div class="ni hide-financeiro" onclick="go('financial',this)">💰 Honorários & NF</div>
     <div class="ns hide-cliente">Comunicação</div>
     <div class="ni hide-cliente" onclick="go('email',this)">✉️ Agente E-mail</div>
+    <div class="ns hide-cliente">Gestão</div>
+    <div class="ni hide-cliente" onclick="go('saude',this)">❤️ Saúde do Escritório</div>
     <div class="ns hide-cliente">Sistema</div>
     <div class="ni hide-cliente" onclick="go('access',this)">🔐 Controle Acesso</div>
     <div class="ni hide-cliente" onclick="go('audit',this)">📋 Auditoria</div>
@@ -455,6 +457,10 @@ tr:hover td{background:var(--sf);}
     </div>
   </div>
 
+  <div class="page" id="page-saude">
+    <div id="saude-content"><div class="loading">🔄 Carregando...</div></div>
+  </div>
+
   <div class="page" id="page-connectors">
     <div class="cc"><div class="cs son"></div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--tx)">Supabase</div><div style="font-size:11px;color:var(--tx3)">Banco de dados</div></div><span class="badge ba">Ativo</span></div>
     <div class="cc"><div class="cs ssn"></div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--tx)">DataJud / CNJ</div><div style="font-size:11px;color:var(--tx3)">Monitoramento processual</div></div><button class="btn bg" style="font-size:11px">Configurar</button></div>
@@ -534,7 +540,7 @@ var SB_URL='https://rdmlxfgwlbroigsisjph.supabase.co';
 var SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkbWx4Zmd3bGJyb2lnc2lzanBoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3NjMxOTIsImV4cCI6MjA5MjMzOTE5Mn0.stw8254uQoJGka6jEx0kXQeGWXn_IOTZcyltM6c5UqA';
 var db=supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,storage:window.localStorage}});
 
-var ptitles={dashboard:'Dashboard',cases:'Casos',clients:'Clientes',agenda:'Agenda',movements:'Andamentos',expenses:'Despesas',docs:'Documentos',importer:'Importar Documento',financial:'Financeiro',email:'Agente E-mail',access:'Controle de Acesso',audit:'Auditoria',connectors:'Conectores',settings:'Configurações',relatorio:'Relatório do Escritório'};
+var ptitles={dashboard:'Dashboard',cases:'Casos',clients:'Clientes',agenda:'Agenda',movements:'Andamentos',expenses:'Despesas',docs:'Documentos',importer:'Importar Documento',financial:'Financeiro',email:'Agente E-mail',access:'Controle de Acesso',audit:'Auditoria',connectors:'Conectores',settings:'Configurações',relatorio:'Relatório do Escritório',saude:'Saúde do Escritório'};
 
 var _perfil='escritorio';
 var _clienteId=null;
@@ -626,6 +632,7 @@ function go(id,el){
   if(id==='email')loadEmailClients();
   if(id==='financial')loadFinanceiro();
   if(id==='expenses')loadDespesasGlobal();
+  if(id==='saude')loadSaude();
 }
 window.addEventListener('beforeunload',function(){registrarLogout();});
 
@@ -1492,6 +1499,141 @@ function exportarAuditCSV(){
     document.body.appendChild(a);a.click();document.body.removeChild(a);
     URL.revokeObjectURL(url);
   });
+}
+
+function loadSaude(){
+  var el=document.getElementById('saude-content');
+  if(!el)return;
+  el.innerHTML='<div class="loading">🔄 Analisando escritório...</div>';
+  var hoje=new Date(); hoje.setHours(0,0,0,0);
+  var em7=new Date(hoje.getTime()+7*86400000);
+  var ha30=new Date(hoje.getTime()-30*86400000);
+  Promise.all([
+    // Todos os casos ativos
+    db.from('casos').select('id,natureza,tipo_acao,numero_cnj,status,cliente:cliente_id(id,nome,email)').eq('status','ativo'),
+    // Andamentos recentes (últimos 30 dias)
+    db.from('andamentos').select('caso_id,data_andamento').gte('data_andamento',ha30.toISOString().slice(0,10)),
+    // Prazos próximos (agenda 0-7 dias)
+    db.from('agenda').select('*,casos(natureza,cliente:cliente_id(nome))').gte('data_hora',hoje.toISOString()).lte('data_hora',em7.toISOString()).order('data_hora',{ascending:true}),
+    // Honorários ativos com saldo
+    db.from('honorarios').select('id,caso_id,valor,status,tipo'),
+    // Pagamentos
+    db.from('pagamentos_honorarios').select('honorario_id,valor'),
+    // Último contato por cliente (último andamento ou e-mail)
+    db.from('andamentos').select('caso_id,data_andamento,casos(cliente_id)').order('data_andamento',{ascending:false}).limit(500),
+  ]).then(function(rs){
+    var casos=rs[0].data||[];
+    var andsRecentes=rs[1].data||[];
+    var prazos=rs[2].data||[];
+    var hons=rs[3].data||[];
+    var pags=rs[4].data||[];
+    var andsAll=rs[5].data||[];
+
+    // Casos com andamento nos últimos 30 dias
+    var casosComAnd=new Set(andsRecentes.map(function(a){return a.caso_id;}));
+    var casosSemAnd=casos.filter(function(c){return !casosComAnd.has(c.id);});
+
+    // Honorários em atraso (ativos com saldo > 0, simplificado)
+    var recPorHon={};
+    pags.forEach(function(p){recPorHon[p.honorario_id]=(recPorHon[p.honorario_id]||0)+Number(p.valor);});
+    var honsAtrasados=hons.filter(function(h){
+      if(h.status==='quitado'||h.status==='cancelado')return false;
+      var saldo=(Number(h.valor)||0)-(recPorHon[h.id]||0);
+      return saldo>0;
+    });
+
+    // Último contato por cliente
+    var ultimoContato={};
+    andsAll.forEach(function(a){
+      if(!a.casos)return;
+      var cliId=a.casos.cliente_id;
+      if(!cliId)return;
+      if(!ultimoContato[cliId]||a.data_andamento>ultimoContato[cliId])ultimoContato[cliId]=a.data_andamento;
+    });
+    var clientesSemContato=[];
+    casos.forEach(function(c){
+      if(!c.cliente)return;
+      var ult=ultimoContato[c.cliente.id];
+      if(!ult||new Date(ult)<ha30){
+        // evitar duplicados
+        if(!clientesSemContato.find(function(x){return x.id===c.cliente.id;})){
+          clientesSemContato.push({id:c.cliente.id,nome:c.cliente.nome,email:c.cliente.email,ultimoContato:ult||null});
+        }
+      }
+    });
+
+    // Score de saúde
+    var problemas=casosSemAnd.length+honsAtrasados.length+clientesSemContato.length;
+    var score=Math.max(0,100-problemas*8);
+    var scoreCor=score>=80?'#2a7':score>=50?'#a07000':'var(--er)';
+    var scoreLabel=score>=80?'Ótimo':score>=50?'Atenção':'Crítico';
+
+    var h='';
+    // Score geral
+    h+='<div class="card" style="text-align:center;margin-bottom:20px;padding:24px">';
+    h+='<div style="font-size:13px;color:var(--tx3);margin-bottom:8px;letter-spacing:1px;text-transform:uppercase">Score de Saúde do Escritório</div>';
+    h+='<div style="font-size:56px;font-weight:900;color:'+scoreCor+'">'+score+'</div>';
+    h+='<div style="font-size:16px;font-weight:700;color:'+scoreCor+'">'+scoreLabel+'</div>';
+    h+='<div style="font-size:12px;color:var(--tx3);margin-top:8px">Atualizado agora · '+problemas+' item(ns) requer(em) atenção</div>';
+    h+='</div>';
+
+    // Grid de 4 cards de status
+    h+='<div class="g4" style="margin-bottom:20px">';
+    h+=saudeCard('📁','Casos sem andamento',casosSemAnd.length,'há 30+ dias',casosSemAnd.length===0);
+    h+=saudeCard('💰','Honorários em aberto',honsAtrasados.length,'com saldo devedor',honsAtrasados.length===0);
+    h+=saudeCard('⏰','Prazos esta semana',prazos.length,'próximos 7 dias',prazos.length===0);
+    h+=saudeCard('👤','Clientes sem contato',clientesSemContato.length,'há 30+ dias',clientesSemContato.length===0);
+    h+='</div>';
+
+    // Detalhes
+    if(prazos.length>0){
+      h+='<div class="card" style="margin-bottom:14px">';
+      h+='<div class="ct" style="margin-bottom:10px;color:var(--ac)">⏰ Prazos esta semana</div>';
+      h+='<table style="width:100%;border-collapse:collapse;font-size:13px">';
+      prazos.forEach(function(p){
+        var dt=new Date(p.data_hora).toLocaleDateString('pt-BR');
+        var hr=new Date(p.data_hora).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+        var cli=p.casos&&p.casos.cliente?p.casos.cliente.nome:'—';
+        h+='<tr style="border-bottom:1px solid var(--bd)"><td style="padding:7px">'+safeText(p.titulo||p.tipo)+'</td><td style="padding:7px;color:var(--tx3)">'+safeText(cli)+'</td><td style="padding:7px;text-align:right;font-weight:600;color:var(--ac)">'+dt+' '+hr+'</td></tr>';
+      });
+      h+='</table></div>';
+    }
+
+    if(casosSemAnd.length>0){
+      h+='<div class="card" style="margin-bottom:14px">';
+      h+='<div class="ct" style="margin-bottom:10px;color:#a07000">📁 Casos sem andamento há 30+ dias</div>';
+      h+='<table style="width:100%;border-collapse:collapse;font-size:13px">';
+      casosSemAnd.forEach(function(c){
+        h+='<tr style="border-bottom:1px solid var(--bd)"><td style="padding:7px;font-weight:600">'+safeText(c.natureza||c.tipo_acao||'Processo')+'</td><td style="padding:7px;color:var(--tx3)">'+safeText(c.cliente?c.cliente.nome:'—')+'</td><td style="padding:7px;text-align:right"><button class="btn bg" style="font-size:10px;padding:3px 8px" onclick="openDetalhesCaso(\''+c.id+'\')">Ver caso</button></td></tr>';
+      });
+      h+='</table></div>';
+    }
+
+    if(clientesSemContato.length>0){
+      h+='<div class="card" style="margin-bottom:14px">';
+      h+='<div class="ct" style="margin-bottom:10px;color:var(--er)">👤 Clientes sem contato há 30+ dias</div>';
+      h+='<table style="width:100%;border-collapse:collapse;font-size:13px">';
+      clientesSemContato.forEach(function(c){
+        var ult=c.ultimoContato?new Date(c.ultimoContato).toLocaleDateString('pt-BR'):'Nunca';
+        h+='<tr style="border-bottom:1px solid var(--bd)"><td style="padding:7px;font-weight:600">'+safeText(c.nome)+'</td><td style="padding:7px;color:var(--tx3)">Último contato: '+ult+'</td><td style="padding:7px;text-align:right;display:flex;gap:6px;justify-content:flex-end">';
+        if(c.email)h+='<button class="btn bg" style="font-size:10px;padding:3px 8px" onclick="go(\'email\',document.querySelector(\'.ni[onclick*=email]\'))">✉️ E-mail</button>';
+        h+='</td></tr>';
+      });
+      h+='</table></div>';
+    }
+
+    el.innerHTML=h;
+  });
+}
+
+function saudeCard(ico,label,val,sub,ok){
+  var cor=ok?'#2a7':(val===0?'#2a7':'var(--er)');
+  return '<div class="card" style="text-align:center">'+
+    '<div style="font-size:22px;margin-bottom:6px">'+ico+'</div>'+
+    '<div style="font-size:28px;font-weight:900;color:'+cor+'">'+val+'</div>'+
+    '<div style="font-size:12px;font-weight:600;color:var(--tx);margin:4px 0 2px">'+label+'</div>'+
+    '<div style="font-size:11px;color:var(--tx3)">'+sub+'</div>'+
+  '</div>';
 }
 
 function traduzirAndamento(andId, btn){

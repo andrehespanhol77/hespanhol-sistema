@@ -1597,7 +1597,7 @@ function salvarAgenda(){
   btn.textContent='Salvando...';btn.disabled=true;
   var tipo=document.getElementById('fa-tipo').value;
   var recorr=document.getElementById('fa-recorr').value;
-  db.from('agenda').insert({
+  var baseEvento={
     titulo:document.getElementById('fa-titulo').value.trim()||null,
     tipo:tipo,
     caso_id:document.getElementById('fa-caso').value||null,
@@ -1605,11 +1605,30 @@ function salvarAgenda(){
     recorrencia:recorr||'nenhuma',
     local:document.getElementById('fa-local').value.trim()||null,
     observacoes:document.getElementById('fa-obs').value.trim()||null
-  }).then(function(res){
+  };
+  db.from('agenda').insert(baseEvento).then(function(res){
     if(res.error){showModalStatus('❌ Erro: '+res.error.message,'er');btn.textContent='Salvar';btn.disabled=false;return;}
     logAuditoria('INSERT','agenda',_userName+' agendou: '+tipo+(recorr&&recorr!=='nenhuma'?' ('+recorr+')':'')+' em '+dataVal);
-    closeModal();loadAgenda();loadDashboard();
+    gerarInstanciasRecorrencia(baseEvento, recorr).then(function(){
+      closeModal();loadAgenda();loadDashboard();
+    });
   });
+}
+
+function gerarInstanciasRecorrencia(base, recorr){
+  if(!recorr||recorr==='nenhuma')return Promise.resolve();
+  var instancias=[];
+  var d=new Date(base.data_hora);
+  var limite={diaria:30,semanal:26,mensal:12}[recorr]||0;
+  for(var i=1;i<=limite;i++){
+    var nd=new Date(d);
+    if(recorr==='diaria')nd.setDate(nd.getDate()+i);
+    else if(recorr==='semanal')nd.setDate(nd.getDate()+(i*7));
+    else if(recorr==='mensal')nd.setMonth(nd.getMonth()+i);
+    var inst=Object.assign({},base,{data_hora:nd.toISOString(),recorrencia:'nenhuma'});
+    instancias.push(inst);
+  }
+  return db.from('agenda').insert(instancias);
 }
 
 function openModalAndamento(preselectedCasoId){
@@ -1943,12 +1962,20 @@ function executarFerramenta(nome, input){
         });
         break;
       case 'agendar_compromisso':
-        db.from('agenda').insert({caso_id:input.caso_id||null,titulo:input.titulo||null,tipo:input.tipo,data_hora:input.data_hora,local:input.local||null,observacoes:input.observacoes||null,recorrencia:input.recorrencia||'nenhuma'}).select().then(function(r){
-          if(r.error){resolve({erro:r.error.message});return;}
-          logAuditoria('INSERT','agenda','Agente agendou: '+input.tipo+(input.recorrencia&&input.recorrencia!=='nenhuma'?' ('+input.recorrencia+')':''));
-          loadDashboard();
-          resolve(r.data[0]);
-        });
+        (function(){
+          var baseAg={caso_id:input.caso_id||null,titulo:input.titulo||null,tipo:input.tipo,data_hora:input.data_hora,local:input.local||null,observacoes:input.observacoes||null,recorrencia:input.recorrencia||'nenhuma'};
+          db.from('agenda').insert(baseAg).select().then(function(r){
+            if(r.error){resolve({erro:r.error.message});return;}
+            logAuditoria('INSERT','agenda','Agente agendou: '+input.tipo+(input.recorrencia&&input.recorrencia!=='nenhuma'?' ('+input.recorrencia+')':''));
+            var recorr=input.recorrencia||'nenhuma';
+            gerarInstanciasRecorrencia(baseAg, recorr).then(function(){
+              loadDashboard();
+              var limites={diaria:30,semanal:26,mensal:12};
+              var info=recorr!=='nenhuma'?' + '+limites[recorr]+' instâncias futuras criadas':'';
+              resolve(Object.assign({},r.data[0],{recorrencia_info:info||undefined}));
+            });
+          });
+        })();
         break;
       case 'buscar_agenda':
         (function(){

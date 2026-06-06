@@ -8,6 +8,7 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/docx@7.8.2/build/index.js"></script>
 <script</script>
 <style>
 :root{--ac:#4A9FD4;--ac2:#2d7db3;--bg:#080f20;--bg2:#0f1a35;--bg3:#152040;--sf:#1a2845;--bd:rgba(74,159,212,0.15);--bd2:rgba(74,159,212,0.3);--tx:#f0f4ff;--tx2:#8fa8c8;--tx3:#5a7a9a;--ok:#2ecc71;--wn:#f39c12;--er:#e74c3c;--fn:'Segoe UI',system-ui,sans-serif;--r:10px;--rl:16px;}
@@ -594,6 +595,114 @@ function mostrarSistema(session){
 
 // ── RELATÓRIOS ─────────────────────────────────────────────────
 function fmtData(d){if(!d)return '—';try{return new Date(d).toLocaleDateString('pt-BR');}catch(e){return d;}}
+
+
+function gerarDOCX(tipo, clientes, casos, honorarios, pagamentos, opts){
+  if(!opts)opts={};
+  if(typeof docx==='undefined'){alert('Biblioteca DOCX ainda carregando. Tente novamente em alguns segundos.');return;}
+  var {Document,Packer,Paragraph,Table,TableRow,TableCell,TextRun,HeadingLevel,AlignmentType,WidthType,BorderStyle}=docx;
+  var dt=new Date().toLocaleDateString('pt-BR');
+  var titulo=opts.titulo||({clientes:'Lista de Clientes',casos:'Lista de Casos',clientes_com_casos:'Clientes e Processos',financeiro:'Relatório Financeiro',completo:'Relatório Completo'}[tipo]||'Relatório');
+
+  function cellBorder(){return {style:BorderStyle.SINGLE,size:4,color:'CCCCCC'};}
+  function mkCell(text,bold,shaded){
+    return new TableCell({
+      shading:shaded?{fill:'1a2b4a',color:'1a2b4a'}:undefined,
+      borders:{top:cellBorder(),bottom:cellBorder(),left:cellBorder(),right:cellBorder()},
+      children:[new Paragraph({children:[new TextRun({text:String(text||'—'),bold:!!bold,color:shaded?'FFFFFF':undefined,size:18})],spacing:{before:40,after:40}})]
+    });
+  }
+  function hdrRow(cols){return new TableRow({children:cols.map(function(c){return mkCell(c,true,true);})});}
+  function dataRow(cols){return new TableRow({children:cols.map(function(c){return mkCell(c,false,false);})});}
+  function mkTable(headers,rows){
+    return new Table({
+      width:{size:100,type:WidthType.PERCENTAGE},
+      rows:[hdrRow(headers)].concat(rows.map(function(r){return dataRow(r);}))
+    });
+  }
+  function h1(text){return new Paragraph({text:text,heading:HeadingLevel.HEADING_1,spacing:{before:300,after:100}});}
+  function h2(text){return new Paragraph({text:text,heading:HeadingLevel.HEADING_2,spacing:{before:200,after:80}});}
+  function p(text){return new Paragraph({children:[new TextRun({text:text,size:20})],spacing:{after:60}});}
+  function spacer(){return new Paragraph({text:'',spacing:{after:100}});}
+
+  var recMap={};
+  pagamentos.forEach(function(pg){recMap[pg.honorario_id]=(recMap[pg.honorario_id]||0)+Number(pg.valor||0);});
+
+  var sections=[];
+
+  // Cabeçalho
+  sections.push(new Paragraph({children:[new TextRun({text:'HESPANHOL ADVOGADOS',bold:true,size:32,color:'1a2b4a'})],alignment:AlignmentType.CENTER}));
+  sections.push(new Paragraph({children:[new TextRun({text:titulo.toUpperCase(),bold:true,size:24,color:'1a2b4a'})],alignment:AlignmentType.CENTER,spacing:{after:100}}));
+  sections.push(new Paragraph({children:[new TextRun({text:'Gerado em: '+dt,size:18,color:'888888'})],alignment:AlignmentType.CENTER,spacing:{after:300}}));
+
+  if(tipo==='clientes'){
+    sections.push(h1('Clientes'));
+    sections.push(mkTable(['Nome','CPF/CNPJ','E-mail','Telefone','Endereço'],
+      clientes.map(function(c){return[c.nome||'',c.cpf_cnpj||'',c.email||'',c.telefone||'',c.endereco||''];})));
+  }
+
+  if(tipo==='casos'){
+    sections.push(h1('Processos'));
+    sections.push(mkTable(['Cliente','Natureza','Nº CNJ','Tribunal','Área','Status'],
+      casos.map(function(c){return[c.cliente?c.cliente.nome:'—',c.natureza||c.tipo_acao||'',c.numero_cnj||'',c.tribunal||'',c.area||'',c.status||''];})));
+  }
+
+  if(tipo==='clientes_com_casos'){
+    sections.push(h1(opts.titulo||'Clientes e Processos'));
+    clientes.forEach(function(cl,i){
+      sections.push(h2((i+1)+'. '+cl.nome));
+      if(cl.email||cl.telefone)sections.push(p([cl.email,cl.telefone].filter(Boolean).join(' · ')));
+      var meus=casos.filter(function(c){return c.cliente_id===cl.id||c.co_cliente_id===cl.id;});
+      if(!meus.length){sections.push(p('(sem processos cadastrados)'));}
+      else{
+        sections.push(mkTable(['Natureza / Tipo','Nº CNJ','Tribunal','Status'],
+          meus.map(function(c){return[c.natureza||c.tipo_acao||'Processo',c.numero_cnj||'(s/número)',c.tribunal||'—',c.status||''];})));
+      }
+      sections.push(spacer());
+    });
+  }
+
+  if(tipo==='financeiro'){
+    sections.push(h1('Honorários'));
+    sections.push(mkTable(['Cliente','Processo','Tipo','Valor','Recebido','Saldo','Status'],
+      honorarios.map(function(h){
+        var vt=h.percentual_exito?h.percentual_exito+'%':('R$ '+(Number(h.valor||0)).toLocaleString('pt-BR',{minimumFractionDigits:2}));
+        var rec=recMap[h.id]||0;
+        var saldo=h.percentual_exito?'—':('R$ '+(Number(h.valor||0)-rec).toLocaleString('pt-BR',{minimumFractionDigits:2}));
+        return[h.casos&&h.casos.cliente?h.casos.cliente.nome:'—',h.casos?(h.casos.natureza||h.casos.tipo_acao||'Processo'):'—',h.tipo==='prolabore'?'Pró-labore':'Êxito',vt,'R$ '+rec.toLocaleString('pt-BR',{minimumFractionDigits:2}),saldo,h.status||''];
+      })));
+  }
+
+  if(tipo==='completo'){
+    sections.push(h1('Clientes'));
+    sections.push(mkTable(['Nome','CPF/CNPJ','E-mail','Telefone'],
+      clientes.map(function(c){return[c.nome||'',c.cpf_cnpj||'',c.email||'',c.telefone||''];})));
+    sections.push(spacer());
+    sections.push(h1('Processos'));
+    sections.push(mkTable(['Cliente','Natureza','Nº CNJ','Tribunal','Status'],
+      casos.map(function(c){return[c.cliente?c.cliente.nome:'—',c.natureza||c.tipo_acao||'',c.numero_cnj||'',c.tribunal||'',c.status||''];})));
+    if(honorarios.length&&podeVerQualquerFinanceiro()){
+      sections.push(spacer());
+      sections.push(h1('Honorários'));
+      sections.push(mkTable(['Cliente','Processo','Tipo','Valor','Recebido','Saldo'],
+        honorarios.map(function(h){
+          var vt=h.percentual_exito?h.percentual_exito+'%':('R$ '+(Number(h.valor||0)).toLocaleString('pt-BR',{minimumFractionDigits:2}));
+          var rec=recMap[h.id]||0;
+          var saldo=h.percentual_exito?'—':('R$ '+(Number(h.valor||0)-rec).toLocaleString('pt-BR',{minimumFractionDigits:2}));
+          return[h.casos&&h.casos.cliente?h.casos.cliente.nome:'—',h.casos?(h.casos.natureza||h.casos.tipo_acao||'Processo'):'—',h.tipo==='prolabore'?'Pró-labore':'Êxito',vt,'R$ '+rec.toLocaleString('pt-BR',{minimumFractionDigits:2}),saldo];
+        })));
+    }
+  }
+
+  var doc=new Document({sections:[{children:sections}]});
+  Packer.toBlob(doc).then(function(blob){
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a');
+    a.href=url;a.download='Hespanhol_'+titulo.replace(/\s+/g,'_')+'_'+dt.replace(/\//g,'-')+'.docx';
+    document.body.appendChild(a);a.click();
+    setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(url);},1000);
+  });
+}
 
 function gerarXLSX(tipo, clientes, casos, honorarios, pagamentos, opts){
   var wb=XLSX.utils.book_new();
@@ -1563,7 +1672,7 @@ var FERRAMENTAS_BASE=[
   {name:'buscar_agenda',description:'Consulta compromissos agendados. Pode filtrar por caso ou listar todos os próximos.',input_schema:{type:'object',properties:{caso_id:{type:'string'},dias:{type:'number',description:'Quantos dias à frente consultar (padrão 30)'}}}},
   {name:'buscar_colaborador',description:'Busca usuários/colaboradores do escritório (advogados, secretárias, estagiários) na base de usuários do sistema pelo nome ou retorna todos.',input_schema:{type:'object',properties:{nome:{type:'string',description:'Nome ou parte do nome (opcional — omita para listar todos)'}}}},
   {name:'enviar_email',description:'Envia e-mail para um cliente ou endereço em nome do escritório Hespanhol Advogados. Use para comunicar andamentos, confirmar audiências, cobrar honorários, etc.',input_schema:{type:'object',properties:{destinatario:{type:'string',description:'E-mail do destinatário'},assunto:{type:'string',description:'Assunto do e-mail'},corpo:{type:'string',description:'Corpo completo do e-mail em texto corrido, com saudação e assinatura'}},required:['destinatario','assunto','corpo']}},
-  {name:'gerar_relatorio',description:'Gera e baixa relatório em Excel (XLSX) ou PDF com os dados da plataforma. O arquivo é baixado automaticamente no navegador. Use filtros para personalizar conforme o pedido do usuário.',input_schema:{type:'object',properties:{tipo:{type:'string',enum:['clientes','casos','clientes_com_casos','financeiro','completo'],description:'clientes=só lista de clientes; casos=só lista de processos; clientes_com_casos=clientes com seus processos vinculados; financeiro=honorários e pagamentos; completo=tudo'},formato:{type:'string',enum:['xlsx','pdf'],description:'xlsx para Excel, pdf para PDF'},titulo:{type:'string',description:'Título personalizado do relatório (opcional)'},filtro_status:{type:'string',description:'Filtrar casos por status: ativo, arquivado, encerrado, etc'},filtro_area:{type:'string',description:'Filtrar casos por área: penal, civel, tributario, trabalhista, outro'},filtro_tribunal:{type:'string',description:'Filtrar casos por tribunal (ex: STF, STJ, TJGO)'},filtro_cliente_id:{type:'string',description:'UUID do cliente para gerar relatório de um cliente específico'},so_com_processos:{type:'boolean',description:'true = incluir apenas clientes que têm processos cadastrados'},so_sem_processos:{type:'boolean',description:'true = incluir apenas clientes sem processos'}},required:['tipo','formato']}}
+  {name:'gerar_relatorio',description:'Gera e baixa relatório em Excel (XLSX) ou PDF com os dados da plataforma. O arquivo é baixado automaticamente no navegador. Use filtros para personalizar conforme o pedido do usuário.',input_schema:{type:'object',properties:{tipo:{type:'string',enum:['clientes','casos','clientes_com_casos','financeiro','completo'],description:'clientes=só lista de clientes; casos=só lista de processos; clientes_com_casos=clientes com seus processos vinculados; financeiro=honorários e pagamentos; completo=tudo'},formato:{type:'string',enum:['xlsx','pdf','docx'],description:'xlsx para Excel, pdf para PDF, docx para Word'},titulo:{type:'string',description:'Título personalizado do relatório (opcional)'},filtro_status:{type:'string',description:'Filtrar casos por status: ativo, arquivado, encerrado, etc'},filtro_area:{type:'string',description:'Filtrar casos por área: penal, civel, tributario, trabalhista, outro'},filtro_tribunal:{type:'string',description:'Filtrar casos por tribunal (ex: STF, STJ, TJGO)'},filtro_cliente_id:{type:'string',description:'UUID do cliente para gerar relatório de um cliente específico'},so_com_processos:{type:'boolean',description:'true = incluir apenas clientes que têm processos cadastrados'},so_sem_processos:{type:'boolean',description:'true = incluir apenas clientes sem processos'}},required:['tipo','formato']}}
 ];
 var FERRAMENTAS_ADMIN=[
   {name:'deletar_caso',description:'Apaga permanentemente um caso. APENAS ADMIN.',input_schema:{type:'object',properties:{caso_id:{type:'string'}},required:['caso_id']}},
@@ -1762,6 +1871,7 @@ function executarFerramenta(nome, input){
             var opts={titulo:titulo,fStatus:fStatus,fArea:fArea,fTrib:fTrib};
             try{
               if(fmt==='pdf'){gerarPDF(tipo,cls,css,hons,pags,opts);}
+              else if(fmt==='docx'){gerarDOCX(tipo,cls,css,hons,pags,opts);}
               else{gerarXLSX(tipo,cls,css,hons,pags,opts);}
               var desc=titulo||(tipo+' '+[fStatus,fArea,fTrib].filter(Boolean).join(' '));
               resolve({sucesso:true,arquivo:'Hespanhol_'+desc.replace(/\s+/g,'_')+'.'+fmt,mensagem:'Download iniciado no navegador.'});

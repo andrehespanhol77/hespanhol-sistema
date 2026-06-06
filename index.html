@@ -1399,7 +1399,7 @@ var FERRAMENTAS_ADMIN=[
   {name:'deletar_cliente',description:'Apaga permanentemente um cliente. APENAS ADMIN.',input_schema:{type:'object',properties:{cliente_id:{type:'string'}},required:['cliente_id']}},
   {name:'deletar_compromisso',description:'Remove um compromisso da agenda. APENAS ADMIN.',input_schema:{type:'object',properties:{compromisso_id:{type:'string'}},required:['compromisso_id']}},
   {name:'convidar_usuario',description:'Cadastra um novo usuário no sistema e envia e-mail de convite para ele criar sua senha. APENAS ADMIN e AUTORIZADO.',input_schema:{type:'object',properties:{nome:{type:'string',description:'Nome completo do usuário'},email:{type:'string',description:'E-mail do usuário'},perfil:{type:'string',enum:['escritorio','autorizado','cliente'],description:'Perfil de acesso: escritorio (padrão), autorizado ou cliente'}},required:['nome','email']}},
-  {name:'cadastrar_honorario',description:'Cadastra honorários (pró-labore ou êxito) vinculados a um caso. APENAS ADMIN e AUTORIZADO. Use após criar o caso. Pode ser chamado mais de uma vez se houver pró-labore E êxito separados.',input_schema:{type:'object',properties:{caso_id:{type:'string',description:'UUID do caso'},tipo:{type:'string',enum:['prolabore','exito'],description:'Tipo do honorário'},modalidade:{type:'string',enum:['avista','parcelado','entrada_parcelas'],description:'Modalidade de pagamento'},valor_total:{type:'number',description:'Valor total em reais (omitir se for percentual de êxito)'},percentual_exito:{type:'number',description:'Percentual de êxito (ex: 20 para 20%). Apenas para tipo=exito quando não há valor fixo.'},valor_entrada:{type:'number',description:'Valor de entrada, quando modalidade=entrada_parcelas'},num_parcelas:{type:'integer',description:'Número de parcelas'},valor_parcela_ref:{type:'number',description:'Valor de referência por parcela'},observacoes:{type:'string',description:'Condições especiais, notas do contrato'}},required:['caso_id','tipo','modalidade']}}
+  {name:'cadastrar_honorario',description:'Cadastra honorários (pró-labore ou êxito) vinculados a um caso. APENAS ADMIN e AUTORIZADO. Use após criar o caso. Pode ser chamado mais de uma vez se houver pró-labore E êxito separados.',input_schema:{type:'object',properties:{caso_id:{type:'string',description:'UUID do caso'},tipo:{type:'string',enum:['prolabore','exito'],description:'Tipo do honorário'},modalidade:{type:'string',enum:['avista','parcelado','entrada_parcelas'],description:'Modalidade de pagamento'},valor:{type:'number',description:'Valor total em reais (omitir se for percentual de êxito)'},percentual_exito:{type:'number',description:'Percentual de êxito (ex: 20 para 20%). Apenas para tipo=exito quando não há valor fixo.'},valor_entrada:{type:'number',description:'Valor de entrada, quando modalidade=entrada_parcelas'},num_parcelas:{type:'integer',description:'Número de parcelas'},valor_parcela:{type:'number',description:'Valor de referência por parcela'},observacoes:{type:'string',description:'Condições especiais, notas do contrato'}},required:['caso_id','tipo','modalidade']}}
 ];
 var FERRAMENTAS=FERRAMENTAS_BASE;
 
@@ -1573,11 +1573,13 @@ function executarFerramenta(nome, input){
         if(!podeVerQualquerFinanceiro()){resolve({erro:'Sem permissão. Apenas admin ou autorizado pode cadastrar honorários.'});return;}
         (function(){
           var obj={caso_id:input.caso_id,tipo:input.tipo,modalidade:input.modalidade,status:'ativo'};
-          if(input.valor_total)obj.valor_total=input.valor_total;
+          if(input.valor_total)obj.valor=input.valor_total;
+          if(input.valor)obj.valor=input.valor;
           if(input.percentual_exito)obj.percentual_exito=input.percentual_exito;
           if(input.valor_entrada)obj.valor_entrada=input.valor_entrada;
           if(input.num_parcelas)obj.num_parcelas=input.num_parcelas;
-          if(input.valor_parcela_ref)obj.valor_parcela_ref=input.valor_parcela_ref;
+          if(input.valor_parcela)obj.valor_parcela=input.valor_parcela;
+          if(input.valor_parcela)obj.valor_parcela=input.valor_parcela;
           if(input.observacoes)obj.observacoes=input.observacoes;
           db.from('honorarios').insert(obj).then(function(r){
             if(r.error){resolve({erro:r.error.message});return;}
@@ -1676,7 +1678,7 @@ function renderHonorarios(data){
         '<div style="text-align:right;min-width:120px">'+
           '<div style="font-size:15px;font-weight:700;color:var(--tx)">'+valorInfo+'</div>'+
           (h.valor_entrada?'<div style="font-size:11px;color:var(--tx3)">Entrada: '+fmtMoeda(h.valor_entrada)+'</div>':'')+
-          (h.num_parcelas?'<div style="font-size:11px;color:var(--tx3)">'+h.num_parcelas+'x '+fmtMoeda(h.valor_parcela_ref)+'</div>':'')+
+          (h.num_parcelas?'<div style="font-size:11px;color:var(--tx3)">'+h.num_parcelas+'x '+fmtMoeda(h.valor_parcela)+'</div>':'')+
         '</div>'+
         '<div style="display:flex;flex-direction:column;gap:6px">'+
           '<button class="btn bg" style="font-size:10px;padding:4px 10px" onclick="abrirPagamentos(\''+h.id+'\')">💰 Pagamentos</button>'+
@@ -1794,7 +1796,7 @@ function salvarNovoHonorario(){
   if(tipo==='exito'&&document.getElementById('nh-pct').value)obj.percentual_exito=Number(document.getElementById('nh-pct').value);
   if(document.getElementById('nh-valor')&&document.getElementById('nh-valor').value)obj.valor_total=Number(document.getElementById('nh-valor').value);
   if(document.getElementById('nh-nparcelas')&&document.getElementById('nh-nparcelas').value)obj.num_parcelas=Number(document.getElementById('nh-nparcelas').value);
-  if(document.getElementById('nh-vparcela')&&document.getElementById('nh-vparcela').value)obj.valor_parcela_ref=Number(document.getElementById('nh-vparcela').value);
+  if(document.getElementById('nh-vparcela')&&document.getElementById('nh-vparcela').value)obj.valor_parcela=Number(document.getElementById('nh-vparcela').value);
   if(document.getElementById('nh-entrada')&&document.getElementById('nh-entrada').value)obj.valor_entrada=Number(document.getElementById('nh-entrada').value);
   if(document.getElementById('nh-obs').value)obj.observacoes=document.getElementById('nh-obs').value.trim();
   var btn=document.getElementById('modal-save-btn');
@@ -2022,7 +2024,7 @@ function sendAIFile(input){
     fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
       model:'claude-haiku-4-5-20251001',
       max_tokens:1024,
-      system:'Extraia dados de um contrato/procuração jurídica. Responda APENAS com JSON no formato: {"cliente":{"nome":"","cpf_cnpj":"","email":"","telefone":"","endereco":""},"processos":[{"natureza":"","numero_cnj":"","tribunal":"","tipo_acao":""}],"honorarios":[{"tipo":"prolabore|exito","modalidade":"avista|parcelado|entrada_parcelas","valor_total":null,"percentual_exito":null,"valor_entrada":null,"num_parcelas":null,"valor_parcela_ref":null,"observacoes":""}]}. Use null para campos ausentes. tipo deve ser "prolabore" ou "exito". Se não houver honorários, retorne array vazio.',
+      system:'Extraia dados de um contrato/procuração jurídica. Responda APENAS com JSON no formato: {"cliente":{"nome":"","cpf_cnpj":"","email":"","telefone":"","endereco":""},"processos":[{"natureza":"","numero_cnj":"","tribunal":"","tipo_acao":""}],"honorarios":[{"tipo":"prolabore|exito","modalidade":"avista|parcelado|entrada_parcelas","valor_total":null,"percentual_exito":null,"valor_entrada":null,"num_parcelas":null,"valor_parcela":null,"observacoes":""}]}. Use null para campos ausentes. tipo deve ser "prolabore" ou "exito". Se não houver honorários, retorne array vazio.',
       messages:[{role:'user',content:[docBlock,{type:'text',text:'Extraia os dados deste documento.'}]}]
     })}).then(function(r){return r.json();}).then(function(data){
       var texto=data&&data.content&&data.content[0]?data.content[0].text:'';
@@ -2375,7 +2377,7 @@ function carregarHonorariosCaso(casoId){
         return '<div style="background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:10px;margin-bottom:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">'+
           '<div style="flex:1;min-width:160px">'+
             '<div style="font-size:12px;font-weight:600;color:var(--tx)">'+safeText(tipoLabel[h.tipo]||h.tipo)+' — '+safeText(modLabel[h.modalidade]||h.modalidade)+'</div>'+
-            '<div style="font-size:11px;color:var(--tx3);margin-top:2px">'+valorInfo+(h.num_parcelas?' · '+h.num_parcelas+'x '+fmtMoeda(h.valor_parcela_ref):'')+'</div>'+
+            '<div style="font-size:11px;color:var(--tx3);margin-top:2px">'+valorInfo+(h.num_parcelas?' · '+h.num_parcelas+'x '+fmtMoeda(h.valor_parcela):'')+'</div>'+
           '</div>'+
           '<div style="text-align:right;font-size:12px">'+
             '<div style="color:#2a7">Recebido: '+fmtMoeda(rec)+'</div>'+
@@ -2413,7 +2415,7 @@ function abrirNovoHonorarioParaCaso(casoId){
     if(tipo==='exito'&&document.getElementById('nh-pct').value)obj.percentual_exito=Number(document.getElementById('nh-pct').value);
     if(document.getElementById('nh-valor')&&document.getElementById('nh-valor').value)obj.valor_total=Number(document.getElementById('nh-valor').value);
     if(document.getElementById('nh-nparcelas')&&document.getElementById('nh-nparcelas').value)obj.num_parcelas=Number(document.getElementById('nh-nparcelas').value);
-    if(document.getElementById('nh-vparcela')&&document.getElementById('nh-vparcela').value)obj.valor_parcela_ref=Number(document.getElementById('nh-vparcela').value);
+    if(document.getElementById('nh-vparcela')&&document.getElementById('nh-vparcela').value)obj.valor_parcela=Number(document.getElementById('nh-vparcela').value);
     if(document.getElementById('nh-entrada')&&document.getElementById('nh-entrada').value)obj.valor_entrada=Number(document.getElementById('nh-entrada').value);
     if(document.getElementById('nh-obs').value)obj.observacoes=document.getElementById('nh-obs').value.trim();
     var btn=document.getElementById('modal-save-btn');btn.textContent='Salvando...';btn.disabled=true;

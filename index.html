@@ -246,6 +246,7 @@ tr:hover td{background:var(--sf);}
       <div style="font-size:13px;color:var(--tx3)" id="clients-count">Carregando...</div>
       <div style="display:flex;gap:8px">
         <button class="btn bg hide-admin" id="btn-pastas-faltantes" onclick="criarPastasFaltantes()" style="font-size:11px">📁 Pastas Faltantes</button>
+        <button class="btn bg hide-admin" onclick="criarSubpastasFaltantes()" style="font-size:11px">📂 Subpastas Financeiras</button>
         <button class="btn bp hide-cliente" onclick="openModalCliente()">+ Novo Cliente</button>
       </div>
     </div>
@@ -1180,7 +1181,33 @@ function apagarCliente(id){
   });
 }
 
-async function criarPastasFaltantes(){
+async 
+function criarSubpastasFaltantes(){
+  var btn=event.target;btn.textContent='🔄 Processando...';btn.disabled=true;
+  var log=[];
+  db.from('casos').select('id,natureza,tipo_acao,pasta_drive_id').not('pasta_drive_id','is',null).then(function(r){
+    var casos=r.data||[];
+    var total=casos.length;
+    var done=0;
+    if(!total){alert('Nenhum caso com pasta no Drive.');btn.textContent='📂 Subpastas Financeiras';btn.disabled=false;return;}
+    function next(){
+      if(done>=total){
+        btn.textContent='📂 Subpastas Financeiras';btn.disabled=false;
+        alert('Concluído!\n'+log.join('\n'));return;
+      }
+      var c=casos[done++];
+      fetch('/api/create-drive-folder',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({acao:'criar_subpastas_financeiras',pasta_id:c.pasta_drive_id})})
+        .then(function(r){return r.json();})
+        .then(function(d){
+          log.push((d.success?'✅ ':'❌ ')+(c.natureza||c.tipo_acao||c.id));
+          setTimeout(next,300);
+        }).catch(function(){log.push('❌ Erro: '+(c.natureza||c.id));setTimeout(next,300);});
+    }
+    next();
+  });
+}
+
+function criarPastasFaltantes(){
   if(!_podeApagar)return;
   var btn=document.getElementById('btn-pastas-faltantes');
   btn.disabled=true;btn.textContent='⏳ Processando...';

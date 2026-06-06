@@ -805,12 +805,12 @@ function mostrarSistema(session){
         });
       });
     }
-    // Verifica aceite dos termos (não exige de clientes)
-    if(perfil !== 'cliente' && u && !u.termos_aceitos_em){
-      mostrarTermos(session, u.id, perfil);
-    } else if(perfil !== 'cliente' && !u){
-      // Usuário autenticado mas sem registro em usuarios — carrega normalmente
-      continuarMostrarSistema(session, perfil);
+    // Verifica aceite dos termos via localStorage (independente de RLS)
+    var termoKey = 'termos_aceitos_' + _userEmail;
+    var termoLocal = localStorage.getItem(termoKey);
+    var termoDb = u && u.termos_aceitos_em;
+    if(perfil !== 'cliente' && !termoLocal && !termoDb){
+      mostrarTermos(session, u ? u.id : null, perfil);
     } else {
       continuarMostrarSistema(session, perfil);
     }
@@ -1385,12 +1385,15 @@ function aceitarTermos(){
   if(!document.getElementById('termos-check').checked){ err.style.display='block'; err.textContent='Marque a caixa para confirmar a leitura.'; return; }
   btn.disabled = true; btn.textContent = 'Registrando...';
   var agora = new Date().toISOString();
-  db.from('usuarios').update({termos_aceitos_em: agora}).eq('id', btn._usuarioId).then(function(r){
-    if(r.error){ err.style.display='block'; err.textContent='Erro ao registrar aceite. Tente novamente.'; btn.disabled=false; btn.textContent='Acessar o sistema'; return; }
-    logAuditoria('ACEITE_TERMOS','usuarios','Usuário aceitou Política de Privacidade e Termo de Sigilo v1.0');
-    document.getElementById('termos-wrap').style.display = 'none';
-    continuarMostrarSistema(btn._session, btn._perfil);
-  });
+  // Salva no localStorage imediatamente (não depende de RLS)
+  localStorage.setItem('termos_aceitos_' + _userEmail, agora);
+  // Tenta salvar no banco também (best effort)
+  if(btn._usuarioId){
+    db.from('usuarios').update({termos_aceitos_em: agora}).eq('id', btn._usuarioId).then(function(){});
+  }
+  logAuditoria('ACEITE_TERMOS','usuarios','Usuário aceitou Política de Privacidade e Termo de Sigilo v1.0');
+  document.getElementById('termos-wrap').style.display = 'none';
+  continuarMostrarSistema(btn._session, btn._perfil);
 }
 
 function fazerLogout(){

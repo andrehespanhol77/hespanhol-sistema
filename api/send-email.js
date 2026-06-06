@@ -1,3 +1,5 @@
+const SB_URL = 'https://rdmlxfgwlbroigsisjph.supabase.co';
+
 const ASSINATURA_HTML = `
 <div style="font-family:Arial,sans-serif">
   <div style="font-size:20px;font-weight:300;color:#243d62;letter-spacing:2px;margin-top:30px;margin-bottom:32px">ANDRÉ HESPANHOL</div>
@@ -21,33 +23,42 @@ const ASSINATURA_HTML = `
   </table>
 </div>`;
 
+async function verificarAuth(req, serviceRoleKey) {
+  const authHeader = req.headers['authorization'] || '';
+  const token = authHeader.replace('Bearer ', '').trim();
+  if (!token) return null;
+  const r = await fetch(`${SB_URL}/auth/v1/user`, {
+    headers: { 'Authorization': `Bearer ${token}`, 'apikey': serviceRoleKey }
+  });
+  if (!r.ok) return null;
+  return r.json();
+}
+
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!serviceRoleKey || !apiKey) return res.status(500).json({ error: 'Configuração ausente' });
+
+  // Autenticação obrigatória
+  const user = await verificarAuth(req, serviceRoleKey);
+  if (!user) return res.status(401).json({ error: 'Não autorizado. Faça login novamente.' });
 
   const { to, subject, text, html } = req.body || {};
-
   if (!to || !subject || (!text && !html)) {
     return res.status(400).json({ error: 'Campos obrigatórios: to, subject, text ou html' });
   }
 
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    return res.status(500).json({ error: 'RESEND_API_KEY não configurada no servidor' });
-  }
-
-  const bodyHtml = html
-    ? html + ASSINATURA_HTML
-    : `<div style="font-family:Arial,sans-serif;font-size:14px;color:#333;line-height:1.7;white-space:pre-wrap">${(text||'').replace(/\n/g,'<br>')}</div>` + ASSINATURA_HTML;
+  // Sanitiza: não aceita HTML externo — apenas text é permitido do frontend
+  const bodyHtml = `<div style="font-family:Arial,sans-serif;font-size:14px;color:#333;line-height:1.7;white-space:pre-wrap">${
+    String(text || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>')
+  }</div>` + ASSINATURA_HTML;
 
   try {
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         from: 'Hespanhol Advogados <andrehespanhol@andrehespanhol.com>',
         to: Array.isArray(to) ? to : [to],
@@ -56,15 +67,10 @@ export default async function handler(req, res) {
         html: bodyHtml,
       }),
     });
-
     const data = await response.json();
-
-    if (!response.ok) {
-      return res.status(response.status).json({ error: data.message || data.name || 'Erro ao enviar e-mail' });
-    }
-
+    if (!response.ok) return res.status(response.status).json({ error: data.message || 'Erro ao enviar' });
     return res.status(200).json({ success: true, id: data.id });
   } catch (err) {
-    return res.status(500).json({ error: err.message || 'Erro interno' });
+    return res.status(500).json({ error: err.message });
   }
 }

@@ -1,20 +1,48 @@
 const SB_URL = 'https://rdmlxfgwlbroigsisjph.supabase.co';
 const APP_URL = 'https://hespanhol-sistema.vercel.app';
 const FROM_EMAIL = 'Hespanhol Advogados <andrehespanhol@andrehespanhol.com>';
+const PERFIS_VALIDOS = ['escritorio', 'autorizado', 'cliente'];
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function verificarAdminAuth(req, serviceRoleKey) {
+  const authHeader = req.headers['authorization'] || '';
+  const token = authHeader.replace('Bearer ', '').trim();
+  if (!token) return null;
+
+  const r = await fetch(`${SB_URL}/auth/v1/user`, {
+    headers: { 'Authorization': `Bearer ${token}`, 'apikey': serviceRoleKey }
+  });
+  if (!r.ok) return null;
+  const user = await r.json();
+  if (!user?.email) return null;
+
+  // Verifica perfil admin na tabela usuarios
+  const ur = await fetch(`${SB_URL}/rest/v1/usuarios?email=eq.${encodeURIComponent(user.email)}&select=perfil`, {
+    headers: { 'Authorization': `Bearer ${serviceRoleKey}`, 'apikey': serviceRoleKey }
+  });
+  const usuarios = await ur.json();
+  const perfil = Array.isArray(usuarios) && usuarios[0]?.perfil;
+  if (perfil !== 'admin') return null;
+  return user;
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const resendKey = process.env.RESEND_API_KEY;
+  if (!serviceRoleKey || !resendKey) return res.status(500).json({ error: 'Configuração ausente' });
+
+  // Apenas admin pode convidar usuários
+  const admin = await verificarAdminAuth(req, serviceRoleKey);
+  if (!admin) return res.status(403).json({ error: 'Acesso restrito a administradores.' });
+
   const { email, nome, perfil } = req.body || {};
   if (!email) return res.status(400).json({ error: 'E-mail obrigatório' });
 
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const resendKey = process.env.RESEND_API_KEY;
+  // Valida perfil — admin não pode ser criado via convite
+  const perfilSeguro = PERFIS_VALIDOS.includes(perfil) ? perfil : 'escritorio';
 
-  if (!serviceRoleKey) return res.status(500).json({ error: 'SUPABASE_SERVICE_ROLE_KEY não configurada' });
-  if (!resendKey) return res.status(500).json({ error: 'RESEND_API_KEY não configurada' });
-
-  // 1. Gera o link de convite via Supabase Admin (sem enviar e-mail)
   const linkRes = await fetch(`${SB_URL}/auth/v1/admin/generate_link`, {
     method: 'POST',
     headers: {
@@ -25,19 +53,16 @@ export default async function handler(req, res) {
     body: JSON.stringify({
       type: 'invite',
       email,
-      data: { nome: nome || '', perfil: perfil || 'escritorio' },
+      data: { nome: nome || '', perfil: perfilSeguro },
     }),
   });
 
   const linkData = await linkRes.json();
-  if (!linkRes.ok) {
-    return res.status(linkRes.status).json({ error: linkData.msg || linkData.error_description || 'Erro ao gerar link de convite' });
-  }
+  if (!linkRes.ok) return res.status(linkRes.status).json({ error: linkData.msg || 'Erro ao gerar convite' });
 
   const inviteLink = linkData.action_link;
-  if (!inviteLink) return res.status(500).json({ error: 'Link de convite não retornado pelo Supabase' });
+  if (!inviteLink) return res.status(500).json({ error: 'Link não retornado' });
 
-  // 2. Envia e-mail via Resend com template personalizado
   const nomePrimeiro = (nome || 'Colaborador').split(' ')[0];
   const html = `
 <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;color:#333;background:#fff">
@@ -60,24 +85,12 @@ export default async function handler(req, res) {
       Se você não esperava este convite, ignore este e-mail.
     </p>
   </div>
-  <div style="background:#f5f7fa;padding:16px 32px;border-radius:0 0 8px 8px;text-align:center;font-size:11px;color:#999;border-top:1px solid #eee">
-    Hespanhol Advogados · Formosa/GO ·
-    <a href="${APP_URL}" style="color:#4a7fc1;text-decoration:none">Acessar o sistema</a>
-  </div>
 </div>`;
 
   const emailRes = await fetch('https://api.resend.com/emails', {
     method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${resendKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from: FROM_EMAIL,
-      to: [email],
-      subject: 'Convite de acesso — Hespanhol Advogados',
-      html,
-    }),
+    headers: { 'Authorization': `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from: FROM_EMAIL, to: [email], subject: 'Convite de acesso — Hespanhol Advogados', html }),
   });
 
   if (!emailRes.ok) {

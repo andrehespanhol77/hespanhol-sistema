@@ -805,9 +805,16 @@ function mostrarSistema(session){
         });
       });
     }
-    // TESTE: mostra termos sempre para debug
+    // Verifica aceite de termos (localStorage + DB)
     if(perfil !== 'cliente'){
-      mostrarTermos(session, u ? u.id : null, perfil);
+      var termoKey = 'termos_aceitos_' + _userEmail;
+      var termoLocal = _userEmail ? localStorage.getItem(termoKey) : null;
+      var termoDb = u && u.termos_aceitos_em;
+      if(!termoLocal && !termoDb){
+        mostrarTermos(session, u ? u.id : null, perfil);
+      } else {
+        continuarMostrarSistema(session, perfil);
+      }
     } else {
       continuarMostrarSistema(session, perfil);
     }

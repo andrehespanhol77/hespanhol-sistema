@@ -287,7 +287,20 @@ tr:hover td{background:var(--sf);}
     <div id="movements-list"><div class="loading">🔄 Carregando andamentos...</div></div>
   </div>
 
-  <div class="page" id="page-expenses"><div class="card"><div class="ct">Despesas</div><div class="loading">Em desenvolvimento.</div></div></div>
+  <div class="page" id="page-expenses">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <div style="font-size:13px;color:var(--tx3)">Despesas por caso — <span id="desp-count">carregando...</span></div>
+    <div style="display:flex;gap:8px">
+      <select class="inp" id="desp-filtro-status" style="font-size:12px;padding:6px 10px" onchange="loadDespesasGlobal()">
+        <option value="">Todos os status</option>
+        <option value="pendente">Pendente</option>
+        <option value="pago">Pago</option>
+        <option value="reembolsado">Reembolsado</option>
+      </select>
+    </div>
+  </div>
+  <div id="desp-global-lista"><div class="loading">🔄 Carregando...</div></div>
+</div>
 
   <div class="page" id="page-docs">
     <div style="display:flex;justify-content:space-between;margin-bottom:16px"><div style="font-size:13px;color:var(--tx3)">Templates do escritório</div></div>
@@ -516,6 +529,7 @@ function go(id,el){
   if(id==='audit')loadAudit();
   if(id==='email')loadEmailClients();
   if(id==='financial')loadFinanceiro();
+  if(id==='expenses')loadDespesasGlobal();
 }
 
 function abrirNovoContextual(){
@@ -592,6 +606,168 @@ function mostrarSistema(session){
   });
 }
 
+
+
+// ── DESPESAS DE CASO ───────────────────────────────────────────
+var CATEGORIAS_DESP=['Custas judiciais','Cópias e impressões','Equipamentos','Passagem aérea','Hotel','Alimentação','Deslocamento (Uber/Taxi/etc)','Correspondência','Perícia/Laudo','Diligência','Extra'];
+
+function fmtMoedaSimples(v){return 'R$ '+(Number(v||0)).toLocaleString('pt-BR',{minimumFractionDigits:2});}
+
+function carregarDespesasCaso(casoId){
+  var cont=document.getElementById('desp-caso-'+casoId);
+  if(!cont)return;
+  Promise.all([
+    db.from('adiantamentos_caso').select('*').eq('caso_id',casoId).order('data_adiantamento',{ascending:false}),
+    db.from('despesas_caso').select('*').eq('caso_id',casoId).order('data_despesa',{ascending:false})
+  ]).then(function(rs){
+    var adts=rs[0].data||[];
+    var desps=rs[1].data||[];
+    var totalAdt=adts.reduce(function(s,a){return s+Number(a.valor||0);},0);
+    var totalDesp=desps.reduce(function(s,d){return s+Number(d.valor||0);},0);
+    var saldoCx=totalAdt-desps.filter(function(d){return d.reembolsavel;}).reduce(function(s,d){return s+Number(d.valor||0);},0);
+    var hoje=new Date();
+    var h='';
+    // Caixinha
+    h+='<div style="background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:12px;margin-bottom:12px">';
+    h+='<div style="font-size:11px;font-weight:600;color:var(--tx3);margin-bottom:8px">CAIXINHA DO CLIENTE</div>';
+    h+='<div style="display:flex;gap:16px;flex-wrap:wrap">';
+    h+='<div><div style="font-size:10px;color:var(--tx3)">Adiantado</div><div style="font-size:14px;font-weight:700;color:var(--ac)">'+fmtMoedaSimples(totalAdt)+'</div></div>';
+    h+='<div><div style="font-size:10px;color:var(--tx3)">Despesas Reimb.</div><div style="font-size:14px;font-weight:700;color:var(--er)">'+fmtMoedaSimples(desps.filter(function(d){return d.reembolsavel;}).reduce(function(s,d){return s+Number(d.valor||0);},0))+'</div></div>';
+    h+='<div><div style="font-size:10px;color:var(--tx3)">Saldo Disponível</div><div style="font-size:14px;font-weight:700;color:'+(saldoCx>=0?'#2a7':'var(--er)')+'">'+fmtMoedaSimples(saldoCx)+'</div></div>';
+    h+='</div>';
+    if(adts.length){
+      h+='<div style="margin-top:8px;font-size:11px;color:var(--tx3)">Adiantamentos: ';
+      h+=adts.map(function(a){return '<span style="margin-right:8px">'+new Date(a.data_adiantamento).toLocaleDateString('pt-BR')+' — '+fmtMoedaSimples(a.valor)+(a.descricao?' ('+a.descricao+')':'')+'</span>';}).join('');
+      h+='</div>';
+    }
+    h+='</div>';
+    // Despesas
+    if(!desps.length){h+='<div style="font-size:12px;color:var(--tx3)">Nenhuma despesa lançada.</div>';}
+    else{
+      h+='<table style="width:100%;border-collapse:collapse;font-size:11px">';
+      h+='<tr style="color:var(--tx3);border-bottom:1px solid var(--bd)"><th style="text-align:left;padding:4px 6px">Data</th><th style="text-align:left;padding:4px 6px">Categoria</th><th style="text-align:left;padding:4px 6px">Descrição</th><th style="text-align:left;padding:4px 6px">Lançado por</th><th style="text-align:right;padding:4px 6px">Valor</th><th style="text-align:center;padding:4px 6px">Status</th><th style="padding:4px 6px"></th></tr>';
+      desps.forEach(function(d){
+        var venc=d.data_vencimento_reembolso?new Date(d.data_vencimento_reembolso):null;
+        var atrasado=venc&&d.status==='pendente'&&venc<hoje;
+        var statusColor=d.status==='reembolsado'?'#2a7':d.status==='pago'?'var(--ac)':atrasado?'var(--er)':'var(--tx3)';
+        var statusLabel=d.status==='reembolsado'?'✅ Reemb.':d.status==='pago'?'✓ Pago':(atrasado?'⚠️ Vencido':'Pendente');
+        h+='<tr style="border-bottom:1px solid var(--bd)">';
+        h+='<td style="padding:5px 6px;font-size:11px">'+new Date(d.data_despesa).toLocaleDateString('pt-BR')+'</td>';
+        h+='<td style="padding:5px 6px;font-size:11px">'+safeText(d.categoria)+'</td>';
+        h+='<td style="padding:5px 6px;font-size:11px;color:var(--tx2)">'+safeText(d.descricao)+'</td>';
+        h+='<td style="padding:5px 6px;font-size:11px;color:var(--tx3)">'+safeText(d.lancado_por)+'</td>';
+        h+='<td style="padding:5px 6px;text-align:right;font-weight:600">'+fmtMoedaSimples(d.valor)+'</td>';
+        h+='<td style="padding:5px 6px;text-align:center;color:'+statusColor+';font-size:10px">'+statusLabel+'</td>';
+        h+='<td style="padding:5px 6px;display:flex;gap:4px">';
+        if(d.comprovante_url)h+='<a href="'+d.comprovante_url+'" target="_blank" style="font-size:10px;color:var(--ac)">📎</a>';
+        h+='<button class="btn bg" style="font-size:9px;padding:2px 6px" onclick="editarDespesaCaso(\''+d.id+'\',\''+casoId+'\')">✏️</button>';
+        if(_podeApagar)h+='<button class="btn bg" style="font-size:9px;padding:2px 6px;color:var(--er)" onclick="apagarDespesaCaso(\''+d.id+'\',\''+casoId+'\')">🗑</button>';
+        h+='</td></tr>';
+      });
+      h+='</table>';
+    }
+    cont.innerHTML=h;
+  });
+}
+
+function abrirNovoAdiantamento(casoId){
+  var html='<div class="fg"><label class="flb">Valor (R$) *</label><input class="inp" type="number" id="adt-valor" placeholder="Ex: 1000"></div>'+
+    '<div class="fg"><label class="flb">Data *</label><input class="inp" type="date" id="adt-data" value="'+new Date().toISOString().slice(0,10)+'"></div>'+
+    '<div class="fg"><label class="flb">Descrição</label><input class="inp" id="adt-desc" placeholder="Ex: Adiantamento para despesas processuais"></div>';
+  openModal('Novo Adiantamento do Cliente',html,function(){
+    var val=Number(document.getElementById('adt-valor').value);
+    if(!val){alert('Informe o valor.');return;}
+    db.from('adiantamentos_caso').insert({caso_id:casoId,valor:val,data_adiantamento:document.getElementById('adt-data').value,descricao:document.getElementById('adt-desc').value.trim()||null,lancado_por:_userName||_userEmail}).then(function(r){
+      if(r.error){alert('Erro: '+r.error.message);return;}
+      logAuditoria('INSERT','adiantamentos_caso','Adiantamento R$'+val+' no caso '+casoId);
+      closeModal();carregarDespesasCaso(casoId);
+    });
+  });
+}
+
+function abrirNovaDepesaCaso(casoId){
+  var opts=CATEGORIAS_DESP.map(function(c){return '<option value="'+c+'">'+c+'</option>';}).join('');
+  var venc=new Date();venc.setDate(venc.getDate()+30);
+  var html='<div class="fg"><label class="flb">Categoria *</label><select class="inp" id="desp-cat"><option value="">Selecione...</option>'+opts+'</select></div>'+
+    '<div class="fg"><label class="flb">Descrição</label><input class="inp" id="desp-desc" placeholder="Ex: Uber para audiência, Táxi aeroporto, etc"></div>'+
+    '<div class="fg"><label class="flb">Valor (R$) *</label><input class="inp" type="number" id="desp-valor" placeholder="0,00"></div>'+
+    '<div class="fg"><label class="flb">Data *</label><input class="inp" type="date" id="desp-data" value="'+new Date().toISOString().slice(0,10)+'"></div>'+
+    '<div class="fg"><label class="flb">Lançado por</label><input class="inp" id="desp-lancador" value="'+((_userName||_userEmail)||'')+'" placeholder="Nome do colaborador"></div>'+
+    '<div class="fg" style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="desp-reimb" checked><label for="desp-reimb" style="font-size:12px">Reembolsável pelo cliente (vence em 30 dias)</label></div>'+
+    '<div class="fg"><label class="flb">Observações</label><textarea class="inp" id="desp-obs" rows="2"></textarea></div>'+
+    '<div class="fg"><label class="flb">Comprovante (PDF/imagem)</label><input type="file" id="desp-file" accept="image/*,.pdf" class="inp" style="padding:4px"></div>';
+  openModal('Nova Despesa',html,function(){
+    var cat=document.getElementById('desp-cat').value;
+    var val=Number(document.getElementById('desp-valor').value);
+    if(!cat||!val){alert('Categoria e valor são obrigatórios.');return;}
+    var reimb=document.getElementById('desp-reimb').checked;
+    var vencDate=new Date();vencDate.setDate(vencDate.getDate()+30);
+    var obj={caso_id:casoId,categoria:cat,descricao:document.getElementById('desp-desc').value.trim()||null,valor:val,data_despesa:document.getElementById('desp-data').value,lancado_por:document.getElementById('desp-lancador').value.trim()||(_userName||_userEmail),reembolsavel:reimb,status:'pendente',data_vencimento_reembolso:reimb?vencDate.toISOString().slice(0,10):null,observacoes:document.getElementById('desp-obs').value.trim()||null};
+    var file=document.getElementById('desp-file').files[0];
+    function salvar(driveUrl,driveId){
+      if(driveUrl)obj.comprovante_url=driveUrl;
+      if(driveId)obj.comprovante_drive_id=driveId;
+      db.from('despesas_caso').insert(obj).then(function(r){
+        if(r.error){alert('Erro: '+r.error.message);return;}
+        logAuditoria('INSERT','despesas_caso','Despesa '+cat+' R$'+val+' no caso '+casoId);
+        closeModal();carregarDespesasCaso(casoId);
+      });
+    }
+    if(file){
+      // Upload para Drive via pasta do caso
+      db.from('casos').select('pasta_drive_id').eq('id',casoId).single().then(function(cr){
+        var pastaId=cr.data&&cr.data.pasta_drive_id;
+        if(!pastaId){salvar(null,null);return;}
+        var reader=new FileReader();
+        reader.onload=function(ev){
+          var b64=ev.target.result.split(',')[1];
+          fetch('/api/create-drive-folder',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tipo:'upload_comprovante',pasta_id:pastaId,nome:file.name,mime:file.type,conteudo_b64:b64})})
+            .then(function(r){return r.json();})
+            .then(function(d){salvar(d.url||null,d.file_id||null);})
+            .catch(function(){salvar(null,null);});
+        };
+        reader.readAsDataURL(file);
+      });
+    } else {salvar(null,null);}
+  });
+}
+
+function editarDespesaCaso(despId,casoId){
+  db.from('despesas_caso').select('*').eq('id',despId).single().then(function(r){
+    var d=r.data;if(!d)return;
+    var opts=CATEGORIAS_DESP.map(function(c){return '<option value="'+c+'"'+(d.categoria===c?' selected':'')+'>'+c+'</option>';}).join('');
+    var html='<div class="fg"><label class="flb">Categoria *</label><select class="inp" id="de-cat"><option value="">Selecione...</option>'+opts+'</select></div>'+
+      '<div class="fg"><label class="flb">Descrição</label><input class="inp" id="de-desc" value="'+(d.descricao||'')+'"></div>'+
+      '<div class="fg"><label class="flb">Valor (R$) *</label><input class="inp" type="number" id="de-valor" value="'+(d.valor||'')+'"></div>'+
+      '<div class="fg"><label class="flb">Data</label><input class="inp" type="date" id="de-data" value="'+(d.data_despesa||'')+'"></div>'+
+      '<div class="fg"><label class="flb">Lançado por</label><input class="inp" id="de-lanc" value="'+(d.lancado_por||'')+'"></div>'+
+      '<div class="fg"><label class="flb">Status</label><select class="inp" id="de-status"><option value="pendente"'+(d.status==='pendente'?' selected':'')+'>Pendente</option><option value="pago"'+(d.status==='pago'?' selected':'')+'>Pago pelo escritório</option><option value="reembolsado"'+(d.status==='reembolsado'?' selected':'')+'>Reembolsado pelo cliente</option></select></div>'+
+      '<div class="fg" style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="de-reimb"'+(d.reembolsavel?' checked':'')+'>  <label for="de-reimb" style="font-size:12px">Reembolsável pelo cliente</label></div>'+
+      '<div class="fg"><label class="flb">Observações</label><textarea class="inp" id="de-obs" rows="2">'+(d.observacoes||'')+'</textarea></div>'+
+      (d.comprovante_url?'<div style="font-size:11px;margin-top:4px"><a href="'+d.comprovante_url+'" target="_blank" style="color:var(--ac)">📎 Ver comprovante no Drive</a></div>':'')+
+      (_podeApagar?'<div style="margin-top:8px;padding-top:10px;border-top:1px solid var(--bd)"><button class="btn bg" style="color:var(--er);width:100%" onclick="apagarDespesaCaso(\''+despId+'\',\''+casoId+'\');closeModal()">🗑 Excluir esta despesa</button></div>':'');
+    openModal('Editar Despesa',html,function(){
+      var cat=document.getElementById('de-cat').value;
+      var val=Number(document.getElementById('de-valor').value);
+      if(!cat||!val){alert('Categoria e valor são obrigatórios.');return;}
+      var reimb=document.getElementById('de-reimb').checked;
+      var vencDate=new Date();vencDate.setDate(vencDate.getDate()+30);
+      db.from('despesas_caso').update({categoria:cat,descricao:document.getElementById('de-desc').value.trim()||null,valor:val,data_despesa:document.getElementById('de-data').value,lancado_por:document.getElementById('de-lanc').value.trim()||null,status:document.getElementById('de-status').value,reembolsavel:reimb,data_vencimento_reembolso:reimb?vencDate.toISOString().slice(0,10):null,observacoes:document.getElementById('de-obs').value.trim()||null}).eq('id',despId).then(function(r){
+        if(r.error){alert('Erro: '+r.error.message);return;}
+        closeModal();carregarDespesasCaso(casoId);
+      });
+    });
+  });
+}
+
+function apagarDespesaCaso(despId,casoId){
+  if(!confirm('Excluir esta despesa?'))return;
+  db.from('despesas_caso').delete().eq('id',despId).then(function(r){
+    if(r.error){alert('Erro: '+r.error.message);return;}
+    logAuditoria('DELETE','despesas_caso','Despesa excluída: '+despId);
+    carregarDespesasCaso(casoId);
+  });
+}
 
 // ── RELATÓRIOS ─────────────────────────────────────────────────
 function fmtData(d){if(!d)return '—';try{return new Date(d).toLocaleDateString('pt-BR');}catch(e){return d;}}
@@ -1672,6 +1848,8 @@ var FERRAMENTAS_BASE=[
   {name:'buscar_agenda',description:'Consulta compromissos agendados. Pode filtrar por caso ou listar todos os próximos.',input_schema:{type:'object',properties:{caso_id:{type:'string'},dias:{type:'number',description:'Quantos dias à frente consultar (padrão 30)'}}}},
   {name:'buscar_colaborador',description:'Busca usuários/colaboradores do escritório (advogados, secretárias, estagiários) na base de usuários do sistema pelo nome ou retorna todos.',input_schema:{type:'object',properties:{nome:{type:'string',description:'Nome ou parte do nome (opcional — omita para listar todos)'}}}},
   {name:'enviar_email',description:'Envia e-mail para um cliente ou endereço em nome do escritório Hespanhol Advogados. Use para comunicar andamentos, confirmar audiências, cobrar honorários, etc.',input_schema:{type:'object',properties:{destinatario:{type:'string',description:'E-mail do destinatário'},assunto:{type:'string',description:'Assunto do e-mail'},corpo:{type:'string',description:'Corpo completo do e-mail em texto corrido, com saudação e assinatura'}},required:['destinatario','assunto','corpo']}},
+  {name:'lancar_despesa_caso',description:'Lança uma despesa vinculada a um processo. Use para registrar custas, viagem, alimentação, hotel, deslocamento, cópias, equipamentos, etc. O campo lancado_por é preenchido automaticamente com o usuário logado se não informado.',input_schema:{type:'object',properties:{caso_id:{type:'string',description:'UUID do processo'},categoria:{type:'string',description:'Categoria: Custas judiciais, Cópias e impressões, Equipamentos, Passagem aérea, Hotel, Alimentação, Deslocamento (Uber/Taxi/etc), Correspondência, Perícia/Laudo, Diligência, Extra'},descricao:{type:'string',description:'Descrição livre da despesa'},valor:{type:'number',description:'Valor em reais'},data_despesa:{type:'string',description:'Data no formato YYYY-MM-DD (padrão: hoje)'},lancado_por:{type:'string',description:'Nome de quem gastou'},reembolsavel:{type:'boolean',description:'Se o cliente deve reembolsar (padrão: true)'},observacoes:{type:'string'}},required:['caso_id','categoria','valor']}},
+  {name:'lancar_adiantamento',description:'Registra um adiantamento do cliente para a caixinha do caso (verba antecipada para despesas processuais).',input_schema:{type:'object',properties:{caso_id:{type:'string',description:'UUID do processo'},valor:{type:'number',description:'Valor adiantado em reais'},data_adiantamento:{type:'string',description:'Data no formato YYYY-MM-DD'},descricao:{type:'string',description:'Descrição do adiantamento'}},required:['caso_id','valor']}},
   {name:'gerar_relatorio',description:'Gera e baixa relatório em Excel (XLSX) ou PDF com os dados da plataforma. O arquivo é baixado automaticamente no navegador. Use filtros para personalizar conforme o pedido do usuário.',input_schema:{type:'object',properties:{tipo:{type:'string',enum:['clientes','casos','clientes_com_casos','financeiro','completo'],description:'clientes=só lista de clientes; casos=só lista de processos; clientes_com_casos=clientes com seus processos vinculados; financeiro=honorários e pagamentos; completo=tudo'},formato:{type:'string',enum:['xlsx','pdf','docx'],description:'xlsx para Excel, pdf para PDF, docx para Word'},titulo:{type:'string',description:'Título personalizado do relatório (opcional)'},filtro_status:{type:'string',description:'Filtrar casos por status: ativo, arquivado, encerrado, etc'},filtro_area:{type:'string',description:'Filtrar casos por área: penal, civel, tributario, trabalhista, outro'},filtro_tribunal:{type:'string',description:'Filtrar casos por tribunal (ex: STF, STJ, TJGO)'},filtro_cliente_id:{type:'string',description:'UUID do cliente para gerar relatório de um cliente específico'},so_com_processos:{type:'boolean',description:'true = incluir apenas clientes que têm processos cadastrados'},so_sem_processos:{type:'boolean',description:'true = incluir apenas clientes sem processos'}},required:['tipo','formato']}}
 ];
 var FERRAMENTAS_ADMIN=[
@@ -1825,6 +2003,26 @@ function executarFerramenta(nome, input){
           resolve({sucesso:true,id:d.id});
         }).catch(function(e){resolve({erro:e.message});});
         break;
+      case 'lancar_despesa_caso':
+        (function(){
+          var venc=new Date();venc.setDate(venc.getDate()+30);
+          var obj={caso_id:input.caso_id,categoria:input.categoria,descricao:input.descricao||null,valor:Number(input.valor),data_despesa:input.data_despesa||new Date().toISOString().slice(0,10),lancado_por:input.lancado_por||_userName||_userEmail,reembolsavel:input.reembolsavel!==false,status:'pendente',data_vencimento_reembolso:input.reembolsavel!==false?venc.toISOString().slice(0,10):null,observacoes:input.observacoes||null};
+          db.from('despesas_caso').insert(obj).then(function(r){
+            if(r.error){resolve({erro:r.error.message});return;}
+            logAuditoria('INSERT','despesas_caso','Despesa '+input.categoria+' R$'+input.valor+' lançada pelo agente');
+            resolve({sucesso:true,mensagem:'Despesa de R$'+input.valor+' ('+input.categoria+') lançada no processo.'});
+          });
+        })();
+        break;
+      case 'lancar_adiantamento':
+        (function(){
+          db.from('adiantamentos_caso').insert({caso_id:input.caso_id,valor:Number(input.valor),data_adiantamento:input.data_adiantamento||new Date().toISOString().slice(0,10),descricao:input.descricao||null,lancado_por:_userName||_userEmail}).then(function(r){
+            if(r.error){resolve({erro:r.error.message});return;}
+            logAuditoria('INSERT','adiantamentos_caso','Adiantamento R$'+input.valor+' lançado pelo agente');
+            resolve({sucesso:true,mensagem:'Adiantamento de R$'+input.valor+' registrado na caixinha do processo.'});
+          });
+        })();
+        break;
       case 'gerar_relatorio':
         (function(){
           var tipo=input.tipo||'completo';
@@ -1947,6 +2145,52 @@ var _honorariosData=[];
 function fmtMoeda(v){
   if(v==null||v===''||isNaN(v))return '—';
   return 'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
+
+function loadDespesasGlobal(){
+  var lista=document.getElementById('desp-global-lista');
+  var countEl=document.getElementById('desp-count');
+  if(!lista)return;
+  var fStatus=document.getElementById('desp-filtro-status');
+  var q=db.from('despesas_caso').select('*,casos(numero_cnj,natureza,tipo_acao,cliente:cliente_id(nome))').order('data_despesa',{ascending:false});
+  if(fStatus&&fStatus.value)q=q.eq('status',fStatus.value);
+  q.then(function(res){
+    var data=res.data||[];
+    if(countEl)countEl.textContent=data.length+' despesa(s)';
+    if(!data.length){lista.innerHTML='<div class="card"><div class="loading">Nenhuma despesa encontrada.</div></div>';return;}
+    var hoje=new Date();
+    var total=data.reduce(function(s,d){return s+Number(d.valor||0);},0);
+    var pendReimb=data.filter(function(d){return d.reembolsavel&&d.status==='pendente';});
+    var atrasadas=pendReimb.filter(function(d){return d.data_vencimento_reembolso&&new Date(d.data_vencimento_reembolso)<hoje;});
+    var html='<div class="g3" style="margin-bottom:16px">';
+    html+='<div class="card" style="text-align:center"><div style="font-size:11px;color:var(--tx3)">Total lançado</div><div style="font-size:18px;font-weight:700;color:var(--er)">'+fmtMoedaSimples(total)+'</div></div>';
+    html+='<div class="card" style="text-align:center"><div style="font-size:11px;color:var(--tx3)">Pendente reembolso</div><div style="font-size:18px;font-weight:700;color:var(--ac)">'+fmtMoedaSimples(pendReimb.reduce(function(s,d){return s+Number(d.valor||0);},0))+'</div></div>';
+    html+='<div class="card" style="text-align:center"><div style="font-size:11px;color:var(--tx3)">Reembolso vencido</div><div style="font-size:18px;font-weight:700;color:var(--er)">'+atrasadas.length+' despesa(s)</div></div>';
+    html+='</div>';
+    html+='<div class="card"><table style="width:100%;border-collapse:collapse;font-size:12px">';
+    html+='<thead><tr style="color:var(--tx3);border-bottom:2px solid var(--bd)"><th style="text-align:left;padding:6px">Data</th><th style="text-align:left;padding:6px">Caso / Cliente</th><th style="text-align:left;padding:6px">Categoria</th><th style="text-align:left;padding:6px">Descrição</th><th style="text-align:left;padding:6px">Lançado por</th><th style="text-align:right;padding:6px">Valor</th><th style="text-align:center;padding:6px">Status</th><th style="padding:6px"></th></tr></thead><tbody>';
+    data.forEach(function(d){
+      var venc=d.data_vencimento_reembolso?new Date(d.data_vencimento_reembolso):null;
+      var atrasado=venc&&d.status==='pendente'&&venc<hoje;
+      var sc=d.status==='reembolsado'?'#2a7':d.status==='pago'?'var(--ac)':atrasado?'var(--er)':'var(--tx3)';
+      var sl=d.status==='reembolsado'?'✅ Reemb.':d.status==='pago'?'✓ Pago':(atrasado?'⚠️ Vencido':'Pendente');
+      var caso=d.casos?(d.casos.natureza||d.casos.tipo_acao||d.casos.numero_cnj||'Processo'):'—';
+      var cliente=d.casos&&d.casos.cliente?d.casos.cliente.nome:'—';
+      html+='<tr style="border-bottom:1px solid var(--bd)">';
+      html+='<td style="padding:6px">'+new Date(d.data_despesa).toLocaleDateString('pt-BR')+'</td>';
+      html+='<td style="padding:6px;font-size:11px"><div style="font-weight:600">'+safeText(caso)+'</div><div style="color:var(--tx3)">'+safeText(cliente)+'</div></td>';
+      html+='<td style="padding:6px">'+safeText(d.categoria)+'</td>';
+      html+='<td style="padding:6px;color:var(--tx2)">'+safeText(d.descricao)+'</td>';
+      html+='<td style="padding:6px;color:var(--tx3)">'+safeText(d.lancado_por)+'</td>';
+      html+='<td style="padding:6px;text-align:right;font-weight:600">'+fmtMoedaSimples(d.valor)+'</td>';
+      html+='<td style="padding:6px;text-align:center;color:'+sc+';font-size:11px">'+sl+(atrasado&&venc?'<br><span style="font-size:9px">venceu '+venc.toLocaleDateString('pt-BR')+'</span>':'')+'</td>';
+      html+='<td style="padding:6px">'+(d.comprovante_url?'<a href="'+d.comprovante_url+'" target="_blank" style="font-size:10px;color:var(--ac)">📎</a>':'')+'</td>';
+      html+='</tr>';
+    });
+    html+='</tbody></table></div>';
+    lista.innerHTML=html;
+  });
 }
 
 function loadFinanceiro(){
@@ -2746,7 +2990,19 @@ function openDetalhesCaso(id){
         h+='<div id="autorizacoes-lista-'+id+'"><div class="loading" style="font-size:12px">🔄 Carregando...</div></div>';
         h+='</div>';
       }
+      // Seção de despesas (todos que podem ver financeiro do caso)
+      if(podeVerFinanceiroCaso(id)||_podeApagar){
+        h+='<div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--bd)">';
+        h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">';
+        h+='<div style="font-size:11px;color:var(--tx3);letter-spacing:1px;text-transform:uppercase">Caixinha & Despesas</div>';
+        h+='<div style="display:flex;gap:6px"><button class="btn bg" style="font-size:11px" onclick="abrirNovaDepesaCaso(''+id+'')">+ Despesa</button>';
+        h+='<button class="btn bg" style="font-size:11px" onclick="abrirNovoAdiantamento(''+id+'')">+ Adiantamento</button></div>';
+        h+='</div>';
+        h+='<div id="desp-caso-'+id+'"><div class="loading" style="font-size:12px">🔄 Carregando...</div></div>';
+        h+='</div>';
+      }
       document.getElementById('mob').innerHTML=h;
+      if(podeVerFinanceiroCaso(id)||_podeApagar)carregarDespesasCaso(id);
       if(podeVerQualquerFinanceiro())carregarHonorariosCaso(id);
       if(_podeApagar)carregarAutorizacoesCaso(id);
     });

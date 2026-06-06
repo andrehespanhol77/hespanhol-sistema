@@ -653,7 +653,7 @@ function loadCases(){
   var countEl=document.getElementById('cases-count');
   if(!tbody)return;
   tbody.innerHTML='<tr><td colspan="8" class="loading">🔄 Buscando no banco...</td></tr>';
-  var query=db.from('casos').select('*, clientes(nome)');
+  var query=db.from('casos').select('*, cliente:cliente_id(nome)');
   if(_perfil==='cliente'&&_clienteId)query=query.eq('cliente_id',_clienteId);
   query.order('created_at',{ascending:false}).then(function(res){
     if(res.error){tbody.innerHTML='<tr><td colspan="8" style="color:var(--er);padding:16px;text-align:center">Erro: '+res.error.message+'</td></tr>';return;}
@@ -664,7 +664,7 @@ function loadCases(){
     tbody.innerHTML='';
     data.forEach(function(c){
       var tr=document.createElement('tr');
-      var nome=c.clientes?c.clientes.nome:'—';
+      var nome=c.cliente?c.cliente.nome:'—';
       var status=c.status==='ativo'?'<span class="badge ba">Ativo</span>':'<span class="badge bw">'+safeText(c.status)+'</span>';
       var tipoDisplay=c.natureza?'<span style="font-weight:600;color:var(--tx)">'+c.natureza+'</span>'+(c.tipo_acao?'<br><span style="font-size:10px;color:var(--tx3)">'+c.tipo_acao+'</span>':''):'<span style="color:var(--tx3)">'+safeText(c.tipo_acao)+'</span>';
       var del=_podeApagar?'<button class="btn bg" style="font-size:10px;padding:4px 8px;color:var(--er)" onclick="event.stopPropagation();apagarCaso(\''+c.id+'\')">🗑</button>':'';
@@ -756,8 +756,8 @@ async function criarPastasFaltantes(){
     }
 
     // ── Casos sem pasta (cujo cliente já tem pasta) ──
-    var casr=await db.from('casos').select('id,tipo_acao,natureza,cliente_id,clientes(pasta_drive_id,nome)').is('pasta_drive_id',null);
-    var casosSem=(casr.data||[]).filter(function(x){return x.clientes&&x.clientes.pasta_drive_id;});
+    var casr=await db.from('casos').select('id,tipo_acao,natureza,cliente_id,cliente:cliente_id(pasta_drive_id,nome)').is('pasta_drive_id',null);
+    var casosSem=(casr.data||[]).filter(function(x){return x.cliente&&x.cliente.pasta_drive_id;});
     addLog('Casos sem pasta (com cliente OK): '+casosSem.length);
 
     for(var j=0;j<casosSem.length;j++){
@@ -765,7 +765,7 @@ async function criarPastasFaltantes(){
       btn.textContent='⏳ Caso '+(j+1)+'/'+casosSem.length;
       var nomeCaso=(cs.natureza||cs.tipo_acao||'Processo')+' — '+cs.id.slice(0,8);
       try{
-        var r2=await fetch('/api/create-drive-folder',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({acao:'criar_processo',nome_processo:nomeCaso,cliente_pasta_id:cs.clientes.pasta_drive_id})});
+        var r2=await fetch('/api/create-drive-folder',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({acao:'criar_processo',nome_processo:nomeCaso,cliente_pasta_id:cs.cliente.pasta_drive_id})});
         var d2=await r2.json();
         if(d2.pasta_id){
           await db.from('casos').update({pasta_url:d2.pasta_url,pasta_drive_id:d2.pasta_id}).eq('id',cs.id);
@@ -831,7 +831,7 @@ function loadAgenda(){
   var lista=document.getElementById('agenda-list');
   if(!lista)return;
   lista.innerHTML='<div class="loading">🔄 Carregando agenda...</div>';
-  db.from('agenda').select('*, casos(numero_cnj, clientes(nome))').order('data_hora',{ascending:true}).then(function(res){
+  db.from('agenda').select('*, casos(numero_cnj, cliente:cliente_id(nome))').order('data_hora',{ascending:true}).then(function(res){
     if(res.error){lista.innerHTML='<div style="color:var(--er);padding:16px">Erro: '+res.error.message+'</div>';return;}
     var data=res.data||[];
     var nb=document.getElementById('agenda-nb'); if(nb)nb.textContent=data.length;
@@ -840,7 +840,7 @@ function loadAgenda(){
     var tipos={audiencia:'🏛️ Audiência',prazo:'⏰ Prazo',julgamento:'⚖️ Julgamento',reuniao:'🤝 Reunião'};
     data.forEach(function(a){
       var dt=a.data_hora?new Date(a.data_hora).toLocaleString('pt-BR'):'—';
-      var cliente=a.casos&&a.casos.clientes?a.casos.clientes.nome:'—';
+      var cliente=a.casos&&a.casos.cliente?a.casos.cliente.nome:'—';
       var cnj=a.casos?a.casos.numero_cnj:'';
       var div=document.createElement('div');
       div.style.cssText='background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);padding:14px 18px;margin-bottom:8px;display:flex;align-items:center;gap:14px';
@@ -860,14 +860,14 @@ function loadMovements(){
   var lista=document.getElementById('movements-list');
   if(!lista)return;
   lista.innerHTML='<div class="loading">🔄 Carregando andamentos...</div>';
-  db.from('andamentos').select('*, casos(numero_cnj, clientes(nome))').order('data_andamento',{ascending:false}).limit(50).then(function(res){
+  db.from('andamentos').select('*, casos(numero_cnj, cliente:cliente_id(nome))').order('data_andamento',{ascending:false}).limit(50).then(function(res){
     if(res.error){lista.innerHTML='<div style="color:var(--er);padding:16px">Erro: '+res.error.message+'</div>';return;}
     var data=res.data||[];
     if(data.length===0){lista.innerHTML='<div class="loading">Nenhum andamento registrado.</div>';return;}
     lista.innerHTML='';
     data.forEach(function(a){
       var dt=a.data_andamento?new Date(a.data_andamento).toLocaleDateString('pt-BR'):'—';
-      var cliente=a.casos&&a.casos.clientes?a.casos.clientes.nome:'—';
+      var cliente=a.casos&&a.casos.cliente?a.casos.cliente.nome:'—';
       var cnj=a.casos?a.casos.numero_cnj:'';
       var div=document.createElement('div');
       div.style.cssText='background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);padding:12px 18px;margin-bottom:8px';
@@ -933,12 +933,12 @@ function loadDashboard(){
   db.from('agenda').select('*',{count:'exact',head:true}).gte('data_hora',hoje.toISOString()).lte('data_hora',em7.toISOString()).then(function(res){
     var el=document.getElementById('dash-prazos'); if(el)el.textContent=res.count||0;
   });
-  db.from('casos').select('*, clientes(nome)').order('created_at',{ascending:false}).limit(5).then(function(res){
+  db.from('casos').select('*, cliente:cliente_id(nome)').order('created_at',{ascending:false}).limit(5).then(function(res){
     var lista=document.getElementById('dash-casos-list');
     if(!lista)return;
     var data=res.data||[];
     if(data.length===0){lista.innerHTML='<div class="loading">Nenhum caso ainda.</div>';return;}
-    lista.innerHTML='<table><thead><tr><th>Cliente</th><th>Tipo</th><th>Status</th></tr></thead><tbody>'+data.map(function(c){return '<tr><td>'+(c.clientes?c.clientes.nome:'—')+'</td><td style="color:var(--tx3)">'+safeText(c.tipo_acao)+'</td><td><span class="badge ba">Ativo</span></td></tr>';}).join('')+'</tbody></table>';
+    lista.innerHTML='<table><thead><tr><th>Cliente</th><th>Tipo</th><th>Status</th></tr></thead><tbody>'+data.map(function(c){return '<tr><td>'+(c.cliente?c.cliente.nome:'—')+'</td><td style="color:var(--tx3)">'+safeText(c.tipo_acao)+'</td><td><span class="badge ba">Ativo</span></td></tr>';}).join('')+'</tbody></table>';
   });
   db.from('agenda').select('*, casos(numero_cnj)').order('data_hora',{ascending:true}).gte('data_hora',new Date().toISOString()).limit(4).then(function(res){
     var lista=document.getElementById('dash-agenda-list');
@@ -1038,12 +1038,12 @@ function openModalCaso(){
     var sel=document.getElementById('fca-cliente'); if(sel)sel.innerHTML=opts;
     var co=document.getElementById('fca-cocliente'); if(co)co.innerHTML='<option value="">Nenhum</option>'+data.map(function(c){return '<option value="'+c.id+'">'+c.nome+'</option>';}).join('');
   });
-  db.from('casos').select('id,numero_cnj,natureza,tipo_acao,clientes(nome)').order('created_at',{ascending:false}).then(function(res){
+  db.from('casos').select('id,numero_cnj,natureza,tipo_acao,cliente:cliente_id(nome)').order('created_at',{ascending:false}).then(function(res){
     var sel=document.getElementById('fca-pai');
     if(!sel)return;
     var data=res.data||[];
     sel.innerHTML='<option value="">Processo independente</option>'+data.map(function(c){
-      var label=(c.clientes?c.clientes.nome:'?')+' — '+(c.natureza||c.tipo_acao||'Processo')+(c.numero_cnj?' ('+c.numero_cnj+')':'');
+      var label=(c.cliente?c.cliente.nome:'?')+' — '+(c.natureza||c.tipo_acao||'Processo')+(c.numero_cnj?' ('+c.numero_cnj+')':'');
       return '<option value="'+c.id+'">'+label+'</option>';
     }).join('');
   });
@@ -1098,12 +1098,12 @@ function openModalAgenda(){
     '<div class="fg"><label class="flb">Observações</label><textarea class="inp" id="fa-obs" rows="2" placeholder="Detalhes adicionais..."></textarea></div>'+
     '<div id="modal-status" style="font-size:12px;margin-top:4px;display:none"></div>',
     salvarAgenda);
-  db.from('casos').select('id,numero_cnj,clientes(nome)').order('created_at',{ascending:false}).then(function(res){
+  db.from('casos').select('id,numero_cnj,cliente:cliente_id(nome)').order('created_at',{ascending:false}).then(function(res){
     var sel=document.getElementById('fa-caso');
     if(!sel)return;
     var data=res.data||[];
     sel.innerHTML='<option value="">Selecione o caso...</option>'+data.map(function(c){
-      var label=(c.clientes?c.clientes.nome:'?')+(c.numero_cnj?' — '+c.numero_cnj:'');
+      var label=(c.cliente?c.cliente.nome:'?')+(c.numero_cnj?' — '+c.numero_cnj:'');
       return '<option value="'+c.id+'">'+label+'</option>';
     }).join('');
   });
@@ -1137,12 +1137,12 @@ function openModalAndamento(preselectedCasoId){
     '<div class="fg"><label class="flb">Descrição *</label><textarea class="inp" id="fand-desc" rows="4" placeholder="Descreva o andamento processual..."></textarea></div>'+
     '<div id="modal-status" style="font-size:12px;margin-top:4px;display:none"></div>',
     salvarAndamento);
-  db.from('casos').select('id,numero_cnj,clientes(nome)').order('created_at',{ascending:false}).then(function(res){
+  db.from('casos').select('id,numero_cnj,cliente:cliente_id(nome)').order('created_at',{ascending:false}).then(function(res){
     var sel=document.getElementById('fand-caso');
     if(!sel)return;
     var data=res.data||[];
     sel.innerHTML='<option value="">Selecione o caso...</option>'+data.map(function(c){
-      var label=(c.clientes?c.clientes.nome:'?')+(c.numero_cnj?' — '+c.numero_cnj:'');
+      var label=(c.cliente?c.cliente.nome:'?')+(c.numero_cnj?' — '+c.numero_cnj:'');
       return '<option value="'+c.id+'"'+(preselectedCasoId===c.id?' selected':'')+'>'+label+'</option>';
     }).join('');
   });
@@ -1347,7 +1347,7 @@ function loadRelatorio(){
   var filtro=document.getElementById('rel-filtro');
   if(!cont)return;
   cont.innerHTML='<div class="loading">🔄 Carregando relatório...</div>';
-  var query=db.from('casos').select('*, clientes(nome,cpf_cnpj), andamentos(descricao,data_andamento)');
+  var query=db.from('casos').select('*, cliente:cliente_id(nome,cpf_cnpj), andamentos(descricao,data_andamento)');
   if(filtro&&filtro.value!=='todos')query=query.eq('status',filtro.value);
   query.order('created_at',{ascending:false}).then(function(res){
     if(res.error){cont.innerHTML='<div style="color:var(--er);padding:16px">Erro: '+res.error.message+'</div>';return;}
@@ -1358,7 +1358,7 @@ function loadRelatorio(){
     if(data.length===0){cont.innerHTML='<div class="loading">Nenhum caso encontrado.</div>';return;}
     var html='<table><thead><tr><th>CLIENTE</th><th>Nº CNJ</th><th>TRIBUNAL</th><th>TIPO</th><th>FASE</th><th>ÚLTIMO ANDAMENTO</th><th>DATA</th><th>STATUS</th></tr></thead><tbody>';
     data.forEach(function(c){
-      var cliente=c.clientes?c.clientes.nome:'—';
+      var cliente=c.cliente?c.cliente.nome:'—';
       var ands=(c.andamentos||[]).sort(function(a,b){return new Date(b.data_andamento)-new Date(a.data_andamento);});
       var ultimoAnd=ands.length?ands[0].descricao:'—';
       var ultimaData=ands.length?new Date(ands[0].data_andamento).toLocaleDateString('pt-BR'):'—';
@@ -1468,7 +1468,7 @@ function executarFerramenta(nome, input){
           var agora=new Date().toISOString();
           var dias=input.dias||30;
           var futuro=new Date(Date.now()+dias*86400000).toISOString();
-          var q=db.from('agenda').select('*, casos(numero_cnj,clientes(nome))').gte('data_hora',agora).lte('data_hora',futuro).order('data_hora',{ascending:true});
+          var q=db.from('agenda').select('*, casos(numero_cnj,cliente:cliente_id(nome))').gte('data_hora',agora).lte('data_hora',futuro).order('data_hora',{ascending:true});
           if(input.caso_id)q=q.eq('caso_id',input.caso_id);
           q.then(function(r){resolve(r.error?{erro:r.error.message}:(r.data||[]));});
         })();
@@ -1498,7 +1498,7 @@ function executarFerramenta(nome, input){
         break;
       case 'listar_casos':
         (function(){
-          var q=db.from('casos').select('*, clientes(nome)').order('created_at',{ascending:false});
+          var q=db.from('casos').select('*, cliente:cliente_id(nome)').order('created_at',{ascending:false});
           if(input.status&&input.status!=='todos')q=q.eq('status',input.status);
           q.then(function(r){resolve(r.error?{erro:r.error.message}:(r.data||[]));});
         })();
@@ -1527,12 +1527,12 @@ function executarFerramenta(nome, input){
         });
         break;
       case 'buscar_casos':
-        db.from('casos').select('*, clientes(nome)').ilike('numero_cnj','%'+input.termo+'%').limit(5).then(function(r1){
+        db.from('casos').select('*, cliente:cliente_id(nome)').ilike('numero_cnj','%'+input.termo+'%').limit(5).then(function(r1){
           if(r1.data&&r1.data.length>0){resolve(r1.data);return;}
           db.from('clientes').select('id').ilike('nome','%'+input.termo+'%').then(function(rc){
             if(!rc.data||rc.data.length===0){resolve([]);return;}
             var ids=rc.data.map(function(c){return c.id;});
-            db.from('casos').select('*, clientes(nome)').in('cliente_id',ids).limit(5).then(function(r2){resolve(r2.data||[]);});
+            db.from('casos').select('*, cliente:cliente_id(nome)').in('cliente_id',ids).limit(5).then(function(r2){resolve(r2.data||[]);});
           });
         });
         break;
@@ -1623,7 +1623,7 @@ function loadFinanceiro(){
   document.getElementById('fin-no').style.display='none';
   var lista=document.getElementById('hon-lista');
   lista.innerHTML='<div class="loading">🔄 Carregando honorários...</div>';
-  db.from('honorarios').select('*, casos(id,natureza,tipo_acao,numero_cnj,clientes(nome))').order('created_at',{ascending:false}).then(function(res){
+  db.from('honorarios').select('*, casos(id,natureza,tipo_acao,numero_cnj,cliente:cliente_id(nome))').order('created_at',{ascending:false}).then(function(res){
     if(res.error){lista.innerHTML='<div style="color:var(--er);padding:16px">Erro: '+res.error.message+'</div>';return;}
     _honorariosData=res.data||[];
     renderHonorarios(_honorariosData);
@@ -1636,7 +1636,7 @@ function filtrarHonorarios(){
   var tipo=document.getElementById('fin-tipo').value;
   var status=document.getElementById('fin-status').value;
   var filtrado=_honorariosData.filter(function(h){
-    var cliente=(h.casos&&h.casos.clientes?h.casos.clientes.nome:'').toLowerCase();
+    var cliente=(h.casos&&h.casos.cliente?h.casos.cliente.nome:'').toLowerCase();
     var caso=(h.casos?(h.casos.natureza||h.casos.tipo_acao||''):'').toLowerCase();
     var cnj=(h.casos?h.casos.numero_cnj||'':'').toLowerCase();
     var matchBusca=!busca||(cliente.includes(busca)||caso.includes(busca)||cnj.includes(busca));
@@ -1655,7 +1655,7 @@ function renderHonorarios(data){
   var statusStyle={ativo:'color:#2a7',quitado:'color:var(--ac)',cancelado:'color:var(--er)'};
   lista.innerHTML='';
   data.forEach(function(h){
-    var cliente=h.casos&&h.casos.clientes?h.casos.clientes.nome:'—';
+    var cliente=h.casos&&h.casos.cliente?h.casos.cliente.nome:'—';
     var caso=h.casos?(h.casos.natureza||h.casos.tipo_acao||'Processo'):'—';
     var cnj=h.casos&&h.casos.numero_cnj?'<span style="font-size:10px;color:var(--tx3);font-family:monospace"> · '+h.casos.numero_cnj+'</span>':'';
     var valorInfo=h.percentual_exito?'<span style="color:var(--ac)">'+h.percentual_exito+'% do êxito</span>':(h.valor_total?fmtMoeda(h.valor_total):'—');
@@ -1736,7 +1736,7 @@ function renderRelatorioFinanceiro(data){
       var s=c.contratado-c.recebido;
       html+='<tr style="border-bottom:1px solid var(--bd)">'+
         '<td style="padding:7px 6px">'+safeText(c.caso?(c.caso.natureza||c.caso.tipo_acao||'Processo'):'—')+'</td>'+
-        '<td style="padding:7px 6px;color:var(--tx2)">'+safeText(c.caso&&c.caso.clientes?c.caso.clientes.nome:'—')+'</td>'+
+        '<td style="padding:7px 6px;color:var(--tx2)">'+safeText(c.caso&&c.caso.cliente?c.caso.cliente.nome:'—')+'</td>'+
         '<td style="padding:7px 6px;text-align:right">'+fmtMoeda(c.contratado)+'</td>'+
         '<td style="padding:7px 6px;text-align:right;color:#2a7">'+fmtMoeda(c.recebido)+'</td>'+
         '<td style="padding:7px 6px;text-align:right;color:'+(s>0?'var(--er)':'#2a7')+'">'+fmtMoeda(s)+'</td>'+
@@ -1749,10 +1749,10 @@ function renderRelatorioFinanceiro(data){
 
 function abrirNovoHonorario(){
   // Carrega casos para o select
-  db.from('casos').select('id,natureza,tipo_acao,clientes(nome)').eq('status','ativo').order('created_at',{ascending:false}).then(function(res){
+  db.from('casos').select('id,natureza,tipo_acao,cliente:cliente_id(nome)').eq('status','ativo').order('created_at',{ascending:false}).then(function(res){
     var opts='<option value="">Selecione o processo...</option>';
     (res.data||[]).forEach(function(c){
-      var label=(c.clientes?c.clientes.nome+' — ':'')+( c.natureza||c.tipo_acao||'Processo');
+      var label=(c.cliente?c.cliente.nome+' — ':'')+( c.natureza||c.tipo_acao||'Processo');
       opts+='<option value="'+c.id+'">'+safeText(label)+'</option>';
     });
     var html=
@@ -1809,7 +1809,7 @@ function salvarNovoHonorario(){
 function abrirPagamentos(honId){
   var hon=_honorariosData.find(function(h){return h.id===honId;});
   if(!hon)return;
-  var cliente=hon.casos&&hon.casos.clientes?hon.casos.clientes.nome:'—';
+  var cliente=hon.casos&&hon.casos.cliente?hon.casos.cliente.nome:'—';
   var caso=hon.casos?(hon.casos.natureza||hon.casos.tipo_acao||'Processo'):'—';
   var tipoLabel={prolabore:'Pró-labore',exito:'Êxito'};
   var container=document.getElementById('mob');
@@ -2038,7 +2038,7 @@ function verAutorizacoesUsuario(userId,nomeUsuario){
       document.getElementById('mob').innerHTML='<div style="font-size:13px;color:var(--tx3);text-align:center;padding:24px">Este usuário não tem acessos financeiros específicos.<br>Acessa apenas dados gerais do perfil Escritório.</div>';
       return;
     }
-    db.from('casos').select('id,numero_cnj,natureza,tipo_acao,clientes(nome)').in('id',auths.map(function(a){return a.caso_id;})).then(function(cr){
+    db.from('casos').select('id,numero_cnj,natureza,tipo_acao,cliente:cliente_id(nome)').in('id',auths.map(function(a){return a.caso_id;})).then(function(cr){
       var cmap={}; (cr.data||[]).forEach(function(c){cmap[c.id]=c;});
       var h='<div style="font-size:12px;color:var(--tx3);margin-bottom:12px">'+auths.length+' acesso(s) financeiro(s) específico(s) concedido(s):</div>';
       h+=auths.map(function(a){
@@ -2046,7 +2046,7 @@ function verAutorizacoesUsuario(userId,nomeUsuario){
         return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd)">'
           +'<div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--tx)">'+(c.natureza||c.tipo_acao||'Processo')+'</div>'
           +'<div style="font-size:11px;color:var(--ac)">'+(c.numero_cnj||'')+'</div>'
-          +'<div style="font-size:11px;color:var(--tx3)">'+(c.clientes?c.clientes.nome:'')+(a.criado_por?' · Concedido por: '+a.criado_por:'')+'</div></div>'
+          +'<div style="font-size:11px;color:var(--tx3)">'+(c.cliente?c.cliente.nome:'')+(a.criado_por?' · Concedido por: '+a.criado_por:'')+'</div></div>'
           +(_podeApagar?'<button class="btn bg" style="font-size:10px;padding:3px 8px;color:var(--er)" onclick="revogarAcessoCaso(\''+a.id+'\',null);this.closest(\'div\').remove()">Revogar</button>':'')
           +'</div>';
       }).join('');
@@ -2100,7 +2100,7 @@ function openPerfilCliente(id){
     var c=res.data; if(!c){document.getElementById('mob').innerHTML='<div style="color:var(--er)">Não encontrado.</div>';return;}
     Promise.all([
       db.from('casos').select('*,andamentos(descricao,data_andamento)').eq('cliente_id',id).order('created_at',{ascending:false}),
-      db.from('casos').select('*,andamentos(descricao,data_andamento),clientes(nome)').eq('co_cliente_id',id).order('created_at',{ascending:false})
+      db.from('casos').select('*,andamentos(descricao,data_andamento),cliente:cliente_id(nome)').eq('co_cliente_id',id).order('created_at',{ascending:false})
     ]).then(function(rs){
       var casosPrincipal=rs[0].data||[];
       var casosCoCliente=rs[1].data||[];
@@ -2224,10 +2224,10 @@ function openEditCaso(id){
         return '<option value="'+cl.id+'"'+(c.co_cliente_id===cl.id?' selected':'')+'>'+cl.nome+'</option>';
       }).join('');
     });
-    db.from('casos').select('id,numero_cnj,natureza,tipo_acao,clientes(nome)').neq('id',id).order('created_at',{ascending:false}).then(function(r){
+    db.from('casos').select('id,numero_cnj,natureza,tipo_acao,cliente:cliente_id(nome)').neq('id',id).order('created_at',{ascending:false}).then(function(r){
       var sel=document.getElementById('fce-pai'); if(!sel)return;
       sel.innerHTML='<option value="">Nenhum (independente)</option>'+(r.data||[]).map(function(cs){
-        var label=(cs.clientes?cs.clientes.nome:'?')+' — '+(cs.natureza||cs.tipo_acao||'Processo')+(cs.numero_cnj?' ('+cs.numero_cnj+')':'');
+        var label=(cs.cliente?cs.cliente.nome:'?')+' — '+(cs.natureza||cs.tipo_acao||'Processo')+(cs.numero_cnj?' ('+cs.numero_cnj+')':'');
         return '<option value="'+cs.id+'"'+(c.caso_pai_id===cs.id?' selected':'')+'>'+label+'</option>';
       }).join('');
     });
@@ -2258,7 +2258,7 @@ function salvarEditCaso(id){
 // ── DETALHES DO PROCESSO ────────────────────────────────────────
 function openDetalhesCaso(id){
   openModal('Detalhes do Processo','<div class="loading">🔄 Carregando processo...</div>',null,true);
-  db.from('casos').select('*,clientes(id,nome,email,telefone),co_cliente:co_cliente_id(id,nome,email,telefone)').eq('id',id).single().then(function(res){
+  db.from('casos').select('*,cliente:cliente_id(id,nome,email,telefone),co_cliente:co_cliente_id(id,nome,email,telefone)').eq('id',id).single().then(function(res){
     var c=res.data; if(!c){document.getElementById('mob').innerHTML='<div style="color:var(--er)">Não encontrado.</div>';return;}
     Promise.all([
       c.caso_pai_id?db.from('casos').select('id,numero_cnj,natureza,tipo_acao').eq('id',c.caso_pai_id).single().then(function(r){return r.data;}):Promise.resolve(null),
@@ -2276,7 +2276,7 @@ function openDetalhesCaso(id){
       h+='<button class="btn bg" style="font-size:11px" onclick="closeModal();setTimeout(function(){openEditCaso(\''+id+'\')},50)">✏️ Editar</button></div>';
       h+='<div class="g2" style="margin-bottom:14px"><div>';
       h+='<div style="font-size:11px;color:var(--tx3);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Dados</div>';
-      if(c.clientes)h+='<div class="fi"><span class="fl">Cliente</span><span class="fv clickable" onclick="closeModal();setTimeout(function(){openPerfilCliente(\''+c.clientes.id+'\')},50)">'+c.clientes.nome+'</span></div>';
+      if(c.cliente)h+='<div class="fi"><span class="fl">Cliente</span><span class="fv clickable" onclick="closeModal();setTimeout(function(){openPerfilCliente(\''+c.cliente.id+'\')},50)">'+c.cliente.nome+'</span></div>';
       if(c.co_cliente)h+='<div class="fi"><span class="fl">Co-cliente</span><span class="fv clickable" onclick="closeModal();setTimeout(function(){openPerfilCliente(\''+c.co_cliente.id+'\')},50)">'+c.co_cliente.nome+'</span></div>';
       if(c.natureza)h+='<div class="fi"><span class="fl">Natureza</span><span class="fv">'+c.natureza+'</span></div>';
       if(c.tipo_acao)h+='<div class="fi"><span class="fl">Tipo</span><span class="fv">'+c.tipo_acao+'</span></div>';

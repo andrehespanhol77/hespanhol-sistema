@@ -16,11 +16,35 @@ export default async function handler(req, res) {
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const resendKey = process.env.RESEND_API_KEY;
   const anthropicKey = process.env.ANTHROPIC_API_KEY;
+  const cronSecret = process.env.CRON_SECRET;
   if (!serviceRoleKey || !resendKey || !anthropicKey) {
     return res.status(500).json({ error: 'Variáveis de ambiente ausentes' });
   }
 
   const force = req.query?.force === 'true' || req.body?.force === true;
+
+  // Verifica autenticação: cron automático OU admin logado (force/teste) OU CRON_SECRET
+  const authHeader = req.headers['authorization'] || '';
+  const isCron = authHeader === `Bearer ${cronSecret}`;
+  const isForceWithSecret = force && cronSecret && req.body?.secret === cronSecret;
+
+  if (!isCron && !isForceWithSecret) {
+    // Permite chamada autenticada de admin para testes
+    if (force && serviceRoleKey) {
+      const userRes = await fetch(`${SB_URL}/auth/v1/user`, {
+        headers: { 'Authorization': authHeader, 'apikey': serviceRoleKey }
+      });
+      if (!userRes.ok) return res.status(401).json({ error: 'Não autorizado.' });
+      const userData = await userRes.json();
+      const ur = await fetch(`${SB_URL}/rest/v1/usuarios?email=eq.${encodeURIComponent(userData.email)}&select=perfil`, {
+        headers: { 'Authorization': `Bearer ${serviceRoleKey}`, 'apikey': serviceRoleKey }
+      });
+      const us = await ur.json();
+      if (!Array.isArray(us) || us[0]?.perfil !== 'admin') return res.status(403).json({ error: 'Apenas admin.' });
+    } else if (cronSecret) {
+      return res.status(401).json({ error: 'Não autorizado.' });
+    }
+  }
 
   // Verifica se está ativo (a menos que seja force/teste)
   if (!force) {
@@ -78,7 +102,7 @@ export default async function handler(req, res) {
           'content-type': 'application/json'
         },
         body: JSON.stringify({
-          model: 'claude-haiku-4-5',
+          model: 'claude-haiku-4-5-20251014',
           max_tokens: 400,
           system: 'Você é o assistente do escritório Hespanhol Advogados. Escreva um resumo semanal CURTO e AMIGÁVEL para o cliente sobre o andamento dos seus processos. Use linguagem simples, sem termos jurídicos. Máximo 4 frases. Comece com "Esta semana," ou "Na última semana,". Não use markdown.',
           messages: [{ role: 'user', content: contexto }]

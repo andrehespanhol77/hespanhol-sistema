@@ -1449,7 +1449,7 @@ function loadMovements(){
       var cnj=a.casos?a.casos.numero_cnj:'';
       var div=document.createElement('div');
       div.style.cssText='background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);padding:12px 18px;margin-bottom:8px';
-      div.innerHTML='<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:12px;font-weight:600;color:var(--tx)">'+cliente+(cnj?' — '+cnj:'')+'</span><div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;color:var(--tx3)">'+dt+'</span><button class="btn bg" style="font-size:10px;padding:2px 7px" onclick="openEditAndamento(\''+a.id+'\',\''+encodeURIComponent(a.descricao||'')+'\',\''+a.data_andamento+'\')">✏️</button></div></div><div style="font-size:12px;color:var(--tx2)">'+safeText(a.descricao)+'</div>';
+      div.innerHTML='<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:12px;font-weight:600;color:var(--tx)">'+cliente+(cnj?' — '+cnj:'')+'</span><div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;color:var(--tx3)">'+dt+'</span><button class="btn bg" style="font-size:10px;padding:2px 7px;color:var(--ac)" title="Traduzir para o cliente" onclick="traduzirAndamento(\''+a.id+'\',this)">🗣</button><button class="btn bg" style="font-size:10px;padding:2px 7px" onclick="openEditAndamento(\''+a.id+'\',\''+encodeURIComponent(a.descricao||'')+'\',\''+a.data_andamento+'\')">✏️</button></div></div><div style="font-size:12px;color:var(--tx2)">'+safeText(a.descricao)+'</div>';
       lista.appendChild(div);
     });
   });
@@ -1491,6 +1491,69 @@ function exportarAuditCSV(){
     a.href=url;a.download='auditoria_'+new Date().toISOString().slice(0,10)+'.csv';
     document.body.appendChild(a);a.click();document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  });
+}
+
+function traduzirAndamento(andId, btn){
+  // Busca o andamento
+  db.from('andamentos').select('*, casos(id,natureza,numero_cnj,cliente:cliente_id(id,nome,email))').eq('id',andId).single().then(function(r){
+    if(r.error||!r.data){alert('Erro ao buscar andamento.');return;}
+    var a=r.data;
+    var textoOriginal=a.descricao||'';
+    var cliente=a.casos&&a.casos.cliente?a.casos.cliente:{};
+    var caso=a.casos|{};
+    if(btn){btn.textContent='⏳';btn.disabled=true;}
+    // Chama Claude para traduzir
+    fetch('/api/claude',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-opus-4-5',
+        max_tokens:600,
+        system:'Você é um assistente jurídico. Reescreva o andamento processual abaixo em linguagem simples, clara e amigável para um cliente leigo. Seja objetivo, use no máximo 3 frases. Não use termos jurídicos sem explicação. Comece diretamente com a informação (sem "Olá" ou saudação).',
+        messages:[{role:'user',content:'Andamento: '+textoOriginal}]
+      })
+    }).then(function(resp){return resp.json();}).then(function(d){
+      if(btn){btn.textContent='🗣';btn.disabled=false;}
+      var traduzido=(d.content&&d.content[0])?d.content[0].text:'Erro na tradução.';
+      // Abre modal com tradução e botão de envio
+      var emailCliente=cliente.email||'';
+      var nomeCliente=cliente.nome||'Cliente';
+      var html=
+        '<div style="margin-bottom:14px">'+
+          '<div style="font-size:11px;color:var(--tx3);margin-bottom:4px">ORIGINAL (jurídico)</div>'+
+          '<div style="background:var(--sf);border:1px solid var(--bd);border-radius:6px;padding:10px;font-size:12px;color:var(--tx2)">'+safeText(textoOriginal)+'</div>'+
+        '</div>'+
+        '<div style="margin-bottom:16px">'+
+          '<div style="font-size:11px;color:var(--tx3);margin-bottom:4px">TRADUÇÃO (linguagem do cliente)</div>'+
+          '<textarea class="inp" id="trad-texto" rows="4" style="font-size:13px">'+traduzido+'</textarea>'+
+        '</div>'+
+        '<div class="fg"><label class="flb">E-mail do destinatário</label><input class="inp" id="trad-email" type="email" value="'+safeText(emailCliente)+'" placeholder="email@cliente.com"></div>'+
+        '<div class="fg"><label class="flb">Assunto</label><input class="inp" id="trad-assunto" value="Atualização do seu processo'+( caso.numero_cnj?' — '+caso.numero_cnj:'')+'"></div>'+
+        '<div id="trad-status" style="font-size:12px;display:none"></div>';
+      openModal('🗣 Traduzir e Enviar ao Cliente', html, function(){
+        var email=document.getElementById('trad-email').value.trim();
+        var assunto=document.getElementById('trad-assunto').value.trim();
+        var texto=document.getElementById('trad-texto').value.trim();
+        var st=document.getElementById('trad-status');
+        if(!email){st.style.display='block';st.style.color='var(--er)';st.textContent='❌ Informe o e-mail do destinatário.';return;}
+        var btn2=document.getElementById('modal-save-btn');
+        btn2.textContent='Enviando...';btn2.disabled=true;
+        fetch('/api/send-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:email,subject:assunto,text:'Prezado(a) '+nomeCliente+',\n\n'+texto})}).then(function(re){return re.json();}).then(function(rd){
+          if(rd.success){
+            logAuditoria('EMAIL','andamentos','Andamento traduzido e enviado para '+email);
+            adicionarEmailEnviado(email,assunto);
+            closeModal();
+          } else {
+            btn2.textContent='Enviar';btn2.disabled=false;
+            st.style.display='block';st.style.color='var(--er)';st.textContent='❌ '+(rd.error||'Erro ao enviar.');
+          }
+        });
+      },'Enviar ao Cliente');
+    }).catch(function(e){
+      if(btn){btn.textContent='🗣';btn.disabled=false;}
+      alert('Erro ao traduzir: '+e.message);
+    });
   });
 }
 
@@ -1591,7 +1654,7 @@ function loadDashboard(){
 }
 
 // ── MODAIS ─────────────────────────────────────────────────────
-function openModal(titulo,html,onSave,wide){
+function openModal(titulo,html,onSave,wide,btnLabel){
   var moc=document.querySelector('#modal .moc');
   moc.className='moc'+(wide?' moc-wide':'');
   document.getElementById('mot').textContent=titulo;
@@ -1599,7 +1662,7 @@ function openModal(titulo,html,onSave,wide){
   var moa=document.getElementById('moa');
   moa.style.display=onSave?'flex':'none';
   var btn=document.getElementById('modal-save-btn');
-  btn.textContent='Salvar';btn.disabled=false;
+  btn.textContent=btnLabel||'Salvar';btn.disabled=false;
   btn.onclick=onSave;
   document.getElementById('modal').classList.add('open');
 }
@@ -3469,7 +3532,7 @@ function openDetalhesCaso(id){
           var dt=a.data_andamento?new Date(a.data_andamento).toLocaleDateString('pt-BR'):'—';
           h+='<div class="tli"><div class="tld"></div>';
           h+='<div style="display:flex;justify-content:space-between;margin-bottom:2px"><span class="tldt">'+dt+'</span>';
-          h+='<button style="background:none;border:none;color:var(--ac);cursor:pointer;font-size:11px;padding:0" onclick="openEditAndamento(\''+a.id+'\',\''+encodeURIComponent(a.descricao||'')+'\',\''+a.data_andamento+'\')">✏️</button></div>';
+          h+='<div style="display:flex;gap:4px"><button style="background:none;border:none;color:var(--ac);cursor:pointer;font-size:11px;padding:0" title="Traduzir para o cliente" onclick="traduzirAndamento(\''+a.id+'\',this)">🗣</button><button style="background:none;border:none;color:var(--ac);cursor:pointer;font-size:11px;padding:0" onclick="openEditAndamento(\''+a.id+'\',\''+encodeURIComponent(a.descricao||'')+'\',\''+a.data_andamento+'\')">✏️</button></div></div>';
           h+='<div class="tltx">'+safeText(a.descricao)+'</div></div>';
         });
         h+='</div>';

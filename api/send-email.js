@@ -2,20 +2,20 @@ const SB_URL = 'https://rdmlxfgwlbroigsisjph.supabase.co';
 
 const ASSINATURA_HTML = `
 <div style="font-family:Arial,sans-serif">
-  <div style="font-size:20px;font-weight:300;color:#243d62;letter-spacing:2px;margin-top:30px;margin-bottom:32px">ANDRÉ HESPANHOL</div>
+  <div style="font-size:16px;font-weight:300;color:#243d62;letter-spacing:2px;margin-top:24px;margin-bottom:26px">ANDRÉ HESPANHOL</div>
   <table cellpadding="0" cellspacing="0" border="0">
     <tr>
-      <td style="vertical-align:top;padding-right:28px">
-        <div style="width:0;height:0;border-style:solid;border-width:90px 90px 0 0;border-color:#5b9bd5 transparent transparent transparent"></div>
+      <td style="vertical-align:top;padding-right:22px">
+        <div style="width:0;height:0;border-style:solid;border-width:72px 72px 0 0;border-color:#5b9bd5 transparent transparent transparent"></div>
       </td>
       <td style="vertical-align:top;padding-top:0">
-        <div style="font-size:26px;font-weight:900;color:#1a2b4a;letter-spacing:1px;line-height:1">HESPANHOL</div>
-        <div style="font-size:12px;font-weight:700;color:#1a2b4a;letter-spacing:5px;margin-top:3px">ADVOGADOS</div>
-        <div style="margin-top:16px;font-size:13px;color:#444;line-height:1.9">
+        <div style="font-size:21px;font-weight:900;color:#1a2b4a;letter-spacing:1px;line-height:1">HESPANHOL</div>
+        <div style="font-size:10px;font-weight:700;color:#1a2b4a;letter-spacing:5px;margin-top:2px">ADVOGADOS</div>
+        <div style="margin-top:13px;font-size:11px;color:#444;line-height:1.9">
           SHIS, QI 28, Conjunto 19, casa 2<br>
           Lago Sul, Brasília - DF - CEP 71670-140
         </div>
-        <div style="margin-top:10px;font-size:13px;font-weight:700;color:#1a2b4a">
+        <div style="margin-top:8px;font-size:11px;font-weight:700;color:#1a2b4a">
           <a href="https://andrehespanhol.com" style="color:#1a2b4a;text-decoration:none">andrehespanhol.com</a>
         </div>
       </td>

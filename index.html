@@ -2681,11 +2681,12 @@ function executarFerramenta(nome, input){
           if(input.cc)payload.cc=input.cc;
           authFetch('/api/send-email',{method:'POST',body:JSON.stringify(payload)}).then(async function(r){
             var d=await r.json().catch(function(){return {};});
-            if(!r.ok){resolve({erro:'Falha no envio (HTTP '+r.status+'): '+(d.error||d.message||'erro desconhecido')});return;}
+            console.log('[agente:enviar_email] status='+r.status, d);
+            if(!r.ok){resolve({erro:'Falha no envio (HTTP '+r.status+'): '+(d.error||d.message||JSON.stringify(d))});return;}
+            try{adicionarEmailEnviado(input.destinatario,input.assunto);}catch(ex){console.warn('[agente:enviar_email] adicionarEmailEnviado falhou:',ex);}
             logAuditoria('EMAIL','email','Agente enviou e-mail para '+input.destinatario+(input.cc?' cc:'+input.cc:'')+': '+input.assunto);
-            adicionarEmailEnviado(input.destinatario,input.assunto);
             resolve({sucesso:true,mensagem:'E-mail enviado para '+input.destinatario+(input.cc?', com cópia para '+input.cc:''),id:d.id});
-          }).catch(function(e){resolve({erro:'Erro de rede ao enviar e-mail: '+e.message});});
+          }).catch(function(e){console.error('[agente:enviar_email] catch:',e);resolve({erro:'Erro de rede ao enviar e-mail: '+e.message});});
         })();
         break;
       case 'lancar_despesa_caso':

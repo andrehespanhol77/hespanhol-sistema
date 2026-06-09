@@ -580,6 +580,16 @@ tr:hover td{background:var(--sf);}
 <script>
 var SB_URL='https://rdmlxfgwlbroigsisjph.supabase.co';
 var SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkbWx4Zmd3bGJyb2lnc2lzanBoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3NjMxOTIsImV4cCI6MjA5MjMzOTE5Mn0.stw8254uQoJGka6jEx0kXQeGWXn_IOTZcyltM6c5UqA';
+
+// Captura hash ANTES do SDK processar (para detectar fluxo de convite)
+var _rawHashParams = (function(){
+  var h = window.location.hash.substring(1);
+  var p = {};
+  h.split('&').forEach(function(s){ var kv=s.split('='); if(kv[0]) p[kv[0]]=decodeURIComponent(kv[1]||''); });
+  return p;
+})();
+var _pendingInvite = (_rawHashParams.access_token && (_rawHashParams.type==='invite'||_rawHashParams.type==='signup'||_rawHashParams.type==='recovery'));
+
 var db=supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,storage:window.localStorage}});
 
 var ptitles={dashboard:'Dashboard',cases:'Casos',clients:'Clientes',agenda:'Agenda',movements:'Andamentos',expenses:'Despesas',docs:'Documentos',importer:'Importar Documento',financial:'Financeiro',email:'Agente E-mail',access:'Controle de Acesso',audit:'Auditoria',connectors:'Conectores',settings:'Configurações',relatorio:'Relatório do Escritório',saude:'Saúde do Escritório'};
@@ -1412,20 +1422,19 @@ function fazerLogout(){
   });
 }
 
-// Detecta token de convite na URL (#access_token=...&type=invite)
-(function(){
-  var hash = window.location.hash.substring(1);
-  var params = {};
-  hash.split('&').forEach(function(p){ var kv=p.split('='); if(kv[0]) params[kv[0]]=decodeURIComponent(kv[1]||''); });
-  if(params.type==='invite' && params.access_token){
-    // Seta a sessão com o token do convite para permitir updateUser
-    db.auth.setSession({ access_token: params.access_token, refresh_token: params.refresh_token||'' }).then(function(){
-      document.getElementById('login-wrap').style.display='none';
-      document.getElementById('invite-wrap').style.display='flex';
-      history.replaceState(null,'',window.location.pathname);
-    });
-  }
-})();
+// Detecta token de convite na URL (#access_token=...&type=invite|signup|recovery)
+if(_pendingInvite){
+  db.auth.setSession({ access_token: _rawHashParams.access_token, refresh_token: _rawHashParams.refresh_token||'' }).then(function(){
+    document.getElementById('login-wrap').style.display='none';
+    document.getElementById('invite-wrap').style.display='flex';
+    history.replaceState(null,'',window.location.pathname);
+  }).catch(function(){
+    // Mesmo se setSession falhar, o SDK já processou o hash — mostra o formulário
+    document.getElementById('login-wrap').style.display='none';
+    document.getElementById('invite-wrap').style.display='flex';
+    history.replaceState(null,'',window.location.pathname);
+  });
+}
 
 function definirSenhaConvite(){
   var pwd=document.getElementById('invite-pwd').value;
@@ -1438,12 +1447,16 @@ function definirSenhaConvite(){
   btn.textContent='Salvando...';btn.disabled=true;
   db.auth.updateUser({password:pwd}).then(function(res){
     if(res.error){err.style.display='block';err.textContent='Erro: '+res.error.message;btn.textContent='Criar senha e entrar';btn.disabled=false;return;}
+    _pendingInvite=false;
     document.getElementById('invite-wrap').style.display='none';
-    mostrarSistema(res.data.session||res.data);
+    db.auth.getSession().then(function(sr){
+      mostrarSistema(sr.data&&sr.data.session ? sr.data.session : res.data.session||res.data);
+    });
   });
 }
 
 db.auth.getSession().then(function(res){
+  if(_pendingInvite) return; // aguarda o usuário definir a senha
   if(res.data&&res.data.session){mostrarSistema(res.data.session);}
 });
 

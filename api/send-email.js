@@ -41,31 +41,33 @@ export default async function handler(req, res) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!serviceRoleKey || !apiKey) return res.status(500).json({ error: 'Configuração ausente' });
 
-  // Autenticação obrigatória
   const user = await verificarAuth(req, serviceRoleKey);
   if (!user) return res.status(401).json({ error: 'Não autorizado. Faça login novamente.' });
 
-  const { to, subject, text, html } = req.body || {};
+  const { to, subject, text, html, cc } = req.body || {};
   if (!to || !subject || (!text && !html)) {
     return res.status(400).json({ error: 'Campos obrigatórios: to, subject, text ou html' });
   }
 
-  // Sanitiza: não aceita HTML externo — apenas text é permitido do frontend
   const bodyHtml = `<div style="font-family:Arial,sans-serif;font-size:14px;color:#333;line-height:1.7;white-space:pre-wrap">${
     String(text || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>')
   }</div>` + ASSINATURA_HTML;
+
+  const payload = {
+    from: 'Hespanhol Advogados <andrehespanhol@andrehespanhol.com>',
+    to: Array.isArray(to) ? to : [to],
+    subject,
+    text: text || '',
+    html: bodyHtml,
+  };
+
+  if (cc) payload.cc = Array.isArray(cc) ? cc : [cc];
 
   try {
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        from: 'Hespanhol Advogados <andrehespanhol@andrehespanhol.com>',
-        to: Array.isArray(to) ? to : [to],
-        subject,
-        text: text || '',
-        html: bodyHtml,
-      }),
+      body: JSON.stringify(payload),
     });
     const data = await response.json();
     if (!response.ok) return res.status(response.status).json({ error: data.message || 'Erro ao enviar' });

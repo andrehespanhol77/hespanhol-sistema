@@ -4,6 +4,7 @@
       "memory": 512,
       "maxDuration": 30
     },
+    { "path": "/api/buscar-publicacoes", "schedule": "0 8 * * *" },
     "api/monitor-processos.js": {
       "maxDuration": 60
     },

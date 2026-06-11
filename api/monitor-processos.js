@@ -171,7 +171,7 @@ export default async function handler(req, res) {
   try {
     // 1. Busca todos os casos ativos com número CNJ + nome do cliente
     const casos = await sb(
-      'casos?select=id,numero_cnj,natureza,tipo_acao,clientes(nome)&status=eq.ativo&numero_cnj=not.is.null'
+      'casos?select=id,numero_cnj,natureza,tipo_acao,clientes!casos_cliente_id_fkey(nome)&status=eq.ativo&numero_cnj=not.is.null'
     );
 
     if (!casos.length) {

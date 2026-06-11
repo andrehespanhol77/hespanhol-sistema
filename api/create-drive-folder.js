@@ -51,11 +51,11 @@ async function uploadArquivo(token, nome, mimeType, conteudoB64, parentId) {
   const metadata = JSON.stringify({name:nome,parents:[parentId]});
   const boundary = "boundary_hespanhol";
   const body = Buffer.concat([
-    Buffer.from(`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${metadata}\r\n--${boundary}\r\nContent-Type: ${mimeType}\r\nContent-Transfer-Encoding: base64\r\n\r\n`),
-    Buffer.from(conteudoB64),
+    Buffer.from(`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${metadata}\r\n--${boundary}\r\nContent-Type: ${mimeType}\r\n\r\n`),
+    fileContent,
     Buffer.from(`\r\n--${boundary}--`)
   ]);
-  const resp = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink",{method:"POST",headers:{Authorization:`Bearer ${token}`,"Content-Type":`multipart/related; boundary=${boundary}`},body});
+  const resp = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink&supportsAllDrives=true",{method:"POST",headers:{Authorization:`Bearer ${token}`,"Content-Type":`multipart/related; boundary=${boundary}`},body});
   const data = await resp.json();
   if (!data.id) throw new Error("Erro ao subir arquivo: "+JSON.stringify(data));
   await fetch(`https://www.googleapis.com/drive/v3/files/${data.id}/permissions`,{method:"POST",headers:{Authorization:`Bearer ${token}`,"Content-Type":"application/json"},body:JSON.stringify({role:"reader",type:"anyone"})});

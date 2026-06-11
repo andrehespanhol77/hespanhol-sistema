@@ -314,13 +314,17 @@ tr:hover td{background:var(--sf);}
   <div class="page" id="page-expenses">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
     <div style="font-size:13px;color:var(--tx3)">Despesas por caso — <span id="desp-count">carregando...</span></div>
-    <div style="display:flex;gap:8px">
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
       <select class="inp" id="desp-filtro-status" style="font-size:12px;padding:6px 10px" onchange="loadDespesasGlobal()">
         <option value="">Todos os status</option>
         <option value="pendente">Pendente</option>
         <option value="pago">Pago</option>
         <option value="reembolsado">Reembolsado</option>
       </select>
+      <input class="inp" id="desp-filtro-de" type="date" style="font-size:12px;padding:6px 10px" onchange="loadDespesasGlobal()" title="De">
+      <input class="inp" id="desp-filtro-ate" type="date" style="font-size:12px;padding:6px 10px" onchange="loadDespesasGlobal()" title="Até">
+      <input class="inp" id="desp-filtro-cliente" type="text" style="font-size:12px;padding:6px 10px;width:150px" oninput="loadDespesasGlobal()" placeholder="Cliente...">
+      <select class="inp" id="desp-filtro-cat" style="font-size:12px;padding:6px 10px" onchange="loadDespesasGlobal()"><option value="">Todas categorias</option><option value="honorarios">Honorários</option><option value="custas">Custas</option><option value="pericia">Perícia</option><option value="transporte">Transporte</option><option value="outros">Outros</option></select>
     </div>
   </div>
   <div id="desp-global-lista"><div class="loading">🔄 Carregando...</div></div>
@@ -894,7 +898,8 @@ function carregarDespesasCaso(casoId){
         h+='<td style="padding:5px 6px;text-align:center;color:'+statusColor+';font-size:10px">'+statusLabel+'</td>';
         h+='<td style="padding:5px 6px;display:flex;gap:4px">';
         if(d.comprovante_url)h+='<a href="'+d.comprovante_url+'" target="_blank" style="font-size:10px;color:var(--ac)">📎</a>';
-        h+='<button class="btn bg" style="font-size:9px;padding:2px 6px" onclick="editarDespesaCaso(\''+d.id+'\',\''+casoId+'\')">✏️</button>';
+        if(d.reembolsavel&&d.status!=='reembolsado')h+='<button class="btn" style="font-size:9px;padding:2px 6px;background:var(--su);color:#fff" onclick="marcarDespesaCasoReembolsada(\''+d.id+'\',\''+casoId+'\')">✅</button>';
+    h+='<button class="btn bg" style="font-size:9px;padding:2px 6px" onclick="editarDespesaCaso(\''+d.id+'\',\''+casoId+'\')">✏️</button>';
         if(_podeApagar)h+='<button class="btn bg" style="font-size:9px;padding:2px 6px;color:var(--er)" onclick="apagarDespesaCaso(\''+d.id+'\',\''+casoId+'\')">🗑</button>';
         h+='</td></tr>';
       });
@@ -1475,6 +1480,7 @@ function loadCases(){
   query.order('created_at',{ascending:false}).then(function(res){
     if(res.error){tbody.innerHTML='<tr><td colspan="8" style="color:var(--er);padding:16px;text-align:center">Erro: '+res.error.message+'</td></tr>';return;}
     var data=res.data||[];
+    if(fCliente)data=data.filter(function(d){var n=(d.casos&&d.casos.cliente&&d.casos.cliente.nome||'').toLowerCase();return n.indexOf(fCliente)>-1;});
     if(countEl)countEl.textContent=data.length+' caso(s) encontrado(s)';
     var nb=document.getElementById('cases-nb'); if(nb)nb.textContent=data.length;
     if(data.length===0){tbody.innerHTML='<tr><td colspan="8" class="loading">Nenhum caso cadastrado ainda.</td></tr>';return;}
@@ -2940,8 +2946,15 @@ function loadDespesasGlobal(){
   var countEl=document.getElementById('desp-count');
   if(!lista)return;
   var fStatus=document.getElementById('desp-filtro-status');
+  var fDe=document.getElementById('desp-filtro-de');
+  var fAte=document.getElementById('desp-filtro-ate');
+  var fCliente=(document.getElementById('desp-filtro-cliente')?document.getElementById('desp-filtro-cliente').value:'').trim().toLowerCase();
+  var fCat=document.getElementById('desp-filtro-cat');
   var q=db.from('despesas_caso').select('*,casos(numero_cnj,natureza,tipo_acao,cliente:cliente_id(nome))').order('data_despesa',{ascending:false});
   if(fStatus&&fStatus.value)q=q.eq('status',fStatus.value);
+  if(fDe&&fDe.value)q=q.gte('data_despesa',fDe.value);
+  if(fAte&&fAte.value)q=q.lte('data_despesa',fAte.value);
+  if(fCat&&fCat.value)q=q.eq('categoria',fCat.value);
   q.then(function(res){
     var data=res.data||[];
     if(countEl)countEl.textContent=data.length+' despesa(s)';
@@ -2994,22 +3007,24 @@ function loadFinanceiro(){
     db.from('honorarios').select('*, casos(id,natureza,tipo_acao,numero_cnj,cliente:cliente_id(nome))').order('created_at',{ascending:false}),
     db.from('pagamentos_honorarios').select('honorario_id,valor'),
     db.from('despesas_escritorio').select('*').order('data_vencimento',{ascending:false}),
-    db.from('impostos').select('*').order('data_vencimento',{ascending:false})
+    db.from('impostos').select('*').order('data_vencimento',{ascending:false}),
+    db.from('despesas_caso').select('valor,status').in('status',['pago','reembolsado'])
   ]).then(function(rs){
     _honorariosData=rs[0].data||[];
     var pags=rs[1].data||[];
     var desps=rs[2].data||[];
     var imps=rs[3].data||[];
+    var despsCasoData=rs[4]?rs[4].data||[]:[];
     renderHonorarios(_honorariosData);
     renderRelatorioFinanceiro(_honorariosData);
     renderDespesasEsc(desps);
     renderImpostos(imps);
-    renderCardsFinanceiros(_honorariosData,pags,desps,imps);
+    renderCardsFinanceiros(_honorariosData,pags,desps,imps,despsCasoData);
     renderAlertasFinanceiros(_honorariosData,pags,desps,imps);
   });
 }
 
-function renderCardsFinanceiros(hons,pags,desps,imps){
+function renderCardsFinanceiros(hons,pags,desps,imps,despsCasoData){
   var hoje=new Date(); hoje.setHours(0,0,0,0);
   var mesIni=new Date(hoje.getFullYear(),hoje.getMonth(),1);
   var mesFim=new Date(hoje.getFullYear(),hoje.getMonth()+1,0);
@@ -3037,7 +3052,7 @@ function renderCardsFinanceiros(hons,pags,desps,imps){
   var impMes=imps.filter(function(i){var dt=new Date(i.data_vencimento);return dt>=mesIni&&dt<=mesFim;});
   var totalImpMes=impMes.reduce(function(s,i){return s+Number(i.valor||0);},0);
   // Resultado
-  var resultado=totalRecebido-despPagas-imps.filter(function(i){return i.status==='pago';}).reduce(function(s,i){return s+Number(i.valor||0);},0);
+  var resultado=totalRecebido-despPagas-imps.filter(function(i){return i.status==='pago';}).reduce(function(s,i){return s+Number(i.valor||0);},0)-(despsCasoData||[]).reduce(function(s,i){return s+Number(i.valor||0);},0);
   var mesLabel=hoje.toLocaleString('pt-BR',{month:'long',year:'numeric'});
   document.getElementById('fin-cards').innerHTML=
     card3('💰','Receita Recebida',fmtMoeda(totalRecebido),'#2a7')+
@@ -3177,12 +3192,31 @@ function editarDespesaEsc(id){
   });
 }
 
+function marcarDespesaCasoReembolsada(despId,casoId){
+  if(!confirm('Marcar despesa como reembolsada?'))return;
+  var hoje=new Date().toISOString().slice(0,10);
+  db.from('despesas_caso').update({status:'reembolsado',data_pagamento:hoje}).eq('id',despId).then(function(r){
+    if(r.error){alert('Erro: '+r.error.message);return;}
+    logAuditoria('UPDATE','despesas_caso','Despesa '+despId+' marcada como reembolsada');
+    carregarDespesasCaso(casoId);
+  });
+}
 function marcarDespesaEscPaga(id){
   var hoje=new Date().toISOString().slice(0,10);
   db.from('despesas_escritorio').update({status:'pago',data_pagamento:hoje}).eq('id',id).then(function(r){
     if(r.error){alert('Erro: '+r.error.message);return;}
     logAuditoria('UPDATE','despesas_escritorio','Despesa '+id+' marcada como paga');
-    loadFinanceiro();
+    db.from('despesas_escritorio').select('*').eq('id',id).single().then(function(rd){
+      if(!rd.error&&rd.data&&rd.data.recorrente){
+        var dv=rd.data;
+        var nd=new Date(dv.data_vencimento+'T12:00:00');
+        nd.setMonth(nd.getMonth()+1);
+        db.from('despesas_escritorio').insert({descricao:dv.descricao,valor:dv.valor,categoria:dv.categoria,data_vencimento:nd.toISOString().slice(0,10),status:'pendente',recorrente:true}).then(function(){
+          logAuditoria('INSERT','despesas_escritorio','Recorrência criada: '+dv.descricao);
+        });
+      }
+      loadFinanceiro();
+    });
   });
 }
 

@@ -3654,7 +3654,7 @@ async function agentLoop(typingEl){
           typingEl.remove();
           var actionEl=appendAIMsg('tool','⚙️ '+formatNomeFerramenta(block.name)+'...');
           typingEl=showTyping();
-          var result=await executarFerramenta(block.name,block.input);
+          var result;try{result=await executarFerramenta(block.name,block.input);}catch(toolErr){result={erro:'Erro interno: '+toolErr.message};}
           actionEl.textContent='✅ '+formatNomeFerramenta(block.name);
           toolResults.push({type:'tool_result',tool_use_id:block.id,content:JSON.stringify(result)});
         }

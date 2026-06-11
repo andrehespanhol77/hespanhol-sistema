@@ -3724,11 +3724,37 @@ function sendAIFile(input){
       _aiMessages.push({role:'user',content:resumo});
       agentLoop(typing).then(function(){
       if(arquivoAgente){
+        // Busca pasta_drive_id nos resultados das ferramentas — upload direto sem depender do Claude
+        var pastaId=null;
+        for(var mi=0;mi<_aiMessages.length;mi++){
+          var mm=_aiMessages[mi];
+          if(mm.role==='user'&&Array.isArray(mm.content)){
+            for(var mj=0;mj<mm.content.length;mj++){
+              var item=mm.content[mj];
+              if(item.type==='tool_result'&&typeof item.content==='string'){
+                try{
+                  var parsed=JSON.parse(item.content);
+                  if(parsed&&parsed.pasta_drive_id){pastaId=parsed.pasta_drive_id;break;}
+                  if(Array.isArray(parsed)&&parsed[0]&&parsed[0].pasta_drive_id){pastaId=parsed[0].pasta_drive_id;break;}
+                }catch(pe){}
+              }
+            }
+          }
+          if(pastaId)break;
+        }
         var n2=(arquivoAgente.nome||'').toLowerCase();
         var t2=n2.indexOf('procura')!==-1?'procuracao':n2.indexOf('contrat')!==-1?'contrato':(n2.indexOf('peti')!==-1||n2.indexOf('recurs')!==-1)?'peticao':'outro';
-        _aiMessages.push({role:'user',content:'O arquivo "'+arquivoAgente.nome+'" ainda não foi salvo no Drive. Chame AGORA a ferramenta upload_documento com: tipo="'+t2+'", nome_arquivo="'+arquivoAgente.nome+'", e o pasta_cliente_id do cliente que você já localizou acima.'});
-        var t3=showTyping();
-        agentLoop(t3).catch(function(e2){t3.remove();appendAIMsg('bot','Erro no upload: '+e2.message);});
+        if(pastaId){
+          var actEl=appendAIMsg('tool','⚙️ Salvando documento no Drive...');
+          fetch('/api/create-drive-folder',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({acao:'upload_documento',pasta_cliente_id:pastaId,tipo:t2,nome:arquivoAgente.nome,mime:arquivoAgente.mime,conteudo_b64:arquivoAgente.b64,caso_pasta_id:null})}).then(function(r){return r.json();}).then(function(d){
+            if(d.error){actEl.textContent='❌ Erro ao salvar no Drive: '+d.error;}
+            else{arquivoAgente=null;actEl.textContent='✅ Documento salvo no Drive';appendAIMsg('bot','📁 Documento salvo: '+d.url);}
+          }).catch(function(e2){actEl.textContent='❌ Erro: '+e2.message;});
+        } else {
+          _aiMessages.push({role:'user',content:'O arquivo "'+arquivoAgente.nome+'" ainda não foi salvo no Drive. Chame AGORA a ferramenta upload_documento com tipo="'+t2+'" e nome_arquivo="'+arquivoAgente.nome+'" usando o pasta_cliente_id do cliente.'});
+          var t3=showTyping();
+          agentLoop(t3).catch(function(e2){t3.remove();appendAIMsg('bot','Erro no upload: '+e2.message);});
+        }
       }
     }).catch(function(e){typing.remove();appendAIMsg('bot','Erro: '+e.message);});
     }).catch(function(e){typing.remove();appendAIMsg('bot','Erro ao processar documento: '+e.message);});

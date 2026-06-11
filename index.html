@@ -1571,8 +1571,7 @@ function apagarCliente(id){
   });
 }
 
-async 
-function criarSubpastasFaltantes(){
+async function criarSubpastasFaltantes(){
   var btn=event.target;btn.textContent='🔄 Processando...';btn.disabled=true;
   var log=[];
   db.from('casos').select('id,natureza,tipo_acao,pasta_drive_id').not('pasta_drive_id','is',null).then(function(r){

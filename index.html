@@ -4423,7 +4423,8 @@ function executarMonitorDataJud(){
   if(!_podeApagar)return;
   var btn=document.getElementById('btn-monitor-datajud');
   btn.textContent='⏳ Verificando...'; btn.disabled=true;
-  fetch('/api/monitor-processos',{method:'POST'})
+  getAuthToken().then(function(token){
+  fetch('/api/monitor-processos',{method:'POST',headers:token?{'Authorization':'Bearer '+token}:{}})
     .then(function(r){return r.json();})
     .then(function(d){
       btn.disabled=false;
@@ -4440,7 +4441,8 @@ function executarMonitorDataJud(){
       if(d.casos_com_novidade>0) loadCases();
     })
     .catch(function(err){btn.textContent='⚡ Monitor DataJud';btn.disabled=false;alert('Erro: '+err.message);});
-}
+  });}
+
 function getTribunalUrl(numero){
   if(!numero)return null;
   var clean=numero.replace(/\s/g,'');

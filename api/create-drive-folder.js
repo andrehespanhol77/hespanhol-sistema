@@ -58,7 +58,6 @@ async function uploadArquivo(token, nome, mimeType, conteudoB64, parentId) {
   const resp = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink",{method:"POST",headers:{Authorization:`Bearer ${token}`,"Content-Type":`multipart/related; boundary=${boundary}`},body});
   const data = await resp.json();
   if (!data.id) throw new Error("Erro ao subir arquivo: "+JSON.stringify(data));
-  // Tornar publico para leitura
   await fetch(`https://www.googleapis.com/drive/v3/files/${data.id}/permissions`,{method:"POST",headers:{Authorization:`Bearer ${token}`,"Content-Type":"application/json"},body:JSON.stringify({role:"reader",type:"anyone"})});
   return {file_id:data.id, url:data.webViewLink||`https://drive.google.com/file/d/${data.id}/view`};
 }
@@ -96,7 +95,6 @@ export default async function handler(req, res) {
       return res.status(200).json({success:true,pasta_id:processoId,pasta_url:`https://drive.google.com/drive/folders/${processoId}`});
     }
 
-    // Criar subpastas financeiras em pasta de processo existente
     if (acao === "criar_subpastas_financeiras") {
       if (!pasta_id) return res.status(400).json({error:"pasta_id obrigatório"});
       const [despId, honId] = await Promise.all([
@@ -106,7 +104,6 @@ export default async function handler(req, res) {
       return res.status(200).json({success:true,pasta_despesas_id:despId,pasta_honorarios_id:honId,pasta_despesas_url:`https://drive.google.com/drive/folders/${despId}`,pasta_honorarios_url:`https://drive.google.com/drive/folders/${honId}`});
     }
 
-    // Upload de comprovante para subpasta correta
     if (acao === "upload_comprovante") {
       if (!pasta_id || !nome || !mime || !conteudo_b64) return res.status(400).json({error:"pasta_id, nome, mime e conteudo_b64 obrigatórios"});
       const subpasta = tipo_comprovante === "honorario" ? "Comprovantes de Honorários" : "Comprovantes de Despesas";
@@ -115,7 +112,27 @@ export default async function handler(req, res) {
       return res.status(200).json({success:true,...result});
     }
 
-    return res.status(400).json({error:"acao inválida. Use: criar_cliente, criar_processo, criar_subpastas_financeiras, upload_comprovante"});
+    if (acao === "upload_documento") {
+      const { pasta_cliente_id, tipo, caso_pasta_id } = req.body;
+      if (!pasta_cliente_id || !tipo || !nome || !mime || !conteudo_b64) return res.status(400).json({error:"pasta_cliente_id, tipo, nome, mime e conteudo_b64 obrigatórios"});
+      let pastaDestinoId;
+      if (tipo === "procuracao") {
+        pastaDestinoId = await buscarOuCriarPasta(token, "Documentos Pessoais", pasta_cliente_id);
+      } else if (tipo === "contrato") {
+        const q2 = encodeURIComponent(`'${pasta_cliente_id}' in parents and name='Financeiro' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+        const resp2 = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q2}&fields=files(id)`,{headers:{Authorization:`Bearer ${token}`}});
+        const data2 = await resp2.json();
+        pastaDestinoId = (data2.files && data2.files[0]) ? data2.files[0].id : await buscarOuCriarPasta(token, "Documentos Pessoais", pasta_cliente_id);
+      } else if (tipo === "peticao" && caso_pasta_id) {
+        pastaDestinoId = await buscarOuCriarPasta(token, "Petições e Docs Instrutórios", caso_pasta_id);
+      } else {
+        pastaDestinoId = pasta_cliente_id;
+      }
+      const result = await uploadArquivo(token, nome, mime, conteudo_b64, pastaDestinoId);
+      return res.status(200).json({success:true,url:result.url,file_id:result.file_id});
+    }
+
+    return res.status(400).json({error:"acao inválida. Use: criar_cliente, criar_processo, criar_subpastas_financeiras, upload_comprovante, upload_documento"});
   } catch (err) {
     console.error("Erro:", err.message);
     return res.status(500).json({error:err.message});

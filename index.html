@@ -3685,7 +3685,7 @@ function sendAI(){
   if(!text)return;
   inp.value='';
   appendAIMsg('usr',text);
-  _aiMessages.push({role:'user',content:text});
+  var msgFinal=arquivoAgente?text+'\n[Sistema: arquivo "'+arquivoAgente.nome+'" disponível para upload no Drive — se for pedido para salvar, chame upload_documento imediatamente com o pasta_drive_id do cliente.]':text;_aiMessages.push({role:'user',content:msgFinal});
   var typing=showTyping();
   agentLoop(typing).catch(function(e){
     typing.remove();
@@ -3722,7 +3722,15 @@ function sendAIFile(input){
       if(!json){typing.remove();appendAIMsg('bot','Não consegui extrair dados do documento. Tente um arquivo mais legível.');return;}
       var nomeArq=(file.name||'').toLowerCase();var tipoDoc=nomeArq.indexOf('procura')!==-1?'procuracao':nomeArq.indexOf('contrat')!==-1?'contrato':(nomeArq.indexOf('peti')!==-1||nomeArq.indexOf('recurs')!==-1)?'peticao':'outro';var resumo='Arquivo recebido: "'+file.name+'" | Tipo detectado: '+tipoDoc+'.\nDados extraídos:\n'+json[0]+'\n\nSiga esta sequência OBRIGATÓRIA:\n1. Verifique/cadastre cliente, processo(s) e honorários.\n2. Após os cadastros, chame IMEDIATAMENTE a ferramenta upload_documento com os parâmetros:\n   - pasta_cliente_id: o pasta_drive_id do cliente (obtido na busca acima)\n   - tipo: "'+tipoDoc+'"\n   - nome_arquivo: "'+file.name+'"\nO arquivo já está disponível no sistema. NÃO finalize sem ter chamado upload_documento.';
       _aiMessages.push({role:'user',content:resumo});
-      agentLoop(typing).catch(function(e){typing.remove();appendAIMsg('bot','Erro: '+e.message);});
+      agentLoop(typing).then(function(){
+      if(arquivoAgente){
+        var n2=(arquivoAgente.nome||'').toLowerCase();
+        var t2=n2.indexOf('procura')!==-1?'procuracao':n2.indexOf('contrat')!==-1?'contrato':(n2.indexOf('peti')!==-1||n2.indexOf('recurs')!==-1)?'peticao':'outro';
+        _aiMessages.push({role:'user',content:'O arquivo "'+arquivoAgente.nome+'" ainda não foi salvo no Drive. Chame AGORA a ferramenta upload_documento com: tipo="'+t2+'", nome_arquivo="'+arquivoAgente.nome+'", e o pasta_cliente_id do cliente que você já localizou acima.'});
+        var t3=showTyping();
+        agentLoop(t3).catch(function(e2){t3.remove();appendAIMsg('bot','Erro no upload: '+e2.message);});
+      }
+    }).catch(function(e){typing.remove();appendAIMsg('bot','Erro: '+e.message);});
     }).catch(function(e){typing.remove();appendAIMsg('bot','Erro ao processar documento: '+e.message);});
   };
   reader.onerror=function(){typing.remove();appendAIMsg('bot','Erro ao ler o arquivo.');};

@@ -148,11 +148,15 @@ export default async function handler(req, res) {
 
   // Segurança: se CRON_SECRET configurado, verificar token
   const secret = process.env.CRON_SECRET;
-  if (secret) {
-    const auth = req.headers['authorization'] || '';
-    if (auth !== `Bearer ${secret}`) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
+  const auth = req.headers['authorization'] || '';
+  // Aceita CRON_SECRET (cron automático) OU JWT de admin (acionamento manual)
+  const isCron = secret && auth === `Bearer ${secret}`;
+  if (!isCron) {
+    const token = auth.replace('Bearer ', '');
+    const { data: { user }, error: authErr } = await supabase.auth.getUser(token);
+    if (authErr || !user) return res.status(401).json({ error: 'Unauthorized' });
+    const { data: usr } = await supabase.from('usuarios').select('perfil').eq('id', user.id).single();
+    if (!usr || usr.perfil !== 'admin') return res.status(403).json({ error: 'Forbidden' });
   }
 
   console.log('Monitor DataJud iniciado:', new Date().toISOString());

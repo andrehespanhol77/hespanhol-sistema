@@ -153,10 +153,17 @@ export default async function handler(req, res) {
   const isCron = secret && auth === `Bearer ${secret}`;
   if (!isCron) {
     const token = auth.replace('Bearer ', '');
-    const { data: { user }, error: authErr } = await supabase.auth.getUser(token);
-    if (authErr || !user) return res.status(401).json({ error: 'Unauthorized' });
-    const { data: usr } = await supabase.from('usuarios').select('perfil').eq('id', user.id).single();
-    if (!usr || usr.perfil !== 'admin') return res.status(403).json({ error: 'Forbidden' });
+    if (!token) return res.status(401).json({ error: 'Unauthorized' });
+    // Valida JWT via Supabase Auth REST (sem cliente supabase-js)
+    const userResp = await fetch(`${SB_URL}/auth/v1/user`, {
+      headers: { 'apikey': SB_ANON, 'Authorization': `Bearer ${token}` },
+    });
+    if (!userResp.ok) return res.status(401).json({ error: 'Unauthorized' });
+    const userData = await userResp.json();
+    const userId = userData?.id;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+    const perfis = await sb(`usuarios?select=perfil&id=eq.${userId}&limit=1`);
+    if (!perfis?.[0] || perfis[0].perfil !== 'admin') return res.status(403).json({ error: 'Forbidden' });
   }
 
   console.log('Monitor DataJud iniciado:', new Date().toISOString());

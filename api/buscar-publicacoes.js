@@ -12,7 +12,7 @@ const PJE_BASE = 'https://comunicaapi.pje.jus.br/api/v1/comunicacao';
 const BUSCAS = [
   { tipo: 'oab', params: { numeroOab: '39645', ufOab: 'DF' }, label: 'OAB/DF 39645' },
   { tipo: 'oab', params: { numeroOab: '109359', ufOab: 'RJ' }, label: 'OAB/RJ 109359' },
-  { tipo: 'nome', params: { nomeAdvogado: 'Hespanhol' }, label: 'Nome: Hespanhol' },
+  { tipo: 'nome', params: { nomeAdvogado: 'Andre Luiz Hespanhol Tavares' }, label: 'Nome: Andre Luiz Hespanhol Tavares' },
 ];
 
 async function fetchPublicacoes(params, dataInicio, dataFim) {

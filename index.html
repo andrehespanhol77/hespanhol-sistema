@@ -3720,7 +3720,7 @@ function sendAIFile(input){
       var texto=data&&data.content&&data.content[0]?data.content[0].text:'';
       var json=texto.match(/\{[\s\S]*\}/);
       if(!json){typing.remove();appendAIMsg('bot','Não consegui extrair dados do documento. Tente um arquivo mais legível.');return;}
-      var resumo='Extraí os seguintes dados do documento:\n'+json[0]+'\n\nAgora cadastre tudo na plataforma: cliente, processo(s) e honorários.';
+      var resumo='Arquivo recebido: "'+file.name+'" (disponível para upload no Drive).\nDados extraídos:\n'+json[0]+'\n\nInstruções: (1) verifique/cadastre cliente, processo(s) e honorários; (2) após confirmar os cadastros, chame OBRIGATORIAMENTE a ferramenta upload_documento para salvar o arquivo na pasta correta do Drive do cliente — o arquivo já está carregado no sistema, basta chamar a ferramenta com o pasta_cliente_id do cliente.';
       _aiMessages.push({role:'user',content:resumo});
       agentLoop(typing).catch(function(e){typing.remove();appendAIMsg('bot','Erro: '+e.message);});
     }).catch(function(e){typing.remove();appendAIMsg('bot','Erro ao processar documento: '+e.message);});

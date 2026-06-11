@@ -1,124 +1,68 @@
-const SB_URL = 'https://rdmlxfgwlbroigsisjph.supabase.co';
-const ADMIN_EMAIL = 'andrehespanhol@andrehespanhol.com';
+const { createClient } = require('@supabase/supabase-js');
 
-export default async function handler(req, res) {
-  if (req.method !== 'GET' && req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://rdmlxfgwlbroigsisjph.supabase.co';
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
+const CRON_SECRET = process.env.CRON_SECRET;
+const PJE_BASE = 'https://comunicaapi.pje.jus.br/api/v1/comunicacao';
+const OABS = [{ numero: '39645', uf: 'DF' },{ numero: '109359', uf: 'RJ' }];
 
-  // Proteção: apenas Vercel Cron (header automático) ou chamada com CRON_SECRET
-  const cronSecret = process.env.CRON_SECRET;
-  const authHeader = req.headers['authorization'] || '';
-  const providedSecret = req.query?.secret || (req.body?.secret);
-  const isCronRequest = authHeader === `Bearer ${cronSecret}`;
-  const isManualWithSecret = cronSecret && providedSecret === cronSecret;
-  if (cronSecret && !isCronRequest && !isManualWithSecret) {
-    return res.status(401).json({ error: 'Não autorizado.' });
-  }
-
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const resendKey = process.env.RESEND_API_KEY;
-  if (!serviceRoleKey || !resendKey) {
-    return res.status(500).json({ error: 'Variáveis de ambiente ausentes' });
-  }
-
-  const hoje = new Date();
-  hoje.setHours(0, 0, 0, 0);
-
-  // Busca compromissos futuros com alerta configurado
-  const agendaRes = await fetch(
-    `${SB_URL}/rest/v1/agenda?select=*,casos(natureza,numero_cnj,cliente:cliente_id(nome))&data_hora=gte.${hoje.toISOString()}&alertar_dias_antes=not.is.null&alerta_enviado=not.is.true&order=data_hora.asc`,
-    {
-      headers: {
-        'Authorization': `Bearer ${serviceRoleKey}`,
-        'apikey': serviceRoleKey,
-        'Content-Type': 'application/json',
-      }
-    }
-  );
-
-  const compromissos = await agendaRes.json();
-  if (!Array.isArray(compromissos)) {
-    return res.status(500).json({ error: 'Erro ao buscar agenda', detail: compromissos });
-  }
-
-  const tipoLabel = { audiencia: 'Audiência', prazo: 'Prazo', julgamento: 'Julgamento', reuniao: 'Reunião', lembrete: 'Lembrete' };
-  const enviados = [];
-
-  for (const c of compromissos) {
-    const dataEvento = new Date(c.data_hora);
-    dataEvento.setHours(0, 0, 0, 0);
-    const diasRestantes = Math.round((dataEvento - hoje) / 86400000);
-    const alertarEm = Number(c.alertar_dias_antes);
-
-    if (diasRestantes !== alertarEm) continue; // só dispara no dia exato
-
-    const tipo = tipoLabel[c.tipo] || c.tipo;
-    const titulo = c.titulo || tipo;
-    const cliente = c.casos?.cliente?.nome || '';
-    const cnj = c.casos?.numero_cnj || '';
-    const dataFmt = dataEvento.toLocaleDateString('pt-BR');
-    const horaFmt = new Date(c.data_hora).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-
-    const assunto = `⏰ Prazo em ${alertarEm} dia(s): ${titulo}`;
-    const html = `
-<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;color:#333">
-  <div style="background:#1a2b4a;padding:24px 32px;border-radius:8px 8px 0 0;text-align:center">
-    <div style="color:#fff;font-size:20px;font-weight:800;letter-spacing:2px">HESPANHOL</div>
-    <div style="color:#8aa8d4;font-size:11px;letter-spacing:3px;margin-top:2px">ADVOGADOS</div>
-  </div>
-  <div style="padding:28px 32px;background:#fff;border:1px solid #eee;border-top:none">
-    <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:16px;margin-bottom:20px;text-align:center">
-      <div style="font-size:32px;margin-bottom:8px">⏰</div>
-      <div style="font-size:16px;font-weight:700;color:#856404">Prazo em <span style="font-size:22px">${alertarEm}</span> dia(s)</div>
-    </div>
-    <table style="width:100%;border-collapse:collapse;font-size:14px">
-      <tr><td style="padding:8px 0;color:#666;width:40%">Tipo</td><td style="padding:8px 0;font-weight:600">${tipo}</td></tr>
-      <tr><td style="padding:8px 0;color:#666">Título</td><td style="padding:8px 0;font-weight:600">${titulo}</td></tr>
-      <tr><td style="padding:8px 0;color:#666">Data</td><td style="padding:8px 0;font-weight:600">${dataFmt} às ${horaFmt}</td></tr>
-      ${cliente ? `<tr><td style="padding:8px 0;color:#666">Cliente</td><td style="padding:8px 0">${cliente}</td></tr>` : ''}
-      ${cnj ? `<tr><td style="padding:8px 0;color:#666">Nº CNJ</td><td style="padding:8px 0;font-family:monospace;font-size:12px">${cnj}</td></tr>` : ''}
-      ${c.local ? `<tr><td style="padding:8px 0;color:#666">Local</td><td style="padding:8px 0">${c.local}</td></tr>` : ''}
-      ${c.observacoes ? `<tr><td style="padding:8px 0;color:#666">Obs.</td><td style="padding:8px 0;font-size:13px;color:#555">${c.observacoes}</td></tr>` : ''}
-    </table>
-    <div style="margin-top:20px;text-align:center">
-      <a href="https://hespanhol-sistema.vercel.app" style="background:#1a2b4a;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:700;font-size:13px">Abrir o Sistema</a>
-    </div>
-  </div>
-</div>`;
-
-    // Destinatários: admin + quem criou (se diferente)
-    const destinatarios = [ADMIN_EMAIL];
-    if (c.criado_por_email && c.criado_por_email !== ADMIN_EMAIL) {
-      destinatarios.push(c.criado_por_email);
-    }
-
-    const emailRes = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        from: 'Hespanhol Advogados <andrehespanhol@andrehespanhol.com>',
-        to: destinatarios,
-        subject: assunto,
-        html,
-      })
-    });
-
-    if (emailRes.ok) {
-      // Marca alerta como enviado
-      await fetch(`${SB_URL}/rest/v1/agenda?id=eq.${c.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${serviceRoleKey}`,
-          'apikey': serviceRoleKey,
-          'Content-Type': 'application/json',
-          'Prefer': 'return=minimal'
-        },
-        body: JSON.stringify({ alerta_enviado: true })
-      });
-      enviados.push({ id: c.id, titulo, diasRestantes, destinatarios });
-    }
-  }
-
-  return res.status(200).json({ ok: true, verificados: compromissos.length, enviados });
+async function fetchPublicacoes(numeroOab, ufOab, dataInicio, dataFim) {
+  const url = PJE_BASE+'?numeroOab='+numeroOab+'&ufOab='+ufOab+'&dataDisponibilizacaoInicio='+dataInicio+'&dataDisponibilizacaoFim='+dataFim+'&size=100';
+  const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+  if (!res.ok) throw new Error('PJe API '+ufOab+': HTTP '+res.status);
+  const json = await res.json();
+  return Array.isArray(json) ? json : (json.content || json.items || json.data || []);
 }
+
+async function sendAlertEmail(p) {
+  await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer '+RESEND_API_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from: 'sistema@andrehespanhol.com', to: 'andrehespanhol@andrehespanhol.com',
+      subject: 'Publicacao sem caso: '+(p.numero_processo||p.tribunal)+' ('+p.data_disponibilizacao+')',
+      html: '<h2>Publicacao sem caso vinculado</h2><p>Processo: '+(p.numero_processo||'(nao identificado)')+'</p><p>Tribunal: '+p.tribunal+'</p><p>Data: '+p.data_disponibilizacao+'</p><p>OAB: '+p.oab_encontrada+'</p><hr><p>'+(p.conteudo||'').slice(0,500)+'</p><p><a href="https://hespanhol-sistema.vercel.app">Acessar sistema</a></p>' })
+  });
+}
+
+module.exports = async (req, res) => {
+  if (req.headers['authorization'] !== 'Bearer '+CRON_SECRET) return res.status(401).json({ error: 'Unauthorized' });
+  const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+  const hoje = new Date();
+  const dataFim = hoje.toISOString().slice(0,10);
+  const dataInicio = new Date(hoje.getTime()-2*24*60*60*1000).toISOString().slice(0,10);
+  const stats = { inseridas:0, vinculadas:0, sem_caso:0, duplicadas:0, erros:[] };
+
+  for (const oab of OABS) {
+    let items = [];
+    try { items = await fetchPublicacoes(oab.numero, oab.uf, dataInicio, dataFim); }
+    catch(e) { stats.erros.push('OAB '+oab.uf+': '+e.message); continue; }
+    for (const item of items) {
+      const idPje = String(item.id||item.idComunicacao||((item.numero_processo||'')+'_'+(item.dataDisponibilizacao||'')));
+      const numeroProcesso = item.numeroProcessoComMascara||item.numero_processo||item.numeroProcesso||null;
+      const dataDisp = item.dataDisponibilizacao?item.dataDisponibilizacao.slice(0,10):dataFim;
+      const tribunal = item.siglaTribunal||item.tribunal||'Desconhecido';
+      const tipo = item.tipoComunicacao||item.tipo||'Publicacao';
+      const { data: existing } = await supabase.from('publicacoes').select('id').eq('id_pje',idPje).single();
+      if (existing) { stats.duplicadas++; continue; }
+      let casoId = null;
+      if (numeroProcesso) {
+        const numLimpo = numeroProcesso.replace(/[^0-9]/g,'');
+        const { data: casos } = await supabase.from('casos').select('id').or('numero_cnj.ilike.%'+numLimpo+'%,numero_processo.ilike.%'+numLimpo+'%').limit(1);
+        if (casos&&casos.length>0) casoId = casos[0].id;
+      }
+      const status = casoId?'vinculada':'sem_caso';
+      const { error: insertErr } = await supabase.from('publicacoes').insert({
+        id_pje:idPje, numero_processo:numeroProcesso, tribunal, tipo_comunicacao:tipo,
+        orgao:item.nomeOrgao||null, data_disponibilizacao:dataDisp,
+        conteudo:item.texto||item.conteudo||'', link:item.link||null,
+        caso_id:casoId, status, oab_encontrada:oab.uf, raw_json:item
+      });
+      if (insertErr) { stats.erros.push(insertErr.message); continue; }
+      stats.inseridas++;
+      if (status==='vinculada') stats.vinculadas++;
+      else { stats.sem_caso++; try { await sendAlertEmail({numero_processo:numeroProcesso,tribunal,tipo_comunicacao:tipo,data_disponibilizacao:dataDisp,conteudo:item.texto||'',oab_encontrada:oab.uf}); } catch(e2){stats.erros.push('email:'+e2.message);} }
+    }
+  }
+  return res.status(200).json({ ok:true, periodo:dataInicio+' a '+dataFim, ...stats });
+};

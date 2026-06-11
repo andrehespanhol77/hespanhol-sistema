@@ -599,7 +599,7 @@ var _clienteId=null;
 var _userId=null;
 var _userEmail='';
 var _userName='';
-var _aiMessages=[];
+var _aiMessages=[];var ultimaPastaClienteId=null;
 var _podeApagar=false;
 var _podeVerValor=false;
 var _autorizacoesCasos=[];
@@ -2540,7 +2540,9 @@ function executarFerramenta(nome, input){
     switch(nome){
       case 'buscar_cliente':
         db.from('clientes').select('*').ilike('nome','%'+input.nome+'%').limit(5).then(function(r){
-          resolve(r.error?{erro:r.error.message}:(r.data||[]));
+          var bdata=r.error?{erro:r.error.message}:(r.data||[]);
+          if(Array.isArray(bdata)&&bdata[0]&&bdata[0].pasta_drive_id){ultimaPastaClienteId=bdata[0].pasta_drive_id;}
+          resolve(bdata);
         });
         break;
       case 'criar_cliente':
@@ -3724,24 +3726,8 @@ function sendAIFile(input){
       _aiMessages.push({role:'user',content:resumo});
       agentLoop(typing).then(function(){
       if(arquivoAgente){
-        // Busca pasta_drive_id nos resultados das ferramentas — upload direto sem depender do Claude
-        var pastaId=null;
-        for(var mi=0;mi<_aiMessages.length;mi++){
-          var mm=_aiMessages[mi];
-          if(mm.role==='user'&&Array.isArray(mm.content)){
-            for(var mj=0;mj<mm.content.length;mj++){
-              var item=mm.content[mj];
-              if(item.type==='tool_result'&&typeof item.content==='string'){
-                try{
-                  var parsed=JSON.parse(item.content);
-                  if(parsed&&parsed.pasta_drive_id){pastaId=parsed.pasta_drive_id;break;}
-                  if(Array.isArray(parsed)&&parsed[0]&&parsed[0].pasta_drive_id){pastaId=parsed[0].pasta_drive_id;break;}
-                }catch(pe){}
-              }
-            }
-          }
-          if(pastaId)break;
-        }
+        // Usa pasta_drive_id capturado diretamente pelo buscar_cliente
+        var pastaId=ultimaPastaClienteId||null;
         var n2=(arquivoAgente.nome||'').toLowerCase();
         var t2=n2.indexOf('procura')!==-1?'procuracao':n2.indexOf('contrat')!==-1?'contrato':(n2.indexOf('peti')!==-1||n2.indexOf('recurs')!==-1)?'peticao':'outro';
         if(pastaId){

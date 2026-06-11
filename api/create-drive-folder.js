@@ -19,7 +19,7 @@ async function getAccessToken() {
   const privateKey = forge.pki.privateKeyFromPem(pem);
   const now = Math.floor(Date.now()/1000);
   const header = base64url(JSON.stringify({alg:"RS256",typ:"JWT"}));
-  const payload = base64url(JSON.stringify({iss:CLIENT_EMAIL,scope:DRIVE_SCOPE,aud:"https://oauth2.googleapis.com/token",iat:now,exp:now+3600}));
+  const payload = base64url(JSON.stringify({iss:CLIENT_EMAIL,sub:"andrehespanhol@andrehespanhol.com",scope:DRIVE_SCOPE,aud:"https://oauth2.googleapis.com/token",iat:now,exp:now+3600}));
   const signingInput = `${header}.${payload}`;
   const md = forge.md.sha256.create();
   md.update(signingInput,"utf8");

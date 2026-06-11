@@ -624,7 +624,7 @@ var _clienteId=null;
 var _userId=null;
 var _userEmail='';
 var _userName='';
-var _aiMessages=[];var ultimaPastaClienteId=null;var _aiModeloAvancado=false;
+var _aiMessages=[];var ultimaPastaClienteId=null;var _aiModeloAvancado=false;var arquivoAgente=null;
 var _podeApagar=false;
 var _podeVerValor=false;
 var _autorizacoesCasos=[];
@@ -1503,7 +1503,8 @@ function loadCases(){
   query.order('created_at',{ascending:false}).then(function(res){
     if(res.error){tbody.innerHTML='<tr><td colspan="8" style="color:var(--er);padding:16px;text-align:center">Erro: '+res.error.message+'</td></tr>';return;}
     var data=res.data||[];
-    if(fCliente)data=data.filter(function(d){var n=(d.casos&&d.casos.cliente&&d.casos.cliente.nome||'').toLowerCase();return n.indexOf(fCliente)>-1;});
+    var fCasosBusca=(document.getElementById('cases-search')?document.getElementById('cases-search').value:'').trim().toLowerCase();
+    if(fCasosBusca)data=data.filter(function(d){var n=(d.cliente&&d.cliente.nome||'').toLowerCase();var t=(d.tipo_acao||'').toLowerCase();var num=(d.numero_cnj||'').toLowerCase();return n.indexOf(fCasosBusca)>-1||t.indexOf(fCasosBusca)>-1||num.indexOf(fCasosBusca)>-1;});
     if(countEl)countEl.textContent=data.length+' caso(s) encontrado(s)';
     var nb=document.getElementById('cases-nb'); if(nb)nb.textContent=data.length;
     if(data.length===0){tbody.innerHTML='<tr><td colspan="8" class="loading">Nenhum caso cadastrado ainda.</td></tr>';return;}

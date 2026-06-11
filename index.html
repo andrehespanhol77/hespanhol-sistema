@@ -647,7 +647,8 @@ var FERRAMENTAS_BASE=[
   {name:'enviar_email',description:'Envia e-mail para um cliente ou endereço em nome do escritório Hespanhol Advogados. Use para comunicar andamentos, confirmar audiências, cobrar honorários, etc. Suporta cópia (cc).',input_schema:{type:'object',properties:{destinatario:{type:'string',description:'E-mail do destinatário principal'},cc:{type:'string',description:'E-mail para cópia (CC). Use andrehespanhol@andrehespanhol.com para copiar o Dr. André.'},assunto:{type:'string',description:'Assunto do e-mail'},corpo:{type:'string',description:'Corpo completo do e-mail em texto corrido, com saudação e assinatura'}},required:['destinatario','assunto','corpo']}},
   {name:'lancar_despesa_caso',description:'Lança uma despesa vinculada a um processo. Use para registrar custas, viagem, alimentação, hotel, deslocamento, cópias, equipamentos, etc. O campo lancado_por é preenchido automaticamente com o usuário logado se não informado.',input_schema:{type:'object',properties:{caso_id:{type:'string',description:'UUID do processo'},categoria:{type:'string',description:'Categoria: Custas judiciais, Cópias e impressões, Equipamentos, Passagem aérea, Hotel, Alimentação, Deslocamento (Uber/Taxi/etc), Correspondência, Perícia/Laudo, Diligência, Extra'},descricao:{type:'string',description:'Descrição livre da despesa'},valor:{type:'number',description:'Valor em reais'},data_despesa:{type:'string',description:'Data no formato YYYY-MM-DD (padrão: hoje)'},lancado_por:{type:'string',description:'Nome de quem gastou'},reembolsavel:{type:'boolean',description:'Se o cliente deve reembolsar (padrão: true)'},observacoes:{type:'string'}},required:['caso_id','categoria','valor']}},
   {name:'lancar_adiantamento',description:'Registra um adiantamento do cliente para a caixinha do caso (verba antecipada para despesas processuais).',input_schema:{type:'object',properties:{caso_id:{type:'string',description:'UUID do processo'},valor:{type:'number',description:'Valor adiantado em reais'},data_adiantamento:{type:'string',description:'Data no formato YYYY-MM-DD'},descricao:{type:'string',description:'Descrição do adiantamento'}},required:['caso_id','valor']}},
-  {name:'gerar_relatorio',description:'Gera e baixa relatório em Excel (XLSX) ou PDF com os dados da plataforma. O arquivo é baixado automaticamente no navegador. Use filtros para personalizar conforme o pedido do usuário.',input_schema:{type:'object',properties:{tipo:{type:'string',enum:['clientes','casos','clientes_com_casos','financeiro','completo'],description:'clientes=só lista de clientes; casos=só lista de processos; clientes_com_casos=clientes com seus processos vinculados; financeiro=honorários e pagamentos; completo=tudo'},formato:{type:'string',enum:['xlsx','pdf','docx'],description:'xlsx para Excel, pdf para PDF, docx para Word'},titulo:{type:'string',description:'Título personalizado do relatório (opcional)'},filtro_status:{type:'string',description:'Filtrar casos por status: ativo, arquivado, encerrado, etc'},filtro_area:{type:'string',description:'Filtrar casos por área: penal, civel, tributario, trabalhista, outro'},filtro_tribunal:{type:'string',description:'Filtrar casos por tribunal (ex: STF, STJ, TJGO)'},filtro_cliente_id:{type:'string',description:'UUID do cliente para gerar relatório de um cliente específico'},so_com_processos:{type:'boolean',description:'true = incluir apenas clientes que têm processos cadastrados'},so_sem_processos:{type:'boolean',description:'true = incluir apenas clientes sem processos'}},required:['tipo','formato']}}
+  {name:'gerar_relatorio',description:'Gera e baixa relatório em Excel (XLSX) ou PDF com os dados da plataforma. O arquivo é baixado automaticamente no navegador. Use filtros para personalizar conforme o pedido do usuário.',input_schema:{type:'object',properties:{tipo:{type:'string',enum:['clientes','casos','clientes_com_casos','financeiro','completo'],description:'clientes=só lista de clientes; casos=só lista de processos; clientes_com_casos=clientes com seus processos vinculados; financeiro=honorários e pagamentos; completo=tudo'},formato:{type:'string',enum:['xlsx','pdf','docx'],description:'xlsx para Excel, pdf para PDF, docx para Word'},titulo:{type:'string',description:'Título personalizado do relatório (opcional)'},filtro_status:{type:'string',description:'Filtrar casos por status: ativo, arquivado, encerrado, etc'},filtro_area:{type:'string',description:'Filtrar casos por área: penal, civel, tributario, trabalhista, outro'},filtro_tribunal:{type:'string',description:'Filtrar casos por tribunal (ex: STF, STJ, TJGO)'},filtro_cliente_id:{type:'string',description:'UUID do cliente para gerar relatório de um cliente específico'},so_com_processos:{type:'boolean',description:'true = incluir apenas clientes que têm processos cadastrados'},so_sem_processos:{type:'boolean',description:'true = incluir apenas clientes sem processos'}},required:['tipo','formato']}},
+  {name:'upload_documento',description:'Salva um documento no Google Drive do cliente na pasta correta. Use sempre após processar qualquer documento (procuração, contrato, peça) enviado pelo usuário. tipo: procuracao→Documentos Pessoais; contrato→Financeiro se existir, senão Documentos Pessoais; peticao→Petições e Docs Instrutórios do caso.',input_schema:{type:'object',properties:{pasta_cliente_id:{type:'string',description:'pasta_drive_id do cliente'},tipo:{type:'string',enum:['procuracao','contrato','peticao','outro'],description:'Tipo do documento'},nome_arquivo:{type:'string',description:'Nome do arquivo com extensão'},caso_pasta_id:{type:'string',description:'pasta_drive_id do caso — necessário para tipo peticao'}},required:['pasta_cliente_id','tipo','nome_arquivo']}}
 ];
 var FERRAMENTAS_ADMIN=[
   {name:'deletar_caso',description:'Apaga permanentemente um caso. APENAS ADMIN.',input_schema:{type:'object',properties:{caso_id:{type:'string'}},required:['caso_id']}},
@@ -2899,6 +2900,24 @@ function executarFerramenta(nome, input){
           resolve({usuarios:usuarios,resumo:resumo});
         });
         break;
+      case 'upload_documento':
+        (function(){
+          if(!arquivoAgente){resolve({erro:'Nenhum arquivo em memória. O usuário deve reenviar o arquivo.'});return;}
+          fetch('/api/create-drive-folder',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+            acao:'upload_documento',
+            pasta_cliente_id:input.pasta_cliente_id,
+            tipo:input.tipo,
+            nome:input.nome_arquivo||arquivoAgente.nome,
+            mime:arquivoAgente.mime,
+            conteudo_b64:arquivoAgente.b64,
+            caso_pasta_id:input.caso_pasta_id||null
+          })}).then(function(r){return r.json();}).then(function(d){
+            if(d.error){resolve({erro:d.error});return;}
+            arquivoAgente=null;
+            resolve({sucesso:true,url:d.url,file_id:d.file_id});
+          }).catch(function(e){resolve({erro:e.message});});
+        })();
+        break;
       default:
         resolve({erro:'Ferramenta desconhecida: '+nome});
     }
@@ -3686,6 +3705,7 @@ function sendAIFile(input){
   var reader=new FileReader();
   reader.onload=function(e){
     var b64=e.target.result.split(',')[1];
+        arquivoAgente={nome:file.name,mime:file.type,b64:b64};
     var mediaType=file.type;
     var docBlock=isPDF
       ?{type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}}

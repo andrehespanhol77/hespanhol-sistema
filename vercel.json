@@ -1,32 +1,14 @@
 {
   "functions": {
-    "api/claude.js": {
-      "memory": 512,
-      "maxDuration": 30
-    },
-    { "path": "/api/buscar-publicacoes", "schedule": "0 8 * * *" },
-    "api/monitor-processos.js": {
-      "maxDuration": 60
-    },
-    "api/check-prazos.js": {
-      "maxDuration": 30
-    },
-    "api/resumo-semanal.js": {
-      "maxDuration": 60
-    }
+    "api/claude.js": { "memory": 512, "maxDuration": 30 },
+    "api/monitor-processos.js": { "maxDuration": 60 },
+    "api/check-prazos.js": { "maxDuration": 30 },
+    "api/resumo-semanal.js": { "maxDuration": 60 }
   },
   "crons": [
-    {
-      "path": "/api/monitor-processos",
-      "schedule": "0 10 * * *"
-    },
-    {
-      "path": "/api/check-prazos",
-      "schedule": "0 8 * * *"
-    },
-    {
-      "path": "/api/resumo-semanal",
-      "schedule": "0 8 * * 5"
-    }
+    { "path": "/api/monitor-processos", "schedule": "0 10 * * *" },
+    { "path": "/api/check-prazos", "schedule": "0 8 * * *" },
+    { "path": "/api/resumo-semanal", "schedule": "0 8 * * 5" },
+    { "path": "/api/buscar-publicacoes", "schedule": "0 8 * * *" }
   ]
 }

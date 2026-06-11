@@ -204,6 +204,7 @@ tr:hover td{background:var(--sf);}
     <div class="ni" onclick="go('movements',this)">📡 Andamentos</div>
     <div class="ni" onclick="go('expenses',this)">🧾 Despesas</div>
     <div class="ni" onclick="go('docs',this)">📄 Documentos</div>
+    <div class="ni hide-cliente" onclick="go('publicacoes',this)">📢 Publicações <span class="nb w" id="pub-nb" style="display:none">0</span></div>
     <div class="ni hide-cliente" onclick="go('importer',this)">🤖 Importar Doc.</div>
     <div class="ns hide-financeiro">Financeiro</div>
     <div class="ni hide-financeiro" onclick="go('financial',this)">💰 Honorários & NF</div>
@@ -250,6 +251,7 @@ tr:hover td{background:var(--sf);}
       <div class="card"><div class="ch"><div class="ct">Casos Recentes</div><span style="font-size:11px;color:var(--ac);cursor:pointer" onclick="go('cases',document.querySelectorAll('.ni')[1])">Ver todos →</span></div><div id="dash-casos-list"><div class="loading">🔄 Carregando...</div></div></div>
       <div class="card"><div class="ch"><div class="ct">Próximos Compromissos</div></div><div id="dash-agenda-list"><div class="loading">🔄 Carregando...</div></div></div>
     </div>
+    <div id="dash-publicacoes-alerta" class="hide-cliente" style="margin-top:12px"></div>
   </div>
 
   <div class="page" id="page-cases">
@@ -486,6 +488,24 @@ tr:hover td{background:var(--sf);}
     <div id="saude-content"><div class="loading">🔄 Carregando...</div></div>
   </div>
 
+  <div class="page" id="page-publicacoes">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div style="font-size:13px;color:var(--tx3)">Publicações PJe — <span id="pub-count">carregando...</span></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <select class="inp" id="pub-filtro-status" onchange="loadPublicacoes()">
+          <option value="">Todos os status</option>
+          <option value="sem_caso">Sem caso vinculado</option>
+          <option value="vinculada">Vinculadas</option>
+          <option value="descartada">Descartadas</option>
+        </select>
+        <input class="inp" id="pub-filtro-de" type="date" onchange="loadPublicacoes()" title="De">
+        <input class="inp" id="pub-filtro-ate" type="date" onchange="loadPublicacoes()" title="Até">
+        <button class="btn bg" style="font-size:11px" onclick="loadPublicacoes()">↺ Atualizar</button>
+      </div>
+    </div>
+    <div id="pub-lista"><div class="loading">🔄 Carregando...</div></div>
+  </div>
+
   <div class="page" id="page-connectors">
     <div class="cc"><div class="cs son"></div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--tx)">Supabase</div><div style="font-size:11px;color:var(--tx3)">Banco de dados</div></div><span class="badge ba">Ativo</span></div>
     <div class="cc"><div class="cs ssn"></div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--tx)">DataJud / CNJ</div><div style="font-size:11px;color:var(--tx3)">Monitoramento processual</div></div><button class="btn bg" style="font-size:11px">Configurar</button></div>
@@ -596,7 +616,7 @@ var _pendingInvite = (_rawHashParams.access_token && (_rawHashParams.type==='inv
 
 var db=supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,storage:window.localStorage}});
 
-var ptitles={dashboard:'Dashboard',cases:'Casos',clients:'Clientes',agenda:'Agenda',movements:'Andamentos',expenses:'Despesas',docs:'Documentos',importer:'Importar Documento',financial:'Financeiro',email:'Agente E-mail',access:'Controle de Acesso',audit:'Auditoria',connectors:'Conectores',settings:'Configurações',relatorio:'Relatório do Escritório',saude:'Saúde do Escritório'};
+var ptitles={dashboard:'Dashboard',cases:'Casos',clients:'Clientes',agenda:'Agenda',movements:'Andamentos',expenses:'Despesas',docs:'Documentos',importer:'Importar Documento',financial:'Financeiro',email:'Agente E-mail',access:'Controle de Acesso',audit:'Auditoria',connectors:'Conectores',settings:'Configurações',relatorio:'Relatório do Escritório',saude:'Saúde do Escritório',publicacoes:'Publicações PJe'};
 
 var _perfil='escritorio';
 var _clienteId=null;
@@ -652,7 +672,8 @@ var FERRAMENTAS_BASE=[
   {name:'lancar_despesa_caso',description:'Lança uma despesa vinculada a um processo. Use para registrar custas, viagem, alimentação, hotel, deslocamento, cópias, equipamentos, etc. O campo lancado_por é preenchido automaticamente com o usuário logado se não informado.',input_schema:{type:'object',properties:{caso_id:{type:'string',description:'UUID do processo'},categoria:{type:'string',description:'Categoria: Custas judiciais, Cópias e impressões, Equipamentos, Passagem aérea, Hotel, Alimentação, Deslocamento (Uber/Taxi/etc), Correspondência, Perícia/Laudo, Diligência, Extra'},descricao:{type:'string',description:'Descrição livre da despesa'},valor:{type:'number',description:'Valor em reais'},data_despesa:{type:'string',description:'Data no formato YYYY-MM-DD (padrão: hoje)'},lancado_por:{type:'string',description:'Nome de quem gastou'},reembolsavel:{type:'boolean',description:'Se o cliente deve reembolsar (padrão: true)'},observacoes:{type:'string'}},required:['caso_id','categoria','valor']}},
   {name:'lancar_adiantamento',description:'Registra um adiantamento do cliente para a caixinha do caso (verba antecipada para despesas processuais).',input_schema:{type:'object',properties:{caso_id:{type:'string',description:'UUID do processo'},valor:{type:'number',description:'Valor adiantado em reais'},data_adiantamento:{type:'string',description:'Data no formato YYYY-MM-DD'},descricao:{type:'string',description:'Descrição do adiantamento'}},required:['caso_id','valor']}},
   {name:'gerar_relatorio',description:'Gera e baixa relatório em Excel (XLSX) ou PDF com os dados da plataforma. O arquivo é baixado automaticamente no navegador. Use filtros para personalizar conforme o pedido do usuário.',input_schema:{type:'object',properties:{tipo:{type:'string',enum:['clientes','casos','clientes_com_casos','financeiro','completo'],description:'clientes=só lista de clientes; casos=só lista de processos; clientes_com_casos=clientes com seus processos vinculados; financeiro=honorários e pagamentos; completo=tudo'},formato:{type:'string',enum:['xlsx','pdf','docx'],description:'xlsx para Excel, pdf para PDF, docx para Word'},titulo:{type:'string',description:'Título personalizado do relatório (opcional)'},filtro_status:{type:'string',description:'Filtrar casos por status: ativo, arquivado, encerrado, etc'},filtro_area:{type:'string',description:'Filtrar casos por área: penal, civel, tributario, trabalhista, outro'},filtro_tribunal:{type:'string',description:'Filtrar casos por tribunal (ex: STF, STJ, TJGO)'},filtro_cliente_id:{type:'string',description:'UUID do cliente para gerar relatório de um cliente específico'},so_com_processos:{type:'boolean',description:'true = incluir apenas clientes que têm processos cadastrados'},so_sem_processos:{type:'boolean',description:'true = incluir apenas clientes sem processos'}},required:['tipo','formato']}},
-  {name:'upload_documento',description:'Salva um documento no Google Drive do cliente na pasta correta. Use sempre após processar qualquer documento (procuração, contrato, peça) enviado pelo usuário. tipo: procuracao→Documentos Pessoais; contrato→Financeiro se existir, senão Documentos Pessoais; peticao→Petições e Docs Instrutórios do caso.',input_schema:{type:'object',properties:{pasta_cliente_id:{type:'string',description:'pasta_drive_id do cliente'},tipo:{type:'string',enum:['procuracao','contrato','peticao','outro'],description:'Tipo do documento'},nome_arquivo:{type:'string',description:'Nome do arquivo com extensão'},caso_pasta_id:{type:'string',description:'pasta_drive_id do caso — necessário para tipo peticao'}},required:['pasta_cliente_id','tipo','nome_arquivo']}}
+  {name:'upload_documento',description:'Salva um documento no Google Drive do cliente na pasta correta. Use sempre após processar qualquer documento (procuração, contrato, peça) enviado pelo usuário. tipo: procuracao→Documentos Pessoais; contrato→Financeiro se existir, senão Documentos Pessoais; peticao→Petições e Docs Instrutórios do caso.',input_schema:{type:'object',properties:{pasta_cliente_id:{type:'string',description:'pasta_drive_id do cliente'},tipo:{type:'string',enum:['procuracao','contrato','peticao','outro'],description:'Tipo do documento'},nome_arquivo:{type:'string',description:'Nome do arquivo com extensão'},caso_pasta_id:{type:'string',description:'pasta_drive_id do caso — necessário para tipo peticao'}},required:['pasta_cliente_id','tipo','nome_arquivo']}},
+  {name:'buscar_publicacoes',description:'Consulta publicações PJe encontradas nos diários eletrônicos. Retorna publicações recentes, podendo filtrar por status (sem_caso, vinculada, descartada) ou por caso específico.',input_schema:{type:'object',properties:{status:{type:'string',enum:['sem_caso','vinculada','descartada','todas'],description:'Filtrar por status (padrão: todas)'},caso_id:{type:'string',description:'UUID do caso para listar apenas publicações vinculadas a ele'},dias:{type:'number',description:'Quantos dias atrás consultar (padrão 30)'}}}}
 ];
 var FERRAMENTAS_ADMIN=[
   {name:'deletar_caso',description:'Apaga permanentemente um caso. APENAS ADMIN.',input_schema:{type:'object',properties:{caso_id:{type:'string'}},required:['caso_id']}},
@@ -741,6 +762,7 @@ function go(id,el){
   if(id==='expenses')loadDespesasGlobal();
   if(id==='saude')loadSaude();
   if(id==='settings')carregarConfigAutomacoes();
+  if(id==='publicacoes')loadPublicacoes();
 }
 window.addEventListener('beforeunload',function(){registrarLogout();});
 // Timeout de inatividade: logout automático após 30 minutos
@@ -2092,6 +2114,87 @@ function loadDashboard(){
       return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bd)"><span style="font-size:16px">'+(tipos[a.tipo]||'📅')+'</span><div><div style="font-size:12px;color:var(--tx)">'+safeText(a.tipo)+'</div><div style="font-size:11px;color:var(--tx3)">'+dt+'</div></div></div>';
     }).join('');
   });
+  // Alerta de publicações sem caso vinculado
+  db.from('publicacoes').select('*',{count:'exact',head:true}).eq('status','sem_caso').then(function(res){
+    var n=res.count||0;
+    var el=document.getElementById('dash-publicacoes-alerta');
+    var nb=document.getElementById('pub-nb');
+    if(!el)return;
+    if(n===0){el.innerHTML='';if(nb){nb.style.display='none';}return;}
+    if(nb){nb.textContent=n;nb.style.display='inline-block';}
+    el.innerHTML='<div style="background:#fff3cd;border:2px solid #ffc107;border-radius:10px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">'+'<div style="display:flex;align-items:center;gap:10px">'+'<span style="font-size:22px">⚠️</span>'+'<div><div style="font-size:14px;font-weight:700;color:#856404">'+n+' publicação'+(n>1?'ões':'')+'  sem caso vinculado</div>'+'<div style="font-size:12px;color:#856404;margin-top:2px">Verifique se há processos não cadastrados — pode haver clientes desatendidos.</div></div>'+'</div>'+'<button class="btn" style="background:#ffc107;color:#212529;font-weight:600;font-size:12px;white-space:nowrap" onclick="go(\'publicacoes\',Array.from(document.querySelectorAll(\'.ni\')).find(function(n){return n.textContent.includes(\'Publicações\')})))">Ver publicações →</button>'+'</div>';
+  });
+}
+
+// ── PUBLICAÇÕES PJe ────────────────────────────────────────────
+function loadPublicacoes(){
+  var statusFiltro=document.getElementById('pub-filtro-status')?document.getElementById('pub-filtro-status').value:'';
+  var deFiltro=document.getElementById('pub-filtro-de')?document.getElementById('pub-filtro-de').value:'';
+  var ateFiltro=document.getElementById('pub-filtro-ate')?document.getElementById('pub-filtro-ate').value:'';
+  var lista=document.getElementById('pub-lista');
+  var counter=document.getElementById('pub-count');
+  if(!lista)return;
+  lista.innerHTML='<div class="loading">🔄 Carregando publicações...</div>';
+  var q=db.from('publicacoes').select('*,caso:caso_id(id,natureza,tipo_acao,numero_cnj)').order('data_disponibilizacao',{ascending:false}).limit(100);
+  if(statusFiltro)q=q.eq('status',statusFiltro);
+  if(deFiltro)q=q.gte('data_disponibilizacao',deFiltro);
+  if(ateFiltro)q=q.lte('data_disponibilizacao',ateFiltro);
+  q.then(function(res){
+    var pubs=res.data||[];
+    if(counter)counter.textContent=pubs.length+' registro(s)';
+    if(!pubs.length){lista.innerHTML='<div class="loading">Nenhuma publicação encontrada.</div>';return;}
+    var statusColor={sem_caso:'#dc3545',vinculada:'#198754',descartada:'#6c757d'};
+    var statusLabel={sem_caso:'Sem caso',vinculada:'Vinculada',descartada:'Descartada'};
+    lista.innerHTML=pubs.map(function(p){
+      var dt=p.data_disponibilizacao?new Date(p.data_disponibilizacao+'T00:00:00').toLocaleDateString('pt-BR'):'—';
+      var casoInfo=p.caso?'<span style="font-size:11px;color:var(--ac);cursor:pointer" onclick="openDetalhesCaso(\''+p.caso.id+'\')">'+(p.caso.natureza||p.caso.tipo_acao||p.caso.numero_cnj||'Ver caso')+'</span>':'';
+      var acoes='';
+      if(p.status==='sem_caso'){
+        acoes='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">'+'<button class="btn bg" style="font-size:10px" onclick="vincularPublicacao(\''+p.id+'\')">' + '🔗 Vincular a caso</button>'+'<button class="btn bg" style="font-size:10px" onclick="descartarPublicacao(\''+p.id+'\')">' + '🗑 Descartar</button>'+'</div>';
+      } else if(p.status==='vinculada'){
+        acoes='<div style="margin-top:6px">'+casoInfo+'</div>';
+      }
+      return '<div class="card" style="margin-bottom:10px;padding:12px">'+'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex-wrap:wrap">'+'<div style="flex:1;min-width:200px">'+'<div style="font-size:11px;font-weight:600;color:var(--tx);margin-bottom:4px">'+safeText(p.tipo_comunicacao||'Comunicação')+' — '+safeText(p.tribunal||'')+'</div>'+'<div style="font-size:11px;color:var(--tx3);margin-bottom:4px">'+dt+' · '+safeText(p.orgao||'')+'</div>'+(p.numero_processo?'<div style="font-size:11px;color:var(--ac);margin-bottom:4px">Proc: '+safeText(p.numero_processo)+'</div>':'')+'<div style="font-size:11px;color:var(--tx);max-height:60px;overflow:hidden">'+safeText((p.conteudo||'').slice(0,250))+((p.conteudo&&p.conteudo.length>250)?'...':'')+'</div>'+acoes+'</div>'+'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">'+'<span class="badge" style="background:'+statusColor[p.status]+';color:#fff;font-size:10px">'+statusLabel[p.status]+'</span>'+(p.link?'<a href="'+p.link+'" target="_blank" class="btn bg" style="font-size:10px;text-decoration:none">🔗 PJe</a>':'')+'</div>'+'</div>'+'</div>';
+    }).join('');
+  });
+}
+
+function carregarPublicacoesCaso(casoId){
+  var cont=document.getElementById('pub-caso-'+casoId);
+  if(!cont)return;
+  db.from('publicacoes').select('*').eq('caso_id',casoId).order('data_disponibilizacao',{ascending:false}).then(function(res){
+    var pubs=res.data||[];
+    if(!pubs.length){cont.innerHTML='<div style="font-size:12px;color:var(--tx3)">Nenhuma publicação vinculada a este processo.</div>';return;}
+    cont.innerHTML=pubs.map(function(p){
+      var dt=p.data_disponibilizacao?new Date(p.data_disponibilizacao+'T00:00:00').toLocaleDateString('pt-BR'):'—';
+      return '<div style="background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:10px;margin-bottom:8px">'+'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">'+'<span style="font-size:11px;font-weight:600;color:var(--tx)">'+safeText(p.tipo_comunicacao||'Comunicação')+' — '+safeText(p.tribunal||'')+'</span>'+'<span style="font-size:11px;color:var(--tx3)">'+dt+'</span>'+'</div>'+'<div style="font-size:11px;color:var(--tx3);margin-bottom:4px">'+safeText(p.orgao||'')+'</div>'+'<div style="font-size:11px;color:var(--tx);max-height:60px;overflow:hidden">'+safeText((p.conteudo||'').slice(0,200))+((p.conteudo&&p.conteudo.length>200)?'...':'')+'</div>'+(p.link?'<a href="'+p.link+'" target="_blank" style="font-size:11px;color:var(--ac);text-decoration:none;display:inline-block;margin-top:4px">🔗 Ver no PJe</a>':'')+'</div>';
+    }).join('');
+  });
+}
+
+function vincularPublicacao(pubId){
+  db.from('casos').select('id,natureza,tipo_acao,numero_cnj,cliente:cliente_id(nome)').eq('status','ativo').order('created_at',{ascending:false}).then(function(res){
+    var casos=res.data||[];
+    var opts=casos.map(function(c){return '<option value="'+c.id+'">'+(c.natureza||c.tipo_acao||'Processo')+(c.numero_cnj?' — '+c.numero_cnj:'')+(c.cliente?' ('+c.cliente.nome+')':'')+'</option>';}).join('');
+    openModal('Vincular Publicação a Caso','<div class="fi"><span class="fl">Caso</span><select class="inp" id="pub-vincular-caso-id" style="width:100%;margin-top:6px"><option value="">Selecione...</option>'+opts+'</select></div>',function(){
+      var casoId=document.getElementById('pub-vincular-caso-id').value;
+      if(!casoId){alert('Selecione um caso.');return;}
+      db.from('publicacoes').update({caso_id:casoId,status:'vinculada'}).eq('id',pubId).then(function(r){
+        if(r.error){alert('Erro: '+r.error.message);return;}
+        logAuditoria('UPDATE','publicacoes','Publicação '+pubId+' vinculada ao caso '+casoId);
+        closeModal();loadPublicacoes();loadDashboard();
+      });
+    });
+  });
+}
+
+function descartarPublicacao(pubId){
+  if(!confirm('Descartar esta publicação? Ela ficará arquivada.'))return;
+  db.from('publicacoes').update({status:'descartada'}).eq('id',pubId).then(function(r){
+    if(r.error){alert('Erro: '+r.error.message);return;}
+    logAuditoria('UPDATE','publicacoes','Publicação '+pubId+' descartada');
+    loadPublicacoes();loadDashboard();
+  });
 }
 
 // ── MODAIS ─────────────────────────────────────────────────────
@@ -2923,6 +3026,21 @@ function executarFerramenta(nome, input){
             if(d.error){resolve({erro:d.error});return;}
             arquivoAgente=null;
             resolve({sucesso:true,url:d.url,file_id:d.file_id});
+          }).catch(function(e){resolve({erro:e.message});});
+        })();
+        break;
+      case 'buscar_publicacoes':
+        (function(){
+          var statusFiltro=input.status&&input.status!=='todas'?input.status:null;
+          var casoFiltro=input.caso_id||null;
+          var dias=input.dias||30;
+          var dataLimite=new Date();dataLimite.setDate(dataLimite.getDate()-dias);
+          var q=db.from('publicacoes').select('id,numero_processo,tribunal,tipo_comunicacao,orgao,data_disponibilizacao,conteudo,link,status,caso_id,oab_encontrada').order('data_disponibilizacao',{ascending:false}).gte('data_disponibilizacao',dataLimite.toISOString().split('T')[0]).limit(50);
+          if(statusFiltro)q=q.eq('status',statusFiltro);
+          if(casoFiltro)q=q.eq('caso_id',casoFiltro);
+          q.then(function(r){
+            var pubs=r.data||[];
+            resolve({total:pubs.length,publicacoes:pubs.map(function(p){return {id:p.id,numero_processo:p.numero_processo,tribunal:p.tribunal,tipo:p.tipo_comunicacao,data:p.data_disponibilizacao,status:p.status,resumo:(p.conteudo||'').slice(0,200),link:p.link};})});
           }).catch(function(e){resolve({erro:e.message});});
         })();
         break;
@@ -4105,10 +4223,16 @@ function openDetalhesCaso(id){
         h+='<div id="desp-caso-'+id+'"><div class="loading" style="font-size:12px">🔄 Carregando...</div></div>';
         h+='</div>';
       }
+      // Seção de publicações PJe
+      h+='<div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--bd)">';
+      h+='<div style="font-size:11px;color:var(--tx3);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">Publicações PJe</div>';
+      h+='<div id="pub-caso-'+id+'"><div class="loading" style="font-size:12px">🔄 Carregando...</div></div>';
+      h+='</div>';
       document.getElementById('mob').innerHTML=h;
       if(podeVerFinanceiroCaso(id)||_podeApagar)carregarDespesasCaso(id);
       if(podeVerQualquerFinanceiro())carregarHonorariosCaso(id);
       if(_podeApagar)carregarAutorizacoesCaso(id);
+      carregarPublicacoesCaso(id);
     });
   });
 }

@@ -1,5 +1,4 @@
 const { createClient } = require('@supabase/supabase-js');
-const fetch = require('node-fetch');
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://rdmlxfgwlbroigsisjph.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -8,11 +7,9 @@ const CRON_SECRET = process.env.CRON_SECRET;
 
 const PJE_BASE = 'https://comunicaapi.pje.jus.br/api/v1/comunicacao';
 
-// Estratégias de busca: por OAB e por nome
 const BUSCAS = [
   { tipo: 'oab', params: { numeroOab: '39645', ufOab: 'DF' }, label: 'OAB/DF 39645' },
   { tipo: 'oab', params: { numeroOab: '109359', ufOab: 'RJ' }, label: 'OAB/RJ 109359' },
-  { tipo: 'nome', params: { nomeAdvogado: 'Andre Luiz Hespanhol Tavares' }, label: 'Nome: Andre Luiz Hespanhol Tavares' },
 ];
 
 async function fetchPublicacoes(params, dataInicio, dataFim) {
@@ -29,8 +26,8 @@ async function fetchPublicacoes(params, dataInicio, dataFim) {
     return [];
   }
   const json = await res.json();
-  // A API retorna { itens: [...] } ou array direto
-  return Array.isArray(json) ? json : (json.itens || json.comunicacoes || json.content || []);
+  // A API retorna { items: [...] }
+  return Array.isArray(json) ? json : (json.items || json.itens || json.comunicacoes || json.content || []);
 }
 
 async function sendAlertEmail(publicacoes) {
@@ -51,7 +48,6 @@ async function sendAlertEmail(publicacoes) {
 }
 
 module.exports = async function handler(req, res) {
-  // Autenticação do cron
   const auth = req.headers['authorization'] || '';
   if (CRON_SECRET && auth !== 'Bearer ' + CRON_SECRET) {
     return res.status(401).json({ error: 'Unauthorized' });
@@ -59,14 +55,12 @@ module.exports = async function handler(req, res) {
 
   const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  // Janela: últimos 2 dias (garante captura mesmo se cron falhar um dia)
   const hoje = new Date();
   const inicio = new Date(hoje);
   inicio.setDate(inicio.getDate() - 2);
   const dataInicio = inicio.toISOString().split('T')[0];
   const dataFim = hoje.toISOString().split('T')[0];
 
-  // Buscar casos para match por numero_processo
   const { data: casos } = await db.from('casos').select('id, numero_cnj, numero_processo');
   const casoMap = {};
   (casos || []).forEach(function(c) {
@@ -74,22 +68,19 @@ module.exports = async function handler(req, res) {
     if (c.numero_processo) casoMap[c.numero_processo.replace(/\D/g,'').slice(-15)] = c.id;
   });
 
-  // Buscar IDs já existentes para dedup
   const { data: existentes } = await db.from('publicacoes').select('id_pje').gte('created_at', new Date(Date.now() - 7*24*60*60*1000).toISOString());
   const idsExistentes = new Set((existentes||[]).map(function(e){return e.id_pje;}));
 
   const stats = { inseridas: 0, vinculadas: 0, sem_caso: 0, duplicadas: 0, erros: 0 };
   const semCaso = [];
 
-  // Executar todas as buscas e deduplicar pelo id da comunicação
-  const todasPublicacoes = new Map(); // id_pje → item
+  const todasPublicacoes = new Map();
   for (const busca of BUSCAS) {
     try {
       const itens = await fetchPublicacoes(busca.params, dataInicio, dataFim);
       console.log(`Busca ${busca.label}: ${itens.length} itens`);
       for (const item of itens) {
-        // Tentar extrair o ID único da comunicação
-        const idPje = String(item.numeroComunicacao || item.idComunicacao || item.id || item.numero || '');
+        const idPje = String(item.id || item.numeroComunicacao || item.idComunicacao || item.numero || '');
         if (!idPje) { stats.erros++; continue; }
         if (!todasPublicacoes.has(idPje)) {
           todasPublicacoes.set(idPje, { item, busca });
@@ -103,11 +94,10 @@ module.exports = async function handler(req, res) {
 
   console.log(`Total único após dedup: ${todasPublicacoes.size}`);
 
-  // Processar e inserir no Supabase
   for (const [idPje, { item, busca }] of todasPublicacoes.entries()) {
     if (idsExistentes.has(idPje)) { stats.duplicadas++; continue; }
 
-    const numProc = String(item.numeroProcesso || item.numero_processo || '');
+    const numProc = String(item.numeroProcesso || item.numero_processo || item.numeroprocessocommascara || '');
     const numProcNorm = numProc.replace(/\D/g,'').slice(-15);
     const casoId = casoMap[numProcNorm] || null;
     const status = casoId ? 'vinculada' : 'sem_caso';
@@ -118,7 +108,7 @@ module.exports = async function handler(req, res) {
       tribunal: item.siglaTribunal || item.tribunal || null,
       tipo_comunicacao: item.tipoComunicacao || item.tipo || null,
       orgao: item.nomeOrgao || item.orgao || null,
-      data_disponibilizacao: item.dataDisponibilizacao || item.dataDisponibilizacaoFinal || null,
+      data_disponibilizacao: item.data_disponibilizacao || item.dataDisponibilizacao || item.datadisponibilizacao || null,
       conteudo: item.texto || item.conteudo || item.teor || null,
       link: item.link || item.urlIntimacao || null,
       caso_id: casoId,
@@ -138,7 +128,6 @@ module.exports = async function handler(req, res) {
     }
   }
 
-  // Alerta por email se houver publicações sem caso
   if (semCaso.length > 0) {
     try { await sendAlertEmail(semCaso); } catch(e) { console.error('Email error:', e.message); }
   }
